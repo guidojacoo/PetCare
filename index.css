@@ -41,7 +41,14 @@
     color: white;
     border: none;
     cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+    }
+  
+  button:hover {
+    background: #666;     
+    transform: scale(1.05); 
   }
+  
   
   .camera {
     width: 100%;
@@ -82,7 +89,7 @@
     display: flex;
     justify-content: space-between;
     width: 100%;
-    gap: 0px;
+    gap: 20px;
   }
   
   #pantalla-inicio {
@@ -109,11 +116,6 @@
   .caja-inicio button {
     text-align: center; 
   }
-  
-  button:hover {
-    background: #666;      
-    transform: scale(1.05); 
-    transition: 0.3s;      
-  }
+
   
   
