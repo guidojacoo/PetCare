@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PetCare</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <div class="pantalla activa" id="pantalla-inicio">
+    <h1>Inicio sesión</h1>
+    <input type="text" placeholder="Usuario o email">
+    <button onclick="mostrar('pantalla-principal')">Continuar</button>
+    <button onclick="mostrar('pantalla-registro')">Crear cuenta</button>
+  </div>
+
+  <div class="pantalla" id="pantalla-registro">
+    <h2>Logo</h2>
+    <p>Eslógan</p>
+    <input type="text" placeholder="Nombre">
+    <input type="text" placeholder="Email">
+    <input type="text" placeholder="Contraseña">
+    <input type="text" placeholder="Confirmar contraseña">
+    <button onclick="mostrar('pantalla-principal')">Continuar</button>
+  </div>
+
+  <div class="pantalla" id="pantalla-principal">
+    <div class="top-buttons">
+      <button>Botón AJUS.</button>
+      <button>Botón IA</button>
+    </div>
+    <div class="camera">Pantalla conectada con la cámara</div>
+    <div class="botones-sec">
+      <button>Botón MIC</button>
+      <button onclick="mostrar('pantalla-alimento')">Botón Premio</button>
+      <button>Botón Alim. Rápida</button>
+    </div>
+  </div>
+
+  <div class="pantalla" id="pantalla-alimento">
+    <div class="top-buttons">
+      <button>Botón AJUS.</button>
+      <button>Botón IA</button>
+    </div>
+    <p>Texto</p>
+    <div class="fila">
+      <div class="circulo">Botón</div>
+      <div class="circulo">Botón</div>
+    </div>
+    <div class="botones-sec">
+      <button>Botón MIC</button>
+      <button>Botón Premio</button>
+      <button onclick="mostrar('pantalla-principal')">Volver</button>
+    </div>
+  </div>
+
+  <script>
+    function mostrar(id) {
+      document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
+      document.getElementById(id).classList.add('activa');
+    }
+  </script>
+
+</body>
+</html>
