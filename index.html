@@ -9,26 +9,36 @@
 <body>
 
   <div class="pantalla activa" id="pantalla-inicio">
-  <div class="caja-inicio">
-    <h1>Inicio sesión</h1>
-    <input type="text" placeholder="Usuario o email">
-    <button onclick="mostrar('pantalla-principal')">Continuar</button>
-    <button onclick="mostrar('pantalla-registro')">Crear cuenta</button>
+    <div class="caja-inicio">
+      <h1>Inicio sesión</h1>
+      <input type="text" placeholder="Usuario o email">
+      <button onclick="mostrar('pantalla-principal')">Continuar</button>
+      <button onclick="mostrar('pantalla-registro')">Crear cuenta</button>
+    </div>
   </div>
-</div>
-
 
   <div class="pantalla" id="pantalla-registro">
-  <div class="caja-registro">
-    <h2>Logo</h2>
-    <p>Eslógan</p>
-    <input type="text" id="nombre" placeholder="Nombre">
-    <input type="text" id="email" placeholder="Email">
-    <input type="password" id="contrasena" placeholder="Contraseña">
-    <input type="password" id="confirmar" placeholder="Confirmar contraseña">
-    <button type="button" onclick="registrarse()">Continuar</button>
+    <div class="caja-registro">
+      <h2>Logo</h2>
+      <p>Eslógan</p>
+
+      <input type="text" id="nombre" placeholder="Nombre">
+      <small class="error" id="error-nombre"></small>
+
+      <input type="text" id="email" placeholder="Email">
+      <small class="error" id="error-email"></small>
+
+      <input type="password" id="contrasena" placeholder="Contraseña">
+      <small class="error" id="error-contrasena"></small>
+
+      <input type="password" id="confirmar" placeholder="Confirmar contraseña">
+      <small class="error" id="error-confirmar"></small>
+
+      <button type="button" onclick="registrarse()">Continuar</button>
+
+      <div id="mensaje-exito" class="mensaje-exito"></div>
+    </div>
   </div>
-</div>
 
   <div class="pantalla" id="pantalla-principal">
     <div class="top-buttons">
@@ -62,6 +72,3 @@
 
   <script src="index.js"></script>
 
-
-</body>
-</html>
