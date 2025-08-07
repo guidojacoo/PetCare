@@ -19,14 +19,16 @@
 
 
   <div class="pantalla" id="pantalla-registro">
+  <div class="caja-registro">
     <h2>Logo</h2>
     <p>Eslógan</p>
-    <input type="text" placeholder="Nombre">
-    <input type="text" placeholder="Email">
-    <input type="text" placeholder="Contraseña">
-    <input type="text" placeholder="Confirmar contraseña">
-    <button onclick="mostrar('pantalla-principal')">Continuar</button>
+    <input type="text" id="nombre" placeholder="Nombre">
+    <input type="text" id="email" placeholder="Email">
+    <input type="password" id="contrasena" placeholder="Contraseña">
+    <input type="password" id="confirmar" placeholder="Confirmar contraseña">
+    <button type="button" onclick="registrarse()">Continuar</button>
   </div>
+</div>
 
   <div class="pantalla" id="pantalla-principal">
     <div class="top-buttons">
@@ -58,12 +60,8 @@
     </div>
   </div>
 
-  <script>
-    function mostrar(id) {
-      document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
-      document.getElementById(id).classList.add('activa');
-    }
-  </script>
+  <script src="index.js"></script>
+
 
 </body>
 </html>
