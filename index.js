@@ -28,7 +28,7 @@ function registrarse() {
     valido = false;
   }
 
-  if (contrasena.value === '') {
+  if (contrasena.value.trim() === '') {
     mostrarError(contrasena, 'Ingresá una contraseña', 'error-contrasena');
     valido = false;
   } else if (contrasena.value.length < 6) {
@@ -36,7 +36,7 @@ function registrarse() {
     valido = false;
   }
 
-  if (confirmar.value === '') {
+  if (confirmar.value.trim() === '') {
     mostrarError(confirmar, 'Repetí tu contraseña', 'error-confirmar');
     valido = false;
   } else if (confirmar.value !== contrasena.value) {
@@ -46,15 +46,13 @@ function registrarse() {
 
   if (valido) {
     mensajeExito.textContent = '¡Cuenta registrada con éxito!';
-
     nombre.value = '';
     email.value = '';
     contrasena.value = '';
     confirmar.value = '';
-
     setTimeout(() => {
       mostrar('pantalla-principal');
-    }, 1000); 
+    }, 1000);
   }
 }
 
@@ -71,4 +69,17 @@ function mostrarError(input, mensaje, idError) {
 function limpiarErrores() {
   document.querySelectorAll('.error').forEach(e => e.textContent = '');
   document.querySelectorAll('input').forEach(input => input.classList.remove('input-error'));
+}
+
+function togglePassword(idInput, boton) {
+  const input = document.getElementById(idInput);
+  const emoji = boton;
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    emoji.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    emoji.textContent = '👁️';
+  }
 }

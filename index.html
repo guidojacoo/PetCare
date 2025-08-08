@@ -28,14 +28,19 @@
       <input type="text" id="email" placeholder="Email">
       <small class="error" id="error-email"></small>
 
-      <input type="password" id="contrasena" placeholder="Contraseña">
+      <div class="input-contenedor">
+        <input type="password" id="contrasena" placeholder="Contraseña">
+        <span class="icono-ojo" onclick="togglePassword('contrasena', this)">👁️</span>
+      </div>
       <small class="error" id="error-contrasena"></small>
 
-      <input type="password" id="confirmar" placeholder="Confirmar contraseña">
+      <div class="input-contenedor">
+        <input type="password" id="confirmar" placeholder="Confirmar contraseña">
+        <span class="icono-ojo" onclick="togglePassword('confirmar', this)">👁️</span>
+      </div>
       <small class="error" id="error-confirmar"></small>
 
       <button type="button" onclick="registrarse()">Continuar</button>
-
       <div id="mensaje-exito" class="mensaje-exito"></div>
     </div>
   </div>
@@ -71,4 +76,5 @@
   </div>
 
   <script src="index.js"></script>
-
+</body>
+</html>
