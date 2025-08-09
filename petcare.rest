@@ -1,0 +1,34 @@
+### Ruta de prueba
+GET http://localhost:3000/
+
+### Listar mascotas
+GET http://localhost:3000/mascotas
+
+### Crear mascota
+POST http://localhost:3000/mascotas
+Content-Type: application/json
+
+{
+  "nombre": "Lucas",
+  "especie": "Perro",
+  "raza": "Caniche",
+  "peso_kg": 5.7,
+  "fecha_nacimiento": "2021-08-12"
+}
+
+### Eliminar mascota
+DELETE http://localhost:3000/mascotas/1
+
+### Listar horarios
+GET http://localhost:3000/horarios
+
+### Crear horario
+POST http://localhost:3000/horarios
+Content-Type: application/json
+
+{
+  "mascota_id": 1,
+  "hora_local": "09:00:00",
+  "gramos": 200,
+  "dias": "1234567"
+}
