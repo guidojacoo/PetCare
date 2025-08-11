@@ -11,12 +11,14 @@
   <div class="pantalla activa" id="pantalla-inicio">
     <div class="caja-inicio">
       <h1>Inicio sesión</h1>
-      <input type="text" placeholder="Usuario o email">
-      <button onclick="mostrar('pantalla-principal')">Continuar</button>
+      <input type="text" id="usuario-login" placeholder="Usuario o email">
+      <small id="mensaje-login" class="error"></small>
+  
+      <button onclick="iniciarSesion()">Continuar</button>
       <button onclick="mostrar('pantalla-registro')">Crear cuenta</button>
     </div>
   </div>
-
+  
   <div class="pantalla" id="pantalla-registro">
     <div class="caja-registro">
       <h2>Logo</h2>

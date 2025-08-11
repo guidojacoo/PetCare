@@ -83,3 +83,24 @@ function togglePassword(idInput, boton) {
     emoji.textContent = '👁️';
   }
 }
+
+function iniciarSesion() {
+  const usuarioLogin = document.getElementById('usuario-login');
+  const mensajeLogin = document.getElementById('mensaje-login');
+
+  mensajeLogin.textContent = '';
+  usuarioLogin.classList.remove('input-error');
+
+  if (usuarioLogin.value.trim() === '') {
+    usuarioLogin.classList.add('input-error');
+    mensajeLogin.textContent = 'Ingresá tu usuario o email';
+    mensajeLogin.style.color = 'red';
+  } else {
+    mensajeLogin.textContent = '¡Sesión iniciada con éxito!';
+    mensajeLogin.style.color = 'green';
+    usuarioLogin.value = '';
+    setTimeout(() => {
+      mostrar('pantalla-principal');
+    }, 1000);
+  }
+}
