@@ -32,3 +32,35 @@ Content-Type: application/json
   "gramos": 200,
   "dias": "1234567"
 }
+
+### Obtener Mascota por ID
+GET http://localhost:3000/mascotas/1
+
+### Actualizar Mascota
+PUT http://localhost:3000/mascotas/1
+Content-Type: application/json
+
+{
+  "nombre": "Calcu modificado",
+  "especie": "Perro",
+  "raza": "Labrador",
+  "peso_kg": 18.0,
+  "fecha_nacimiento": "2019-05-15"
+}
+
+### Horarios de una Mascota
+GET http://localhost:3000/mascotas/1/horarios
+
+### Actualizar Horario segun ID
+PUT http://localhost:3000/horarios/1
+Content-Type: application/json
+
+{
+  "hora_local": "18:30:00",
+  "gramos": 220,
+  "dias": "1234567",
+  "activo": true
+}
+
+### Eliminar Horario
+DELETE http://localhost:3000/horarios/1
