@@ -3,6 +3,17 @@ BEGIN;
 -- Eliminar tablas si ya existen
 DROP TABLE IF EXISTS horarios CASCADE;
 DROP TABLE IF EXISTS mascotas CASCADE;
+DROP TABLE IF EXISTS usuarios CASCADE;
+
+--Tabla: usuarios
+CREATE TABLE IF NOT EXISTS usuarios (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(80) NOT NULL,
+    email VARCHAR(120) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    fecha_registro TIMESTAMPTZ DEFAULT NOW(),
+    rol VARCHAR(20) DEFAULT 'usuario'
+);
 
 -- Tabla: mascotas
 CREATE TABLE mascotas (
@@ -45,5 +56,13 @@ SELECT setval('horarios_id_seq', (SELECT MAX(id) FROM horarios));
 ALTER TABLE horarios
   ADD CONSTRAINT fk_horarios_mascota
   FOREIGN KEY (mascota_id) REFERENCES mascotas(id);
+  
+ALTER TABLE mascotas
+  ADD COLUMN IF NOT EXISTS usuario_id INT;
+
+ALTER TABLE mascotas
+  ADD CONSTRAINT fk_mascotas_usuario
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+  ON DELETE CASCADE;
 
 COMMIT;
