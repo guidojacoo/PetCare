@@ -14,18 +14,20 @@ app.use(express.json());
 app.get("/", (req, res) => res.json({ ok: true, api: "PetCare" }));
 
 // Rutas Mascotas
-app.get("/mascotas", mascotas.listar)
-app.get("/mascotas/:id", mascotas.obtener)
-app.post("/mascotas", mascotas.crear)
-app.put("/mascotas/:id", mascotas.actualizar)
-app.delete("/mascotas/:id", mascotas.eliminar)
-app.get("/mascotas/:id/horarios", mascotas.horariosDeMascota)
+app.get("/mascotas", mascotas.Listar)
+app.get("/mascotas/:id", mascotas.Obtener)
+app.post("/mascotas", mascotas.Crear)
+app.put("/mascotas/:id", mascotas.Actualizar)
+app.delete("/mascotas/:id", mascotas.Eliminar)
+app.get("/mascotas/:id/horarios", mascotas.HorariosDeMascota)
 
 // Rutas Horarios
-app.get("/horarios", horarios.listar)
-app.post("/horarios", horarios.crear)
-app.put("/horarios/:id", horarios.actualizar)
-app.delete("/horarios/:id", horarios.eliminar)
+app.get("/horarios", horarios.Listar)
+app.post("/horarios", horarios.Crear)
+app.put("/horarios/:id", horarios.Actualizar)
+app.delete("/horarios/:id", horarios.Eliminar)
+
+// Rutas Usuarios
 
 // Iniciar servidor
 let puerto = 3000;
