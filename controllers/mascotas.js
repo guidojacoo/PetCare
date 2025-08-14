@@ -31,10 +31,12 @@ export const Actualizar = async (req, res) => {
 };
 
 export const Eliminar = async (req, res) => {
-    let r = await query("DELETE FROM mascotas WHERE id=$1", [req.params.id]);
+    let id = req.params.id;
+    await query("DELETE FROM horarios WHERE mascota_id=$1", [id]);
+    let r = await query("DELETE FROM mascotas WHERE id=$1", [id]);
     if (!r.rowCount) return res.status(404).json({ error: "No encontrada" });
     res.status(204).end();
-};
+  };
 
 export const HorariosDeMascota = async (req, res) => {
     let r = await query(

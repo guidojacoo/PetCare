@@ -5,6 +5,7 @@ import express from "express";
 import cors from "cors";
 import * as mascotas from "./controllers/mascotas.js";
 import * as horarios from "./controllers/horarios.js";
+import * as usuarios from "./controllers/usuarios.js"
 
 let app = express();
 app.use(cors());
@@ -28,6 +29,13 @@ app.put("/horarios/:id", horarios.Actualizar)
 app.delete("/horarios/:id", horarios.Eliminar)
 
 // Rutas Usuarios
+app.get("/usuarios", usuarios.Listar)
+app.get("/usuarios/:id", usuarios.Obtener)
+app.post("/usuarios", usuarios.Crear)
+app.put("/usuarios/:id", usuarios.Actualizar)
+app.delete("/usuarios/:id", usuarios.Eliminar)
+app.post("/login", usuarios.Login)
+
 
 // Iniciar servidor
 let puerto = 3000;

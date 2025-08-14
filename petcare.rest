@@ -64,3 +64,42 @@ Content-Type: application/json
 
 ### Eliminar Horario
 DELETE http://localhost:3000/horarios/1
+
+### Listar usuarios
+GET http://localhost:3000/usuarios
+
+### Obtener usuario por ID
+GET http://localhost:3000/usuarios/1
+
+### Crear usuario
+POST http://localhost:3000/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "britospark",
+  "email": "lunaperritozahir@petcare.com",
+  "password": "123456",
+  "rol": "usuario"
+}
+
+### Actualizar usuario
+PUT http://localhost:3000/usuarios/1
+Content-Type: application/json
+
+{
+  "nombre": "Usuario Editado",
+  "email": "demo@petcare.com",
+  "rol": "admin"
+}
+
+### Eliminar usuario
+DELETE http://localhost:3000/usuarios/1
+
+### Login de usuario
+POST http://localhost:3000/login
+Content-Type: application/json
+
+{
+  "email": "demo@petcare.com",
+  "password": "123456"
+}
