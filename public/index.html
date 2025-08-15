@@ -59,6 +59,20 @@
        style="width:100%; height:100%; object-fit:cover; border-radius:8px;" 
        alt="Cámara en vivo">
 </div>
+<div>
+<button onclick="moverServo()" style="margin-top:10px; padding:10px 20px; font-size:16px;">
+  Activar Servo
+</button>
+
+<script>
+  function moverServo() {
+    fetch("http://192.168.0.244:81/servo")
+      .then(r => r.text())
+      .then(t => console.log(t));
+  }
+</script>
+</div>
+
     <div class="botones-sec">
       <button>Botón MIC</button>
       <button onclick="mostrar('pantalla-alimento')">Botón Premio</button>
