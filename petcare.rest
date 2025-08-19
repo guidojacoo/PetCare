@@ -17,7 +17,7 @@ Content-Type: application/json
 }
 
 ### Eliminar mascota
-DELETE http://localhost:3000/mascotas/1
+DELETE http://localhost:3000/mascotas/5
 
 ### Listar horarios
 GET http://localhost:3000/horarios
@@ -27,17 +27,17 @@ POST http://localhost:3000/horarios
 Content-Type: application/json
 
 {
-  "mascota_id": 1,
+  "mascota_id": 4,
   "hora_local": "09:00:00",
   "gramos": 200,
   "dias": "1234567"
 }
 
 ### Obtener Mascota por ID
-GET http://localhost:3000/mascotas/1
+GET http://localhost:3000/mascotas/3
 
 ### Actualizar Mascota
-PUT http://localhost:3000/mascotas/1
+PUT http://localhost:3000/mascotas/3
 Content-Type: application/json
 
 {
@@ -49,10 +49,10 @@ Content-Type: application/json
 }
 
 ### Horarios de una Mascota
-GET http://localhost:3000/mascotas/1/horarios
+GET http://localhost:3000/mascotas/3/horarios
 
 ### Actualizar Horario segun ID
-PUT http://localhost:3000/horarios/1
+PUT http://localhost:3000/horarios/3
 Content-Type: application/json
 
 {
