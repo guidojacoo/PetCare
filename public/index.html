@@ -53,12 +53,13 @@
       <button>Botón IA</button>
     </div>
 
-<div class="camera">
-  <img id="camara-stream" 
-       src="http://192.168.0.244:81/stream" 
-       style="width:100%; height:100%; object-fit:cover; border-radius:8px;" 
-       alt="Cámara en vivo">
-</div>
+    <div class="camera">
+      <img id="camara-stream" 
+           src="http://172.20.10.5:81/stream" 
+           style="width:100%; height:100%; object-fit:cover; border-radius:8px;" 
+           alt="Cámara en vivo">
+    </div>
+    
 <div>
 <button onclick="moverServo()" style="margin-top:10px; padding:10px 20px; font-size:16px;">
   Activar Servo
@@ -66,7 +67,7 @@
 
 <script>
   function moverServo() {
-    fetch("http://192.168.0.244:81/servo")
+    fetch("http://172.20.10.5:79/servo")
       .then(r => r.text())
       .then(t => console.log(t));
   }
