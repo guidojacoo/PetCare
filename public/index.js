@@ -1,106 +1,133 @@
-function mostrar(id) {
-  document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
-  document.getElementById(id).classList.add('activa');
-}
-
-function registrarse() {
-  const nombre = document.getElementById('nombre');
-  const email = document.getElementById('email');
-  const contrasena = document.getElementById('contrasena');
-  const confirmar = document.getElementById('confirmar');
-  const mensajeExito = document.getElementById('mensaje-exito');
-
-  limpiarErrores();
-  mensajeExito.textContent = '';
-
-  let valido = true;
-
-  if (nombre.value.trim() === '') {
-    mostrarError(nombre, 'Completa tu nombre', 'error-nombre');
-    valido = false;
-  }
-
-  if (email.value.trim() === '') {
-    mostrarError(email, 'Completa tu email', 'error-email');
-    valido = false;
-  } else if (!validarEmail(email.value.trim())) {
-    mostrarError(email, 'El email no es válido', 'error-email');
-    valido = false;
-  }
-
-  if (contrasena.value.trim() === '') {
-    mostrarError(contrasena, 'Ingresá una contraseña', 'error-contrasena');
-    valido = false;
-  } else if (contrasena.value.length < 6) {
-    mostrarError(contrasena, 'La contraseña debe tener al menos 6 caracteres', 'error-contrasena');
-    valido = false;
-  }
-
-  if (confirmar.value.trim() === '') {
-    mostrarError(confirmar, 'Repetí tu contraseña', 'error-confirmar');
-    valido = false;
-  } else if (confirmar.value !== contrasena.value) {
-    mostrarError(confirmar, 'Las contraseñas no coinciden', 'error-confirmar');
-    valido = false;
-  }
-
-  if (valido) {
-    mensajeExito.textContent = '¡Cuenta registrada con éxito!';
-    nombre.value = '';
-    email.value = '';
-    contrasena.value = '';
-    confirmar.value = '';
-    setTimeout(() => {
-      mostrar('pantalla-principal');
-    }, 1000);
-  }
-}
+const DBURL = "http://localhost:3000";
 
 function validarEmail(email) {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function mostrarError(input, mensaje, idError) {
-  input.classList.add('input-error');
-  document.getElementById(idError).textContent = mensaje;
+function mostrarMensajeOk(texto) {
+  let mensaje = document.getElementById("mensaje-exito");
+  if (!mensaje) {
+    mensaje = document.createElement("div");
+    mensaje.id = "mensaje-exito";
+    mensaje.style.marginTop = "8px";
+    mensaje.style.color = "green";
+    const contenedor = document.querySelector(".content");
+    if (contenedor) contenedor.appendChild(mensaje);
+  }
+  mensaje.textContent = texto;
+}
+
+function mostrarError(input, texto) {
+  input.classList.add("input-error");
+  let error = document.createElement("div");
+  error.className = "error";
+  error.style.color = "red";
+  error.style.marginTop = "6px";
+  error.textContent = texto;
+  input.insertAdjacentElement("afterend", error);
 }
 
 function limpiarErrores() {
-  document.querySelectorAll('.error').forEach(e => e.textContent = '');
-  document.querySelectorAll('input').forEach(input => input.classList.remove('input-error'));
+  document.querySelectorAll(".error").forEach(e => e.remove());
+  document.querySelectorAll(".input").forEach(i => i.classList.remove("input-error"));
+  let mensaje = document.getElementById("mensaje-exito");
+  if (mensaje) mensaje.textContent = "";
 }
 
-function togglePassword(idInput, boton) {
-  const input = document.getElementById(idInput);
-  const emoji = boton;
+async function registrarUsuario() {
+  limpiarErrores();
+  const nombreInput = document.getElementById("nombre");
+  const emailInput = document.getElementById("email");
+  const passInput = document.getElementById("contrasena");
+  const confirmarInput = document.getElementById("confirmar");
 
-  if (input.type === 'password') {
-    input.type = 'text';
-    emoji.textContent = '🙈';
-  } else {
-    input.type = 'password';
-    emoji.textContent = '👁️';
+  const nombre = nombreInput.value.trim();
+  const email = emailInput.value.trim();
+  const pass = passInput.value;
+  const confirmar = confirmarInput.value;
+
+  let valido = true;
+  if (!nombre) { mostrarError(nombreInput, "Completá tu nombre"); valido = false; }
+  if (!email) { mostrarError(emailInput, "Completá tu email"); valido = false; }
+  else if (!validarEmail(email)) { mostrarError(emailInput, "Email inválido"); valido = false; }
+  if (!pass) { mostrarError(passInput, "Ingresá una contraseña"); valido = false; }
+  else if (pass.length < 6) { mostrarError(passInput, "Mínimo 6 caracteres"); valido = false; }
+  if (!confirmar) { mostrarError(confirmarInput, "Repetí tu contraseña"); valido = false; }
+  else if (confirmar !== pass) { mostrarError(confirmarInput, "No coinciden"); valido = false; }
+  if (!valido) return;
+
+  try {
+    const respuesta = await fetch(`${DBURL}/usuarios`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre, email, password: pass, rol: "usuario" })
+    });
+    const datos = await respuesta.json();
+    if (respuesta.ok) {
+      nombreInput.value = "";
+      emailInput.value = "";
+      passInput.value = "";
+      confirmarInput.value = "";
+      mostrarMensajeOk("¡Cuenta registrada con éxito! Iniciá sesión.");
+      setTimeout(() => { location.href = "login.html"; }, 900);
+    } else {
+      mostrarError(emailInput, datos.error || "No se pudo registrar");
+    }
+  } catch (e) {
+    mostrarError(emailInput, "Error de red");
   }
 }
 
-function iniciarSesion() {
-  const usuarioLogin = document.getElementById('usuario-login');
-  const mensajeLogin = document.getElementById('mensaje-login');
-
-  mensajeLogin.textContent = '';
-  usuarioLogin.classList.remove('input-error');
-
-  if (usuarioLogin.value.trim() === '') {
-    usuarioLogin.classList.add('input-error');
-    mensajeLogin.textContent = 'Ingresá tu usuario o email';
-    mensajeLogin.style.color = 'red';
-  } else {
-    mensajeLogin.textContent = '¡Sesión iniciada con éxito!';
-    mensajeLogin.style.color = 'green';
-    usuarioLogin.value = '';
-    setTimeout(() => {
-      mostrar('pantalla-principal');
-    }, 1000);
-  }
+function prepararRegistro() {
+  const boton = document.querySelector(".btn.btn-orange.full");
+  if (!boton) return;
+  boton.addEventListener("click", (e) => {
+    e.preventDefault();
+    registrarUsuario();
+  });
 }
+
+function prepararLogin() {
+  const inputs = document.querySelectorAll(".input");
+  const boton = document.querySelector(".btn.btn-orange.full");
+  if (!boton || inputs.length < 2) return;
+  boton.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const emailInput = inputs[0];
+    const passInput = inputs[1];
+    document.querySelectorAll(".error").forEach(e => e.remove());
+    emailInput.classList.remove("input-error");
+    passInput.classList.remove("input-error");
+
+    const email = emailInput.value.trim();
+    const pass = passInput.value;
+
+    let valido = true;
+    if (!email || !validarEmail(email)) { mostrarError(emailInput, "Ingresá un email válido"); valido = false; }
+    if (!pass) { mostrarError(passInput, "Ingresá tu contraseña"); valido = false; }
+    if (!valido) return;
+
+    try {
+      const respuesta = await fetch(`${DBURL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: pass })
+      });
+      const datos = await respuesta.json();
+      if (respuesta.ok) {
+        localStorage.setItem("usuario", JSON.stringify(datos));
+        location.href = "mascota.html";
+      } else {
+        mostrarError(passInput, datos.error || "Credenciales inválidas");
+      }
+    } catch (e) {
+      mostrarError(passInput, "Error de red");
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const path = (location.pathname || "").toLowerCase();
+  if (path.endsWith("registro.html")) prepararRegistro();
+  if (path.endsWith("login.html")) prepararLogin();
+});
