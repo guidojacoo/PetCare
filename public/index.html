@@ -66,7 +66,7 @@
 
 <script>
   function moverServo() {
-    fetch("http://192.168.0.244:81/servo")
+    fetch("http://192.168.0.244:8080/servo")
       .then(r => r.text())
       .then(t => console.log(t));
   }
