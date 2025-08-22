@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Añadir mascota • Edad</title>
+  <title>Añadir mascota • Cumpleaños</title>
   <link rel="stylesheet" href="edad.css" />
 </head>
 <body>
@@ -16,24 +16,19 @@
 
     <section class="content">
       <h2 class="title">Elegí su cumpleaños</h2>
-      <p class="muted">Elegir una raza puede ayudar a distinguir características especiales de tu mascota</p>
+      <p class="muted">Esta fecha ayuda a personalizar la alimentación.</p>
 
       <div class="underline-input">
-        <input type="text" placeholder="Campo de texto" />
-      </div>
-
-      <div class="picker">
-        <div class="col"><span class="arrow">↑</span><span>Meses</span><span class="arrow">↓</span></div>
-        <div class="col"><span class="arrow">↑</span><span>Días</span><span class="arrow">↓</span></div>
-        <div class="col"><span class="arrow">↑</span><span>Año</span><span class="arrow">↓</span></div>
-        <button class="mic" aria-label="Dictar">🎤</button>
+        <input id="fecha-nacimiento" type="date" />
       </div>
 
       <div class="actions">
-        <a class="btn btn-orange" href="index.html">Siguiente</a>
+        <button class="btn btn-orange" id="btn-fecha-finalizar" type="button">Finalizar</button>
         <a class="btn btn-cyan" href="index.html">Salir</a>
       </div>
     </section>
   </main>
+
+  <script src="onboarding.js"></script>
 </body>
 </html>

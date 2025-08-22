@@ -19,19 +19,21 @@
       <p class="muted">Elegir una raza puede ayudar a distinguir características especiales de tu mascota</p>
 
       <div class="underline-input">
-        <input type="text" placeholder="Busca la raza" />
+        <input id="raza-buscar" type="text" placeholder="Busca la raza" />
       </div>
 
-      <ul class="list">
+      <ul class="list" id="raza-lista">
         <li>Raza 1</li><li>Raza 2</li><li>Raza 3</li><li>Raza 4</li>
         <li>Raza 5</li><li>Raza 6</li><li>Raza 7</li><li>Raza 8</li><li>Raza 9</li>
       </ul>
 
       <div class="actions">
-        <a class="btn btn-orange" href="edad.html">Siguiente</a>
+        <button class="btn btn-orange" id="btn-raza-next" type="button">Siguiente</button>
         <a class="btn btn-cyan" href="index.html">Salir</a>
       </div>
     </section>
   </main>
+
+  <script src="onboarding.js"></script>
 </body>
 </html>

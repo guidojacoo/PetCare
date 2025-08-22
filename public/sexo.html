@@ -9,7 +9,7 @@
 <body>
   <main class="phone">
     <header class="topbar">
-      <a class="back" href="inicio.html" aria-label="Volver">‹</a>
+      <a class="back" href="mascota.html" aria-label="Volver">‹</a>
       <span>Añadir mascota</span>
       <span></span>
     </header>
@@ -18,22 +18,24 @@
       <h2 class="title center">Mi mascota es</h2>
 
       <div class="grid-2">
-        <button class="card">
+        <button class="card" id="btn-sexo-macho" type="button">
           <div class="emoji">🐶</div>
           <div class="label">Macho</div>
         </button>
 
-        <button class="card">
+        <button class="card" id="btn-sexo-hembra" type="button">
           <div class="emoji">🐶</div>
           <div class="label">Hembra</div>
         </button>
       </div>
 
       <div class="actions">
-        <a class="btn btn-orange" href="peso.html">Siguiente</a>
-        <a class="btn btn-cyan" href="inicio.html">Salir</a>
+        <button class="btn btn-orange" id="btn-sexo-next" type="button">Siguiente</button>
+        <a class="btn btn-cyan" href="index.html">Salir</a>
       </div>
     </section>
   </main>
+
+  <script src="onboarding.js"></script>
 </body>
 </html>
