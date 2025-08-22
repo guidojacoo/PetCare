@@ -19,18 +19,24 @@
       <p class="muted">Seleccioná el peso para poder ajustar las cantidades de alimento correctas</p>
 
       <label class="label">Peso (kg)</label>
-      <div class="chips">
-        <button class="chip">5 kg</button>
-        <button class="chip">10 kg</button>
-        <button class="chip">20 kg</button>
-        <button class="chip">40 kg</button>
+      <div class="chips" id="peso-chips">
+        <button class="chip" data-peso="5">5 kg</button>
+        <button class="chip" data-peso="10">10 kg</button>
+        <button class="chip" data-peso="20">20 kg</button>
+        <button class="chip" data-peso="40">40 kg</button>
+      </div>
+
+      <div class="underline-input">
+        <input id="peso-custom" type="number" step="0.1" min="0" placeholder="Otro peso (opcional)">
       </div>
 
       <div class="actions">
-        <a class="btn btn-orange" href="raza.html">Siguiente</a>
+        <button class="btn btn-orange" id="btn-peso-next" type="button">Siguiente</button>
         <a class="btn btn-cyan" href="index.html">Salir</a>
       </div>
     </section>
   </main>
+
+  <script src="onboarding.js"></script>
 </body>
 </html>

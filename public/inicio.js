@@ -88,19 +88,19 @@ function prepararRegistro() {
 }
 
 function prepararLogin() {
-  const inputs = document.querySelectorAll(".input");
-  const boton = document.querySelector(".btn.btn-orange.full");
-  if (!boton || inputs.length < 2) return;
+  const emailInput = document.querySelectorAll(".input")[0];
+  const passInput  = document.querySelectorAll(".input")[1];
+  const boton      = document.getElementById("btn-login");
+  if (!boton || !emailInput || !passInput) return;
+
   boton.addEventListener("click", async (e) => {
     e.preventDefault();
-    const emailInput = inputs[0];
-    const passInput = inputs[1];
-    document.querySelectorAll(".error").forEach(e => e.remove());
+    document.querySelectorAll(".error").forEach(n=>n.remove());
     emailInput.classList.remove("input-error");
     passInput.classList.remove("input-error");
 
     const email = emailInput.value.trim();
-    const pass = passInput.value;
+    const pass  = passInput.value;
 
     let valido = true;
     if (!email || !validarEmail(email)) { mostrarError(emailInput, "Ingresá un email válido"); valido = false; }
@@ -108,23 +108,44 @@ function prepararLogin() {
     if (!valido) return;
 
     try {
-      const respuesta = await fetch(`${DBURL}/login`, {
+      const r = await fetch(`${DBURL}/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ email, password: pass })
       });
-      const datos = await respuesta.json();
-      if (respuesta.ok) {
-        localStorage.setItem("usuario", JSON.stringify(datos));
-        location.href = "mascota.html";
+      const d = await r.json();
+
+      if (r.ok) {
+        localStorage.setItem("usuario", JSON.stringify(d));
+        await irSegunMascotas();
       } else {
-        mostrarError(passInput, datos.error || "Credenciales inválidas");
-      }
-    } catch (e) {
+        mostrarError(passInput,"El usuario o contraseña son incorrectos");
+      }      
+    } catch {
       mostrarError(passInput, "Error de red");
     }
   });
 }
+
+async function tieneMascotas(userId) {
+  try {
+    const r = await fetch(`${DBURL}/mascotas`);
+    const data = await r.json();
+    if (!Array.isArray(data)) return false;
+    return data.some(m => m.usuario_id === userId);
+  } catch {
+    return false;
+  }
+}
+
+async function irSegunMascotas() {
+  let u = null;
+  try { u = JSON.parse(localStorage.getItem("usuario")); } catch {}
+  if (!u || !u.id) { location.href = "login.html"; return; }
+  const hay = await tieneMascotas(u.id);
+  location.href = hay ? "principal.html" : "mascota.html";
+}
+
 
 document.addEventListener("DOMContentLoaded", () => {
   const path = (location.pathname || "").toLowerCase();
