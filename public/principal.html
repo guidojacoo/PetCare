@@ -14,7 +14,7 @@
 
     <div class="camera">
       <img id="camara-stream" 
-           src="http://172.20.10.5:81/stream" 
+           src="http://192.168.0.244:81/stream" 
            style="width:200px; height:200px;border-radius:8px;" 
            alt="Cámara en vivo">
     </div>
@@ -27,7 +27,7 @@
     
     <script>
       function moverServo() {
-        fetch("http://172.20.10.5:8080/servo")   
+        fetch("http://192.168.0.244:8080/servo")   
           .then(r => r.text())
           .then(t => console.log(t));
       }
