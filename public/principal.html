@@ -12,56 +12,27 @@
     <button class="fab fab-gear" aria-label="Ajustes">⚙️</button>
 
 
-    <div class="camera" style="max-width:600px">
+    <div class="camera">
       <img id="camara-stream" 
            src="http://172.20.10.5:81/stream" 
-           style="width:100%; height:auto; object-fit:cover; border-radius:8px;" 
+           style="width:200px; height:200px;border-radius:8px;" 
            alt="Cámara en vivo">
     </div>
     
-    <div style="margin-top:10px">
-      <button onclick="apagarCam()" style="padding:8px 16px;">Apagar cámara</button>
-      <button onclick="prenderCam()" style="padding:8px 16px; margin-left:8px;">Prender cámara</button>
+    <div>
+      <button onclick="moverServo()" style="margin-top:10px; padding:10px 20px; font-size:16px;">
+        Activar Servo
+      </button>
     </div>
     
     <script>
-      const IP = "172.20.10.5";     // tu ESP32-CAM
-      const img = document.getElementById("camara-stream");
-    
-      function apagarCam() {
-        // 1) cortamos el stream del navegador
-        img.src = "";
-        // 2) pedimos apagar la cámara en el ESP32
-        fetch(`http://${IP}:8080/cam/off`).then(r => r.text()).then(console.log);
-      }
-    
-      function prenderCam() {
-        // 1) pedimos prender la cámara
-        fetch(`http://${IP}:8080/cam/on`)
-          .then(r => r.ok ? r.text() : Promise.reject("cam-init-failed"))
-          .then(() => {
-            // 2) restauramos el stream
-            img.src = `http://${IP}:81/stream`;
-          })
-          .catch(console.error);
+      function moverServo() {
+        fetch("http://172.20.10.5:8080/servo")   
+          .then(r => r.text())
+          .then(t => console.log(t));
       }
     </script>
     
-
-
-<div>
-  <button onclick="moverServo()" style="margin-top:10px; padding:10px 20px; font-size:16px;">
-    Activar Servo
-  </button>
-</div>
-
-<script>
-  function moverServo() {
-    fetch("http://172.20.10.5:8080/servo")   
-      .then(r => r.text())
-      .then(t => console.log(t));
-  }
-</script>
 
     <div class="bottom-actions">
       <button class="fab" aria-label="Micrófono silenciado">🔇</button>
