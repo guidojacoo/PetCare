@@ -16,17 +16,35 @@ const char *password = "mlc2009iB";
 // Configuración del servo
 // ===========================
 Servo myServo;
-#define SERVO_PIN 15  //  Cambia si usas otro pin para el servo
+#define SERVO_PIN 14  // Cambia si usas otro pin para el servo
 WebServer server(8080); // Servidor web
 
 void startCameraServer();
 void setupLedFlash();
 
-//  Función que mueve el servo a 90°, espera 2s, y vuelve a 0°
+// ===========================
+// Manejo de CORS
+// ===========================
+void enableCORS() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
+void handleOptions() {
+  enableCORS();
+  server.send(204); // No Content
+}
+
+// ===========================
+// Función que mueve el servo
+// ===========================
 void handleServo() {
   myServo.write(90);
   delay(2000);
   myServo.write(0);
+
+  enableCORS();
   server.send(200, "text/plain", "Servo movido");
 }
 
@@ -108,12 +126,13 @@ void setup() {
   }
   Serial.println("\nWiFi connected");
 
-  //  Inicializar servo
-  myServo.attach(SERVO_PIN);
+  // Inicializar servo
+  myServo.attach(SERVO_PIN, 500, 2400);
   myServo.write(0); // posición inicial
 
-  //  Ruta HTTP para mover el servo
-  server.on("/servo", handleServo);
+  // Rutas HTTP con CORS
+  server.on("/servo", HTTP_GET, handleServo);
+  server.on("/servo", HTTP_OPTIONS, handleOptions); // para preflight CORS
   server.begin();
 
   // Iniciar servidor de cámara
@@ -125,5 +144,5 @@ void setup() {
 }
 
 void loop() {
-  server.handleClient(); //  Para atender las peticiones al servo
+  server.handleClient(); // Para atender las peticiones al servo
 }
