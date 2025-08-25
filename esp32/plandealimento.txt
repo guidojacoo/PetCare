@@ -1,0 +1,90 @@
+#include <WiFi.h>
+#include <WebServer.h>
+#include <Servo.h>
+#include <ArduinoJson.h>
+
+const char* ssid = "TU_SSID";
+const char* password = "TU_PASSWORD";
+
+WebServer server(80);
+Servo servoMotor;
+
+// Variables del plan
+int meals = 0;
+float secondsOpen = 1;          // tiempo que el servo queda abierto
+unsigned long cadencia = 0;     // tiempo entre comidas en milisegundos
+int comidasDadas = 0;
+unsigned long ultimaComida = 0;
+
+// Configuración de horas
+const int rangoHoras = 14;            // 08:00 a 22:00
+const unsigned long rangoSegundos = rangoHoras * 3600UL; // 50400 seg
+const unsigned long nocheSegundos = 10 * 3600UL;         // 22:00 a 08:00 (simula la noche)
+
+void setup() {
+  Serial.begin(115200);
+  servoMotor.attach(12);
+  servoMotor.write(0);
+
+  // Conectar WiFi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi conectado: " + WiFi.localIP().toString());
+
+  // Endpoint para recibir plan desde el frontend
+  server.on("/setPlan", HTTP_POST, [](){
+    server.send(200, "text/plain", "Plan recibido"); // solo respuesta rápida
+  },
+  NULL,
+  [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, data, len);
+    if(!error){
+      meals = doc["meals"];
+      secondsOpen = doc["secondsOpen"];
+      // calcular cadencia en milisegundos
+      cadencia = (rangoSegundos / (meals - 1)) * 1000UL;
+      comidasDadas = 0;
+      ultimaComida = millis();
+      Serial.println("Plan activado:");
+      Serial.println("Comidas por día: " + String(meals));
+      Serial.println("Segundos servo: " + String(secondsOpen));
+      Serial.println("Cadencia entre comidas (ms): " + String(cadencia));
+    } else {
+      Serial.println("Error al recibir JSON");
+    }
+  });
+
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+
+  if(meals > 0){
+    unsigned long ahora = millis();
+
+    // Dar comida si toca
+    if(comidasDadas < meals){
+      if(ahora - ultimaComida >= cadencia || comidasDadas == 0){
+        ultimaComida = ahora;
+        comidasDadas++;
+        Serial.println("Activando comida #" + String(comidasDadas));
+        servoMotor.write(90);                      // abrir
+        delay((unsigned long)(secondsOpen*1000));  // mantener abierto según gramos
+        servoMotor.write(0);                       // cerrar
+      }
+    } 
+    else {
+      // Ya terminó las comidas del día → esperar la noche
+      Serial.println("Día completado. Esperando noche...");
+      delay(nocheSegundos * 1000UL); // espera simulando la noche
+      comidasDadas = 0;
+      ultimaComida = millis();
+      Serial.println("Nuevo día: reiniciando plan");
+    }
+  }
+}

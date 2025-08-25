@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Plan de Comidas - PetCare</title>
+</head>
+<body>
+  <h1>Plan de Comidas - PetCare 🐶</h1>
+
+  <form id="foodForm">
+    <label for="grams">Gramos por comida:</label>
+    <input type="number" id="grams" name="grams" min="10" step="5" required>
+
+    <label for="meals">Cantidad de comidas al día:</label>
+    <select id="meals" name="meals" required>
+      <option value="2">2 comidas</option>
+      <option value="3">3 comidas</option>
+      <option value="4">4 comidas</option>
+    </select>
+
+    <button type="submit">Guardar Plan</button>
+  </form>
+
+  <p id="response"></p>
+
+  <script>
+    document.getElementById("foodForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const grams = parseInt(document.getElementById("grams").value);
+      const meals = parseInt(document.getElementById("meals").value);
+
+      // Cálculo de segundos de servo (ejemplo: 10g = 1 seg)
+      const secondsOpen = grams / 10;
+
+      // Horario base 08:00 a 22:00
+      const startHour = 8;
+      const endHour = 22;
+      const range = (endHour - startHour) * 60; // minutos disponibles
+
+      // Intervalo entre comidas
+      const interval = Math.floor(range / (meals - 1));
+
+      // Armar objeto JSON
+      const data = {
+        grams: grams,
+        meals: meals,
+        secondsOpen: secondsOpen,
+        intervalMinutes: interval
+      };
+
+      // 📌 Mostrar en consola lo que se manda
+      console.log("Datos que se envían al ESP32:", data);
+
+      // Enviar al ESP32
+      try {
+        const res = await fetch("/setPlan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        const msg = await res.text();
+        document.getElementById("response").innerText = "Respuesta: " + msg;
+      } catch (err) {
+        document.getElementById("response").innerText = "Error al enviar datos";
+      }
+    });
+  </script>
+</body>
+</html>
