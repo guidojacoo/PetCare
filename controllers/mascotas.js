@@ -51,3 +51,9 @@ export const HorariosDeMascota = async (req, res) => {
   );
   res.json(r.rows);
 };
+
+export const ListarPorUsuario = async (req, res) => {
+  let r = await query(
+    "SELECT * FROM mascotas WHERE usuario_id = $1 ORDER BY creado_en DESC");
+  res.json(r.rows);
+};

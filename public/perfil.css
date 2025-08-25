@@ -1,0 +1,39 @@
+:root{
+    --orange:#ff7a00; --cyan:#05c2cc; --bg:#0f172a; --text:#ffffff; --muted:#93a3b8;
+    --card:#0f162b; --line:#1f2a44; --danger:#ff4d4f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b1221;color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial}
+  .phone{max-width:420px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#0f162b;border-bottom:1px solid var(--line)}
+  .topbar .back{color:#dbe2f0;text-decoration:none;font-size:22px;line-height:1}
+  .content{padding:16px;display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .user-card{display:flex;gap:12px;align-items:center}
+  .avatar{width:44px;height:44px;display:grid;place-items:center;background:#0b1120;border:1px solid var(--line);border-radius:50%}
+  .title{margin:0;font-size:18px}
+  .subtitle{margin:0 0 10px 0;font-size:16px}
+  .muted{color:var(--muted);margin:2px 0 0 0}
+  
+  .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);background:#0b1120;border-radius:10px}
+  .item .name{font-weight:600}
+  .item .meta{color:#b8c2da;font-size:13px}
+  .item .actions{display:flex;gap:8px}
+  
+  .row{display:flex;gap:10px;align-items:center}
+  .between{justify-content:space-between}
+  
+  .label{display:block;margin:10px 0 6px 0;color:#dbe2f0;font-size:14px}
+  .input, select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b1120;color:#fff}
+  .btn{border:0;border-radius:10px;padding:10px 12px;font-weight:600;cursor:pointer}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:#cdd6f4}
+  .btn-orange{background:var(--orange);color:#111}
+  .btn-danger{background:var(--danger);color:#111}
+  .full{width:100%}
+  
+  .hidden{display:none}
+  .msg{margin-top:8px;font-size:14px}
+  .msg.ok{color:#13d38e}
+  .msg.err{color:#ff6b6b}
+  
