@@ -1,90 +1,119 @@
 #include <WiFi.h>
 #include <WebServer.h>
-#include <Servo.h>
+#include <ESP32Servo.h>
 #include <ArduinoJson.h>
+#include <time.h>
 
+// =================== WiFi ===================
 const char* ssid = "TU_SSID";
 const char* password = "TU_PASSWORD";
 
-WebServer server(80);
+// =================== Servo ===================
 Servo servoMotor;
+#define SERVO_PIN 14
 
-// Variables del plan
+// =================== Web Server ===================
+WebServer server(8080);
+
+// =================== Variables del plan ===================
 int meals = 0;
-float secondsOpen = 1;          // tiempo que el servo queda abierto
-unsigned long cadencia = 0;     // tiempo entre comidas en milisegundos
-int comidasDadas = 0;
-unsigned long ultimaComida = 0;
+float secondsOpen = 1;
+String mealTimes[4];   // máximo 4 horarios
+bool comidasDadas[4];  // para controlar duplicados
 
-// Configuración de horas
-const int rangoHoras = 14;            // 08:00 a 22:00
-const unsigned long rangoSegundos = rangoHoras * 3600UL; // 50400 seg
-const unsigned long nocheSegundos = 10 * 3600UL;         // 22:00 a 08:00 (simula la noche)
+// =================== Configuración NTP ===================
+const char* ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = -10800;  // Argentina GMT-3
+const int daylightOffset_sec = 0;
 
+// =================== Utilidad: obtener hora ===================
+void printLocalTime() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Error obteniendo hora");
+    return;
+  }
+  Serial.println(&timeinfo, "%H:%M:%S");
+}
+
+String getCurrentHour() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    return "";
+  }
+  char buffer[6];
+  strftime(buffer, sizeof(buffer), "%H:%M", &timeinfo);
+  return String(buffer);
+}
+
+// =================== Endpoint ===================
+void handleSetPlan() {
+  if (server.hasArg("plain")) {
+    StaticJsonDocument<300> doc;
+    DeserializationError error = deserializeJson(doc, server.arg("plain"));
+    if (!error) {
+      meals = doc["meals"];
+      secondsOpen = doc["secondsOpen"];
+
+      JsonArray times = doc["times"].as<JsonArray>();
+      for (int i = 0; i < meals; i++) {
+        mealTimes[i] = times[i].as<String>();
+        comidasDadas[i] = false;
+      }
+
+      Serial.println("✅ Plan recibido:");
+      for (int i = 0; i < meals; i++) {
+        Serial.println("Comida " + String(i+1) + " a las " + mealTimes[i]);
+      }
+
+      server.send(200, "text/plain", "Plan recibido con horarios");
+      return;
+    }
+  }
+  server.send(400, "text/plain", "Error al recibir plan");
+}
+
+// =================== Setup ===================
 void setup() {
   Serial.begin(115200);
-  servoMotor.attach(12);
+
+  servoMotor.attach(SERVO_PIN, 500, 2400);
   servoMotor.write(0);
 
-  // Conectar WiFi
   WiFi.begin(ssid, password);
+  Serial.print("Conectando WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println("\nWiFi conectado: " + WiFi.localIP().toString());
 
-  // Endpoint para recibir plan desde el frontend
-  server.on("/setPlan", HTTP_POST, [](){
-    server.send(200, "text/plain", "Plan recibido"); // solo respuesta rápida
-  },
-  NULL,
-  [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-    StaticJsonDocument<200> doc;
-    DeserializationError error = deserializeJson(doc, data, len);
-    if(!error){
-      meals = doc["meals"];
-      secondsOpen = doc["secondsOpen"];
-      // calcular cadencia en milisegundos
-      cadencia = (rangoSegundos / (meals - 1)) * 1000UL;
-      comidasDadas = 0;
-      ultimaComida = millis();
-      Serial.println("Plan activado:");
-      Serial.println("Comidas por día: " + String(meals));
-      Serial.println("Segundos servo: " + String(secondsOpen));
-      Serial.println("Cadencia entre comidas (ms): " + String(cadencia));
-    } else {
-      Serial.println("Error al recibir JSON");
-    }
-  });
+  // Configurar hora NTP
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  printLocalTime();
 
+  // Endpoint
+  server.on("/setPlan", HTTP_POST, handleSetPlan);
   server.begin();
 }
 
+// =================== Loop ===================
 void loop() {
   server.handleClient();
 
-  if(meals > 0){
-    unsigned long ahora = millis();
+  if (meals > 0) {
+    String horaActual = getCurrentHour();
 
-    // Dar comida si toca
-    if(comidasDadas < meals){
-      if(ahora - ultimaComida >= cadencia || comidasDadas == 0){
-        ultimaComida = ahora;
-        comidasDadas++;
-        Serial.println("Activando comida #" + String(comidasDadas));
-        servoMotor.write(90);                      // abrir
-        delay((unsigned long)(secondsOpen*1000));  // mantener abierto según gramos
-        servoMotor.write(0);                       // cerrar
+    for (int i = 0; i < meals; i++) {
+      if (!comidasDadas[i] && horaActual == mealTimes[i]) {
+        comidasDadas[i] = true;
+
+        Serial.println("🍽 Dando comida #" + String(i+1) + " a las " + horaActual);
+
+        servoMotor.write(90);
+        delay((unsigned long)(secondsOpen * 1000));
+        servoMotor.write(0);
       }
-    } 
-    else {
-      // Ya terminó las comidas del día → esperar la noche
-      Serial.println("Día completado. Esperando noche...");
-      delay(nocheSegundos * 1000UL); // espera simulando la noche
-      comidasDadas = 0;
-      ultimaComida = millis();
-      Serial.println("Nuevo día: reiniciando plan");
     }
   }
 }

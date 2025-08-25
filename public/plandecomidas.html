@@ -5,7 +5,7 @@
   <title>Plan de Comidas - PetCare</title>
 </head>
 <body>
-  <h1>Plan de Comidas - PetCare 🐶</h1>
+  <h1>Plan de Comidas - PetCare</h1>
 
   <form id="foodForm">
     <label for="grams">Gramos por comida:</label>
@@ -18,41 +18,57 @@
       <option value="4">4 comidas</option>
     </select>
 
+    <div id="mealTimes"></div>
+
     <button type="submit">Guardar Plan</button>
   </form>
 
   <p id="response"></p>
 
   <script>
+    const mealsSelect = document.getElementById("meals");
+    const mealTimesDiv = document.getElementById("mealTimes");
+
+    // Generar inputs de hora según comidas seleccionadas
+    mealsSelect.addEventListener("change", () => {
+      mealTimesDiv.innerHTML = ""; // limpiar
+      const meals = parseInt(mealsSelect.value);
+
+      for (let i = 0; i < meals; i++) {
+        const label = document.createElement("label");
+        label.textContent = `Hora comida ${i+1}:`;
+
+        const input = document.createElement("input");
+        input.type = "time";
+        input.required = true;
+        input.name = "time" + i;
+
+        mealTimesDiv.appendChild(label);
+        mealTimesDiv.appendChild(input);
+        mealTimesDiv.appendChild(document.createElement("br"));
+      }
+    });
+
+    // Inicializar con 2 comidas por defecto
+    mealsSelect.dispatchEvent(new Event("change"));
+
     document.getElementById("foodForm").addEventListener("submit", async function(e) {
       e.preventDefault();
 
       const grams = parseInt(document.getElementById("grams").value);
-      const meals = parseInt(document.getElementById("meals").value);
+      const meals = parseInt(mealsSelect.value);
 
-      // Cálculo de segundos de servo (ejemplo: 10g = 1 seg)
+      // 10g = 1 seg (ejemplo)
       const secondsOpen = grams / 10;
 
-      // Horario base 08:00 a 22:00
-      const startHour = 8;
-      const endHour = 22;
-      const range = (endHour - startHour) * 60; // minutos disponibles
+      const times = [];
+      const inputs = mealTimesDiv.querySelectorAll("input[type=time]");
+      inputs.forEach(inp => times.push(inp.value));
 
-      // Intervalo entre comidas
-      const interval = Math.floor(range / (meals - 1));
+      const data = { grams, meals, secondsOpen, times };
 
-      // Armar objeto JSON
-      const data = {
-        grams: grams,
-        meals: meals,
-        secondsOpen: secondsOpen,
-        intervalMinutes: interval
-      };
+      console.log("Datos enviados al ESP32:", data);
 
-      // 📌 Mostrar en consola lo que se manda
-      console.log("Datos que se envían al ESP32:", data);
-
-      // Enviar al ESP32
       try {
         const res = await fetch("/setPlan", {
           method: "POST",
