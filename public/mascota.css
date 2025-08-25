@@ -1,12 +1,80 @@
-body { margin:0; font-family:sans-serif; background:#0b1e31; color:white; display:flex; justify-content:center; }
-.phone { width:100%; max-width:400px; min-height:100vh; padding:20px; display:flex; flex-direction:column; gap:20px; background:#081a2b; }
-.topbar { display:flex; align-items:center; gap:10px; padding:10px; background:#0f2a43; border-radius:8px; }
-.back { color:white; text-decoration:none; font-size:18px; }
-.avatar-wrap { position:relative; width:120px; height:120px; margin:20px auto; }
-.avatar { width:100%; height:100%; border-radius:50%; background:#18aee2; }
-.plus { position:absolute; right:0; bottom:0; width:30px; height:30px; border-radius:50%; background:white; color:black; display:flex; align-items:center; justify-content:center; }
-.petname { text-align:center; }
-.underline-input input { width:100%; padding:10px; border:none; border-bottom:2px solid #4a6783; background:transparent; color:white; }
-.btn { display:block; text-align:center; margin-top:10px; padding:12px; border-radius:8px; font-weight:700; text-decoration:none; }
-.btn-orange { background:#f7a51a; color:#1b1302; }
-.btn-cyan { background:#02c6cc; color:#07262c; }
+:root {
+    --orange: #ff7a00;
+    --cyan: #05c2cc;
+    --bg: #0f172a;
+    --text: #ffffff;
+  }
+  
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  
+  .phone {
+    max-width: 420px;
+    margin: auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .topbar {
+    padding: 14px;
+    background: #0f162b;
+    border-bottom: 1px solid #1f2a44;
+    text-align: center;
+  }
+  
+  .content {
+    padding: 20px;
+  }
+  
+  .step {
+    display: none;
+  }
+  .step.active {
+    display: block;
+  }
+  
+  input {
+    width: 100%;
+    margin: 10px 0;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #1f2a44;
+    background: #0b1120;
+    color: #fff;
+  }
+  
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--orange);
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .chips {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+  }
+  
+  .chip {
+    padding: 10px 14px;
+    border-radius: 20px;
+    background: #0f162b;
+    border: 1px solid #1f2a44;
+    cursor: pointer;
+    color: #fff;
+  }
+  .chip.active {
+    outline: 2px solid var(--cyan);
+  }
+  

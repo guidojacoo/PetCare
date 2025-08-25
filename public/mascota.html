@@ -2,37 +2,65 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PetCare • Añadir mascota</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PetCare • Nueva Mascota</title>
   <link rel="stylesheet" href="mascota.css">
 </head>
 <body>
   <main class="phone">
-    <header class="topbar between">
-      <a class="back" href="registro.html" aria-label="Volver">&lt;</a>
-      <span>Añadir mascota</span>
-      <span></span>
+    <header class="topbar">
+      <h1 class="title">Crear Mascota</h1>
     </header>
 
     <section class="content">
-      <div class="avatar-wrap">
-        <div class="avatar"></div>
-        <div class="plus">+</div>
+
+      <!-- Paso 1 -->
+      <div class="step active" id="step-1">
+        <h2>¿Cómo se llama tu perro?</h2>
+        <input type="text" id="nombre" placeholder="Ej: Firulais">
+        <button class="btn next" data-next="2">Siguiente</button>
       </div>
 
-      <h3 class="petname">Nombre de mi mascota</h3>
-
-      <div class="underline-input">
-        <input id="nombre-mascota" type="text" placeholder="Nombre de mi mascota...">
+      <!-- Paso 2 -->
+      <div class="step" id="step-2">
+        <h2>Sexo</h2>
+        <div class="chips">
+          <button class="chip" data-sexo="Macho">Macho</button>
+          <button class="chip" data-sexo="Hembra">Hembra</button>
+        </div>
+        <button class="btn next" data-next="3">Siguiente</button>
       </div>
 
-      <div class="content" style="gap:10px;">
-        <button class="btn btn-orange full" id="btn-mascota-next" type="button">Siguiente</button>
-        <a class="btn btn-cyan full" href="index.html">Salir</a>
+      <!-- Paso 3 -->
+      <div class="step" id="step-3">
+        <h2>Peso</h2>
+        <div class="chips">
+          <button class="chip" data-peso="5">5 kg</button>
+          <button class="chip" data-peso="10">10 kg</button>
+          <button class="chip" data-peso="20">20 kg</button>
+          <button class="chip" data-peso="40">40 kg</button>
+        </div>
+        <input type="number" id="peso" placeholder="Otro peso (kg)">
+        <button class="btn next" data-next="4">Siguiente</button>
       </div>
+
+      <!-- Paso 4 -->
+      <div class="step" id="step-4">
+        <h2>Raza</h2>
+        <input type="text" id="raza" placeholder="Ej: Labrador">
+        <button class="btn next" data-next="5">Siguiente</button>
+      </div>
+
+      <!-- Paso 5 -->
+      <div class="step" id="step-5">
+        <h2>Fecha de Nacimiento</h2>
+        <input type="date" id="fecha">
+        <button class="btn finish">Finalizar</button>
+      </div>
+
     </section>
   </main>
 
-  <script src="onboarding.js"></script>
+  <script src="mascota.js"></script>
 </body>
 </html>

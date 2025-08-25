@@ -12,19 +12,25 @@ export const Obtener = async (req, res) => {
 };
 
 export const Crear = async (req, res) => {
-  let { nombre, raza, peso_kg, fecha_nacimiento, usuario_id } = req.body;
+  let { nombre, sexo, raza, peso_kg, fecha_nacimiento, usuario_id } = req.body;
   let r = await query(
-    "INSERT INTO mascotas(nombre, raza, peso_kg, fecha_nacimiento, usuario_id) VALUES($1,$2,$3,$4,$5) RETURNING *",
-    [nombre, raza, peso_kg, fecha_nacimiento, usuario_id]
+    "INSERT INTO mascotas(nombre, sexo, raza, peso_kg, fecha_nacimiento, usuario_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",
+    [nombre, sexo, raza, peso_kg, fecha_nacimiento, usuario_id]
   );
   res.status(201).json(r.rows[0]);
 };
 
 export const Actualizar = async (req, res) => {
-  let { nombre, raza, peso_kg, fecha_nacimiento } = req.body;
+  let { nombre, sexo, raza, peso_kg, fecha_nacimiento } = req.body;
   let r = await query(
-    "UPDATE mascotas SET nombre=$2, raza=$3, peso_kg=$4, fecha_nacimiento=$5 WHERE id=$1 RETURNING *",
-    [req.params.id, nombre, raza, peso_kg, fecha_nacimiento]
+    `UPDATE mascotas 
+     SET nombre = COALESCE($2,nombre),
+         sexo = COALESCE($3,sexo),
+         raza = COALESCE($4,raza),
+         peso_kg = COALESCE($5,peso_kg),
+         fecha_nacimiento = COALESCE($6,fecha_nacimiento)
+     WHERE id=$1 RETURNING *`,
+    [req.params.id, nombre, sexo, raza, peso_kg, fecha_nacimiento]
   );
   if (!r.rowCount) return res.status(404).json({ error: "No encontrada" });
   res.json(r.rows[0]);

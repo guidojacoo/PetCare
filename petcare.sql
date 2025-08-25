@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 CREATE TABLE mascotas (
   id SERIAL PRIMARY KEY,
   nombre VARCHAR(80) NOT NULL,
+  sexo VARCHAR(10) NOT NULL,
   raza VARCHAR(80),
   peso_kg NUMERIC(5,2),
   fecha_nacimiento DATE,
