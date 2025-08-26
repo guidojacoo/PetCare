@@ -1,7 +1,8 @@
 BEGIN;
 
 -- Eliminar tablas si ya existen
-DROP TABLE IF EXISTS horarios CASCADE;
+DROP TABLE IF EXISTS comidas_programadas CASCADE;
+DROP TABLE IF EXISTS dispensador_config CASCADE;
 DROP TABLE IF EXISTS mascotas CASCADE;
 DROP TABLE IF EXISTS usuarios CASCADE;
 
@@ -23,46 +24,29 @@ CREATE TABLE mascotas (
   raza VARCHAR(80),
   peso_kg NUMERIC(5,2),
   fecha_nacimiento DATE,
-  creado_en TIMESTAMPTZ DEFAULT now()
+  creado_en TIMESTAMPTZ DEFAULT now(),
+  usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
--- Datos de ejemplo para mascotas
-INSERT INTO mascotas (id, nombre, especie, raza, peso_kg, fecha_nacimiento) VALUES
-(1, 'Calcu', 'Perro', 'Labrador', 25.5, '2019-04-15'),
-(2, 'Zahir', 'Gato', 'Siames', 4.3, '2021-08-10');
+-- Tabla: configuracion de dispensador
+CREATE TABLE dispensador_config (
+  mascota_id INTEGER PRIMARY KEY REFERENCES mascotas(id) ON DELETE CASCADE,
+  dias_activos VARCHAR(14) NOT NULL DEFAULT '',
+  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT chk_dias_activos_formato CHECK (dias_activos ~ '^[1-7]*$')
+);
 
--- Tabla: horarios
-CREATE TABLE horarios (
+-- Tabla: comidas programadas
+CREATE TABLE comidas_programadas (
   id SERIAL PRIMARY KEY,
-  mascota_id INTEGER NOT NULL,
-  hora_local TIME NOT NULL, 
+  mascota_id INTEGER NOT NULL REFERENCES mascotas(id) ON DELETE CASCADE,
+  dia_semana SMALLINT NOT NULL,
+  hora_local TIME NOT NULL,
   gramos INTEGER NOT NULL,
-  dias VARCHAR(14) NOT NULL,
-  activo BOOLEAN DEFAULT true,
-  creado_en TIMESTAMPTZ DEFAULT now()
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT chk_dia_semana CHECK (dia_semana BETWEEN 1 AND 7),
+  CONSTRAINT chk_gramos_pos CHECK (gramos > 0),
+  CONSTRAINT uq_mascota_dia_hora UNIQUE (mascota_id, dia_semana, hora_local)
 );
-
--- Datos de ejemplo para horarios
-INSERT INTO horarios (id, mascota_id, hora_local, gramos, dias, activo) VALUES
-(1, 1, '09:00:00', 200, '1234567', true),
-(2, 1, '18:00:00', 250, '1234567', true),
-(3, 2, '08:30:00', 50, '1234567', true);
-
--- Secuencias para IDs
-SELECT setval('mascotas_id_seq', (SELECT MAX(id) FROM mascotas));
-SELECT setval('horarios_id_seq', (SELECT MAX(id) FROM horarios));
-
--- Claves foráneas
-ALTER TABLE horarios
-  ADD CONSTRAINT fk_horarios_mascota
-  FOREIGN KEY (mascota_id) REFERENCES mascotas(id);
-  
-ALTER TABLE mascotas
-  ADD COLUMN IF NOT EXISTS usuario_id INT;
-
-ALTER TABLE mascotas
-  ADD CONSTRAINT fk_mascotas_usuario
-  FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
-  ON DELETE CASCADE;
 
 COMMIT;
