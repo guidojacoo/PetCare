@@ -4,116 +4,269 @@
 #include <ArduinoJson.h>
 #include <time.h>
 
-// =================== WiFi ===================
-const char* ssid = "TU_SSID";
+// ===========================
+// WiFi
+// ===========================
+const char* ssid     = "TU_SSID";
 const char* password = "TU_PASSWORD";
 
-// =================== Servo ===================
+// ===========================
+// Servo
+// ===========================
 Servo servoMotor;
 #define SERVO_PIN 14
 
-// =================== Web Server ===================
+// ===========================
+// Web Server
+// ===========================
 WebServer server(8080);
 
-// =================== Variables del plan ===================
-int meals = 0;
-float secondsOpen = 1;
-String mealTimes[4];   // máximo 4 horarios
-bool comidasDadas[4];  // para controlar duplicados
+// ===========================
+// Plan semanal
+// ===========================
+// Máximo de horarios por día (ajustá si querés)
+#define MAX_MEALS_PER_DAY 12
 
-// =================== Configuración NTP ===================
+// Guardamos horas como "HH:MM"
+String dayTimes[7][MAX_MEALS_PER_DAY];
+int    dayCount[7] = {0,0,0,0,0,0,0};
+bool   fed[7][MAX_MEALS_PER_DAY];  // si ya se dio esa comida
+float  secondsOpen = 1.0;
+
+// Para detectar cambio de día
+int lastWday = -1;
+
+// ===========================
+// NTP (hora/día)
+// ===========================
 const char* ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = -10800;  // Argentina GMT-3
 const int daylightOffset_sec = 0;
 
-// =================== Utilidad: obtener hora ===================
-void printLocalTime() {
+String getCurrentHHMM() {
   struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    Serial.println("Error obteniendo hora");
+  if (!getLocalTime(&timeinfo)) return "";
+  char buf[6];
+  strftime(buf, sizeof(buf), "%H:%M", &timeinfo);
+  return String(buf);
+}
+
+// tm_wday: 0=Domingo, 1=Lunes, ... 6=Sábado
+int getWday() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) return -1;
+  return timeinfo.tm_wday;
+}
+
+// ===========================
+// CORS
+// ===========================
+void enableCORS() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+void handleOptions() {
+  enableCORS();
+  server.send(204);
+}
+
+// ===========================
+// Utilidades
+// ===========================
+void resetFedForDay(int wday) {
+  if (wday < 0 || wday > 6) return;
+  for (int i = 0; i < dayCount[wday]; i++) {
+    fed[wday][i] = false;
+  }
+}
+
+void resetAllFed() {
+  for (int d = 0; d < 7; d++) resetFedForDay(d);
+}
+
+bool isValidHHMM(const String& s) {
+  if (s.length() != 5) return false;
+  if (s.charAt(2) != ':') return false;
+  int hh = s.substring(0,2).toInt();
+  int mm = s.substring(3,5).toInt();
+  return (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59);
+}
+
+// ===========================
+// Endpoint: /setPlan  (POST)
+// body: { "secondsOpen": <float>, "weekplan": [ [..lunes..], [..martes..], ..., [..domingo..] ] }
+// NOTA: El orden que llega es Lunes..Domingo
+// Internamente convertimos a 0=Domingo..6=Sábado para comparar con tm_wday.
+// ===========================
+void handleSetPlan() {
+  if (!server.hasArg("plain")) {
+    enableCORS();
+    server.send(400, "text/plain", "Falta cuerpo JSON");
     return;
   }
-  Serial.println(&timeinfo, "%H:%M:%S");
-}
 
-String getCurrentHour() {
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    return "";
+  StaticJsonDocument<1500> doc; // tamaño suficiente para listas
+  DeserializationError err = deserializeJson(doc, server.arg("plain"));
+  if (err) {
+    enableCORS();
+    server.send(400, "text/plain", "JSON invalido");
+    return;
   }
-  char buffer[6];
-  strftime(buffer, sizeof(buffer), "%H:%M", &timeinfo);
-  return String(buffer);
-}
 
-// =================== Endpoint ===================
-void handleSetPlan() {
-  if (server.hasArg("plain")) {
-    StaticJsonDocument<300> doc;
-    DeserializationError error = deserializeJson(doc, server.arg("plain"));
-    if (!error) {
-      meals = doc["meals"];
-      secondsOpen = doc["secondsOpen"];
+  if (!doc.containsKey("secondsOpen") || !doc.containsKey("weekplan")) {
+    enableCORS();
+    server.send(400, "text/plain", "Campos requeridos: secondsOpen, weekplan");
+    return;
+  }
 
-      JsonArray times = doc["times"].as<JsonArray>();
-      for (int i = 0; i < meals; i++) {
-        mealTimes[i] = times[i].as<String>();
-        comidasDadas[i] = false;
+  secondsOpen = doc["secondsOpen"].as<float>();
+
+  // weekplan llega como 7 arrays: 0=Lunes .. 6=Domingo (ISO)
+  JsonArray week = doc["weekplan"].as<JsonArray>();
+  if (week.size() != 7) {
+    enableCORS();
+    server.send(400, "text/plain", "weekplan debe tener 7 elementos");
+    return;
+  }
+
+  // Limpio
+  for (int d = 0; d < 7; d++) {
+    dayCount[d] = 0;
+  }
+
+  // Mapeo: ISO (Lun..Dom) -> tm_wday (Dom..Sab)
+  // ISO index -> tm_wday:
+  //   Lunes(0) -> 1
+  //   Martes(1) -> 2
+  //   Miércoles(2) -> 3
+  //   Jueves(3) -> 4
+  //   Viernes(4) -> 5
+  //   Sábado(5) -> 6
+  //   Domingo(6) -> 0
+  auto isoToWday = [](int iso)->int {
+    if (iso == 6) return 0;     // Domingo
+    return iso + 1;             // Lunes..Sábado -> 1..6
+  };
+
+  for (int iso = 0; iso < 7; iso++) {
+    int wday = isoToWday(iso);
+    JsonArray times = week[iso].as<JsonArray>();
+    int idx = 0;
+    for (JsonVariant v : times) {
+      if (idx >= MAX_MEALS_PER_DAY) break;
+      String t = v.as<String>();
+      t.trim();
+      if (isValidHHMM(t)) {
+        dayTimes[wday][idx] = t;
+        idx++;
       }
-
-      Serial.println("✅ Plan recibido:");
-      for (int i = 0; i < meals; i++) {
-        Serial.println("Comida " + String(i+1) + " a las " + mealTimes[i]);
-      }
-
-      server.send(200, "text/plain", "Plan recibido con horarios");
-      return;
     }
+    dayCount[wday] = idx;
   }
-  server.send(400, "text/plain", "Error al recibir plan");
+
+  resetAllFed();
+
+  // Log
+  Serial.println("=== Plan semanal recibido ===");
+  Serial.printf("secondsOpen: %.2f s\n", secondsOpen);
+  for (int d = 0; d < 7; d++) {
+    Serial.printf("Dia %d (tm_wday): ", d);
+    for (int i = 0; i < dayCount[d]; i++) {
+      Serial.print(dayTimes[d][i]);
+      if (i < dayCount[d]-1) Serial.print(", ");
+    }
+    Serial.println();
+  }
+
+  enableCORS();
+  server.send(200, "text/plain", "Plan semanal cargado");
 }
 
-// =================== Setup ===================
+// ===========================
+// Setup
+// ===========================
 void setup() {
   Serial.begin(115200);
 
+  // Servo
   servoMotor.attach(SERVO_PIN, 500, 2400);
   servoMotor.write(0);
 
+  // WiFi
   WiFi.begin(ssid, password);
   Serial.print("Conectando WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nWiFi conectado: " + WiFi.localIP().toString());
+  Serial.println("\nWiFi OK: " + WiFi.localIP().toString());
 
-  // Configurar hora NTP
+  // Hora NTP
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  printLocalTime();
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    lastWday = timeinfo.tm_wday;
+    Serial.printf("Hora inicial: %02d:%02d  wday=%d\n", timeinfo.tm_hour, timeinfo.tm_min, lastWday);
+  } else {
+    Serial.println("No se pudo obtener hora inicial (NTP)");
+  }
 
-  // Endpoint
+  // Endpoints
   server.on("/setPlan", HTTP_POST, handleSetPlan);
+  server.on("/setPlan", HTTP_OPTIONS, handleOptions);
+
   server.begin();
+
+  // Estado inicial: sin comidas dadas
+  resetAllFed();
 }
 
-// =================== Loop ===================
+// ===========================
+// Loop
+// ===========================
+unsigned long lastCheck = 0;
+const unsigned long CHECK_EVERY_MS = 1000; // chequeo cada 1s
+
 void loop() {
   server.handleClient();
 
-  if (meals > 0) {
-    String horaActual = getCurrentHour();
+  // Chequeo periódico
+  unsigned long now = millis();
+  if (now - lastCheck < CHECK_EVERY_MS) return;
+  lastCheck = now;
 
-    for (int i = 0; i < meals; i++) {
-      if (!comidasDadas[i] && horaActual == mealTimes[i]) {
-        comidasDadas[i] = true;
+  // Obtener hora/día actual
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    // Si no hay hora, no alimentamos
+    return;
+  }
 
-        Serial.println("🍽 Dando comida #" + String(i+1) + " a las " + horaActual);
+  int wday = timeinfo.tm_wday; // 0=Domingo..6=Sábado
+  // Cambio de día → limpiar "fed" para el nuevo día
+  if (wday != lastWday) {
+    resetFedForDay(wday);
+    lastWday = wday;
+    Serial.printf("Cambio de dia: wday=%d, reset flags\n", wday);
+  }
 
-        servoMotor.write(90);
-        delay((unsigned long)(secondsOpen * 1000));
-        servoMotor.write(0);
-      }
+  // Formato HH:MM actual
+  char hmbuf[6];
+  strftime(hmbuf, sizeof(hmbuf), "%H:%M", &timeinfo);
+  String nowHHMM = String(hmbuf);
+
+  // ¿Hay plan para este día?
+  int count = dayCount[wday];
+  for (int i = 0; i < count; i++) {
+    if (!fed[wday][i] && nowHHMM == dayTimes[wday][i]) {
+      // Disparamos servo una sola vez por horario
+      fed[wday][i] = true;
+      Serial.printf("Alimentando (wday=%d) a las %s\n", wday, dayTimes[wday][i].c_str());
+
+      servoMotor.write(90); // abrir
+      delay((unsigned long)(secondsOpen * 1000));
+      servoMotor.write(0);  // cerrar
     }
   }
 }

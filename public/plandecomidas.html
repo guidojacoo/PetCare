@@ -2,72 +2,71 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Plan de Comidas - PetCare</title>
+  <title>Plan Semanal - PetCare</title>
 </head>
 <body>
-  <h1>Plan de Comidas - PetCare</h1>
+  <h1>Plan Semanal - PetCare</h1>
 
-  <form id="foodForm">
+  <form id="weekForm">
     <label for="grams">Gramos por comida:</label>
     <input type="number" id="grams" name="grams" min="10" step="5" required>
 
-    <label for="meals">Cantidad de comidas al día:</label>
-    <select id="meals" name="meals" required>
-      <option value="2">2 comidas</option>
-      <option value="3">3 comidas</option>
-      <option value="4">4 comidas</option>
-    </select>
+    <p>Ingresá horarios por día en formato HH:MM separados por coma. Ej: <code>08:00, 13:30, 20:00</code></p>
 
-    <div id="mealTimes"></div>
+    <label>Lunes:</label>
+    <input type="text" id="mon" placeholder="08:00, 20:00">
 
-    <button type="submit">Guardar Plan</button>
+    <label>Martes:</label>
+    <input type="text" id="tue" placeholder="08:00, 20:00">
+
+    <label>Miércoles:</label>
+    <input type="text" id="wed" placeholder="08:00, 20:00">
+
+    <label>Jueves:</label>
+    <input type="text" id="thu" placeholder="08:00, 20:00">
+
+    <label>Viernes:</label>
+    <input type="text" id="fri" placeholder="08:00, 20:00">
+
+    <label>Sábado:</label>
+    <input type="text" id="sat" placeholder="09:00">
+
+    <label>Domingo:</label>
+    <input type="text" id="sun" placeholder="09:00">
+
+    <button type="submit">Guardar Plan Semanal</button>
   </form>
 
   <p id="response"></p>
 
   <script>
-    const mealsSelect = document.getElementById("meals");
-    const mealTimesDiv = document.getElementById("mealTimes");
+    function parseTimes(text) {
+      if (!text) return [];
+      return text.split(",")
+                 .map(s => s.trim())
+                 .filter(s => /^\d{2}:\d{2}$/.test(s));
+    }
 
-    // Generar inputs de hora según comidas seleccionadas
-    mealsSelect.addEventListener("change", () => {
-      mealTimesDiv.innerHTML = ""; // limpiar
-      const meals = parseInt(mealsSelect.value);
-
-      for (let i = 0; i < meals; i++) {
-        const label = document.createElement("label");
-        label.textContent = `Hora comida ${i+1}:`;
-
-        const input = document.createElement("input");
-        input.type = "time";
-        input.required = true;
-        input.name = "time" + i;
-
-        mealTimesDiv.appendChild(label);
-        mealTimesDiv.appendChild(input);
-        mealTimesDiv.appendChild(document.createElement("br"));
-      }
-    });
-
-    // Inicializar con 2 comidas por defecto
-    mealsSelect.dispatchEvent(new Event("change"));
-
-    document.getElementById("foodForm").addEventListener("submit", async function(e) {
+    document.getElementById("weekForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const grams = parseInt(document.getElementById("grams").value);
-      const meals = parseInt(mealsSelect.value);
-
-      // 10g = 1 seg (ejemplo)
       const secondsOpen = grams / 10;
 
-      const times = [];
-      const inputs = mealTimesDiv.querySelectorAll("input[type=time]");
-      inputs.forEach(inp => times.push(inp.value));
+      // Orden: Lunes..Domingo (ISO-8601 1..7)
+      const weekplan = [
+        parseTimes(document.getElementById("mon").value),
+        parseTimes(document.getElementById("tue").value),
+        parseTimes(document.getElementById("wed").value),
+        parseTimes(document.getElementById("thu").value),
+        parseTimes(document.getElementById("fri").value),
+        parseTimes(document.getElementById("sat").value),
+        parseTimes(document.getElementById("sun").value),
+      ];
 
-      const data = { grams, meals, secondsOpen, times };
+      const data = { secondsOpen, weekplan };
 
-      console.log("Datos enviados al ESP32:", data);
+      console.log("Plan semanal enviado:", data);
 
       try {
         const res = await fetch("/setPlan", {
