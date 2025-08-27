@@ -3,27 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tutorial 1</title>
+  <title>Patalla principal</title>
   <link rel="stylesheet" href="principal.css">
 </head>
 <body>
 
   <main class="phone">
-  <a href="perfil.html" class="btn-config" aria-label="Configuración">⚙</a>
+    <header class="top">
+      <button class="btn btn-gear" aria-label="Ajustes">⚙️</button>
+      <div class="dot"></div>
+    </header>
 
-
-    <div class="camera">
+    <section class="camera">
       <img id="camara-stream" 
            src="http://192.168.0.244:81/stream" 
            style="width:200px; height:200px;border-radius:8px;" 
            alt="Cámara en vivo">
-    </div>
+   <div class="camera-overlay">Pantalla conectada<br>con la camara</div>
+  </section>
     
-    <div>
-      <button onclick="moverServo()" style="margin-top:10px; padding:10px 20px; font-size:16px;">
-        Activar Servo
-      </button>
-    </div>
+    
     
     <script>
       function moverServo() {
@@ -36,7 +35,7 @@
 
     <div class="bottom-actions">
       <button class="fab" aria-label="Micrófono silenciado">🔇</button>
-      <button class="fab" aria-label="Premio / Huella">🐾</button>
+      <button onclick="moverServo()"class="fab"> 🐾 </button>
       <button class="fab" aria-label="Tomar foto">📸</button>
     </div>
   </main>
