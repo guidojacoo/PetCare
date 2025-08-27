@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<title>plan semanal simple - petcare</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+	<style>
+		:root {
+			--bg: #0f0f10;
+			--card: #17181a;
+			--muted: #8b8f98;
+			--text: #e8e9eb;
+			--accent: #2dd4bf;
+			--danger: #ef4444;
+			--ok: #22c55e;
+		}
+
+		* { box-sizing: border-box; }
+
+		html, body {
+			margin: 0;
+			padding: 0;
+			background: var(--bg);
+			color: var(--text);
+			font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial;
+		}
+
+		.wrap {
+			max-width: 640px;
+			margin: 0 auto;
+			padding: 16px;
+		}
+
+		.title {
+			font-size: 22px;
+			font-weight: 600;
+			text-align: center;
+			margin: 8px 0 14px;
+		}
+
+		.card {
+			background: var(--card);
+			border: 1px solid #222326;
+			border-radius: 16px;
+			padding: 14px;
+		}
+
+		.label {
+			display: block;
+			font-size: 14px;
+			margin: 10px 0 6px;
+		}
+
+		.input,
+		.select {
+			width: 100%;
+			background: #111214;
+			color: var(--text);
+			border: 1px solid #24262a;
+			border-radius: 12px;
+			padding: 14px 12px;
+			font-size: 16px;
+			outline: none;
+		}
+
+		.btn {
+			width: 100%;
+			padding: 14px;
+			border-radius: 12px;
+			border: 1px solid #2a2e33;
+			background: #141517;
+			color: #e8e9eb;
+			font-size: 16px;
+			cursor: pointer;
+			margin-top: 10px;
+		}
+
+		.btn.primary {
+			background: var(--accent);
+			color: #06201c;
+			border-color: #1a6a5f;
+		}
+
+		.hint {
+			font-size: 12px;
+			color: var(--muted);
+			margin-top: 6px;
+		}
+
+		.box {
+			background: #111214;
+			border: 1px solid #24262a;
+			border-radius: 12px;
+			padding: 12px;
+			margin-top: 10px;
+		}
+
+		.status {
+			font-size: 13px;
+			margin-top: 8px;
+			text-align: center;
+		}
+
+		.ok { color: var(--ok); }
+		.err { color: var(--danger); }
+	</style>
+</head>
+
+<body>
+	<div class="wrap">
+		<h1 class="title">plan semanal - petcare</h1>
+
+		<div class="card">
+			<span class="label">tu mascota</span>
+			<select id="selMascota" class="select" disabled></select>
+			<div id="msgMascota" class="hint"></div>
+
+			<span class="label">gramos por comida</span>
+			<input
+				id="grams"
+				class="input"
+				type="number"
+				min="10"
+				step="5"
+				inputmode="numeric"
+				placeholder="ej: 200"
+			>
+
+			<div class="box">
+				<span class="label">horarios para todos los dias</span>
+				<input
+					id="allTimes"
+					class="input"
+					type="text"
+					inputmode="numeric"
+					placeholder="08:00, 13:30, 20:00"
+				>
+				<div class="hint">formato hh:mm separados por coma</div>
+			</div>
+
+			<div class="box">
+				<span class="label">resumen</span>
+				<div id="resumeText" class="hint">sin horarios</div>
+			</div>
+
+			<button id="btnVer" class="btn">ver resumen</button>
+			<button id="btnGuardar" class="btn primary">guardar plan semanal</button>
+			<div id="response" class="status"></div>
+		</div>
+	</div>
+
+	<script>
+  const API = "http://localhost:3000";
+
+  function parseTimes(txt) {
+    if (!txt) return [];
+    return txt.split(",").map(s => s.trim()).filter(s => /^\d{2}:\d{2}$/.test(s));
+  }
+
+  function dayName(n) {
+    return ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"][n % 7];
+  }
+
+  function renderResumen(arr) {
+    const lines = [];
+    for (let d = 1; d <= 7; d++) {
+      lines.push(`${dayName(d)}: ${arr.length ? arr.join(", ") : "sin horarios"}`);
+    }
+    document.getElementById("resumeText").innerHTML = lines.join("<br>");
+  }
+
+  function getUserId() {
+    try {
+      const u = JSON.parse(localStorage.getItem("usuario"));
+      return u && u.id ? Number(u.id) : 0;
+    } catch { return 0; }
+  }
+
+  let mascota_id = 0;
+
+  async function cargarMascota() {
+    const uid = getUserId();
+    const sel = document.getElementById("selMascota");
+    const msg = document.getElementById("msgMascota");
+
+    if (!uid) {
+      sel.innerHTML = "<option value=''>sin usuario</option>";
+      msg.textContent = "iniciá sesión";
+      return;
+    }
+
+    try {
+      const r = await fetch(`${API}/db/mismascotas/${encodeURIComponent(uid)}`);
+      const list = await r.json();
+      sel.innerHTML = "";
+
+      if (Array.isArray(list) && list.length > 0) {
+        const m = list[0];
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = m.nombre;
+        sel.appendChild(opt);
+        mascota_id = Number(m.id);
+        msg.textContent = "";
+      } else {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "sin mascotas";
+        sel.appendChild(opt);
+        msg.textContent = "no hay mascotas";
+      }
+    } catch (e) {
+      sel.innerHTML = "<option value=''>error</option>";
+      msg.textContent = "error al cargar mascotas";
+    }
+  }
+
+  document.getElementById("btnVer").addEventListener("click", () => {
+    const arr = parseTimes(document.getElementById("allTimes").value);
+    renderResumen(arr);
+  });
+
+  document.getElementById("btnGuardar").addEventListener("click", async () => {
+    const grams = parseInt(document.getElementById("grams").value || "0", 10);
+    const resp = document.getElementById("response");
+
+    if (!mascota_id) { resp.innerHTML = "<span class='err'>no hay mascota</span>"; return; }
+    if (!grams || grams < 10) { resp.innerHTML = "<span class='err'>gramos inválidos</span>"; return; }
+
+    const arr = parseTimes(document.getElementById("allTimes").value);
+    if (arr.length === 0) { resp.innerHTML = "<span class='err'>agregá horarios</span>"; return; }
+
+    // mismo horario todos los días
+    const week = Array.from({length:7}, () => arr.slice(0));
+
+    const payload = {
+      mascota_id,
+      secondsOpen: grams / 10,   // tu backend lo convierte a gramos
+      weekplan: week
+    };
+
+    try {
+      const r = await fetch(`${API}/db/plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const d = await r.json(); // <- el backend responde JSON
+      if (!r.ok) throw new Error(d.error || "Error");
+
+      resp.innerHTML = "<span class='ok'>guardado ✔</span>";
+    } catch (e) {
+      resp.innerHTML = `<span class='err'>${e.message || "error al enviar"}</span>`;
+    }
+  });
+
+  cargarMascota();
+</script>
+</body>
+</html>

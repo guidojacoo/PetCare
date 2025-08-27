@@ -49,4 +49,7 @@ CREATE TABLE comidas_programadas (
   CONSTRAINT uq_mascota_dia_hora UNIQUE (mascota_id, dia_semana, hora_local)
 );
 
+CREATE INDEX IF NOT EXISTS idx_comidas_mascota ON comidas_programadas (mascota_id);
+CREATE INDEX IF NOT EXISTS idx_comidas_dia ON comidas_programadas (dia_semana);
+
 COMMIT;

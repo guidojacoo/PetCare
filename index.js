@@ -5,7 +5,8 @@ import express from "express";
 import cors from "cors";
 import * as mascotas from "./controllers/mascotas.js";
 import * as horarios from "./controllers/horarios.js";
-import * as usuarios from "./controllers/usuarios.js"
+import * as usuarios from "./controllers/usuarios.js";
+import * as planes from "./controllers/planes.js";
 
 let app = express();
 app.use(cors());
@@ -22,11 +23,11 @@ app.put("/mascotas/:id", mascotas.Actualizar)
 app.delete("/mascotas/:id", mascotas.Eliminar)
 app.get("/mascotas/:id/horarios", mascotas.HorariosDeMascota)
 
-// Rutas Horarios
-app.get("/horarios", horarios.Listar)
-app.post("/horarios", horarios.Crear)
-app.put("/horarios/:id", horarios.Actualizar)
-app.delete("/horarios/:id", horarios.Eliminar)
+// Rutas Planes
+app.post("/db/plan", planes.GuardarPlanDB);
+app.get("/db/plan/:id", planes.ObtenerPlanDB);             
+app.get("/db/mismascotas/:id", planes.MisMascotasDB);  
+app.get("/db/planes", planes.Listar);  
 
 // Rutas Usuarios
 app.get("/usuarios", usuarios.Listar)
