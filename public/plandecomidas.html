@@ -7,31 +7,44 @@
 <body>
   <h1>Plan Semanal - PetCare</h1>
 
+  <!-- Conexión -->
+  <form id="connForm">
+    <label for="ip">IP del ESP32 (sin http, sin /):</label>
+    <input type="text" id="ip" placeholder="172.20.10.5" required>
+    <label for="port">Puerto:</label>
+    <input type="number" id="port" value="8080" min="1" max="65535" required>
+    <button type="submit">Guardar conexión</button>
+    <button type="button" id="goTable">Ver tabla de comidas efectuadas</button>
+  </form>
+
+  <hr>
+
+  <!-- Plan semanal -->
   <form id="weekForm">
     <label for="grams">Gramos por comida:</label>
     <input type="number" id="grams" name="grams" min="10" step="5" required>
 
     <p>Ingresá horarios por día en formato HH:MM separados por coma. Ej: <code>08:00, 13:30, 20:00</code></p>
 
-    <label>Lunes:</label>
+    <label for="mon">Lunes:</label>
     <input type="text" id="mon" placeholder="08:00, 20:00">
 
-    <label>Martes:</label>
+    <label for="tue">Martes:</label>
     <input type="text" id="tue" placeholder="08:00, 20:00">
 
-    <label>Miércoles:</label>
+    <label for="wed">Miércoles:</label>
     <input type="text" id="wed" placeholder="08:00, 20:00">
 
-    <label>Jueves:</label>
+    <label for="thu">Jueves:</label>
     <input type="text" id="thu" placeholder="08:00, 20:00">
 
-    <label>Viernes:</label>
+    <label for="fri">Viernes:</label>
     <input type="text" id="fri" placeholder="08:00, 20:00">
 
-    <label>Sábado:</label>
+    <label for="sat">Sábado:</label>
     <input type="text" id="sat" placeholder="09:00">
 
-    <label>Domingo:</label>
+    <label for="sun">Domingo:</label>
     <input type="text" id="sun" placeholder="09:00">
 
     <button type="submit">Guardar Plan Semanal</button>
@@ -40,6 +53,35 @@
   <p id="response"></p>
 
   <script>
+    // ====== Persistencia de IP/puerto ======
+    const ipInput = document.getElementById("ip");
+    const portInput = document.getElementById("port");
+    const goTableBtn = document.getElementById("goTable");
+
+    // Cargar valores guardados
+    ipInput.value = localStorage.getItem("petcare_ip") || "";
+    portInput.value = localStorage.getItem("petcare_port") || "8080";
+
+    document.getElementById("connForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      localStorage.setItem("petcare_ip", ipInput.value.trim());
+      localStorage.setItem("petcare_port", portInput.value.trim());
+      alert("Conexión guardada");
+    });
+
+    goTableBtn.addEventListener("click", () => {
+      // Mismo folder /public
+      window.location.href = "tabladecomidasefectuadas.html";
+    });
+
+    function buildURL(path) {
+      const ip = (localStorage.getItem("petcare_ip") || ipInput.value || "").trim();
+      const port = (localStorage.getItem("petcare_port") || portInput.value || "8080").trim();
+      if (!ip) throw new Error("Falta IP del ESP32");
+      return `http://${ip}:${port}${path}`;
+    }
+
+    // ====== Helpers de horarios ======
     function parseTimes(text) {
       if (!text) return [];
       return text.split(",")
@@ -47,13 +89,13 @@
                  .filter(s => /^\d{2}:\d{2}$/.test(s));
     }
 
+    // ====== Envío del plan ======
     document.getElementById("weekForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-
-      const grams = parseInt(document.getElementById("grams").value);
+      const grams = parseInt(document.getElementById("grams").value, 10);
       const secondsOpen = grams / 10;
 
-      // Orden: Lunes..Domingo (ISO-8601 1..7)
+      // Orden ISO: Lunes..Domingo (luego el .ino lo mapea a tm_wday)
       const weekplan = [
         parseTimes(document.getElementById("mon").value),
         parseTimes(document.getElementById("tue").value),
@@ -65,19 +107,22 @@
       ];
 
       const data = { secondsOpen, weekplan };
-
       console.log("Plan semanal enviado:", data);
 
+      const respEl = document.getElementById("response");
+      respEl.textContent = "Enviando...";
+
       try {
-        const res = await fetch("/setPlan", {
+        const url = buildURL("/setPlan");
+        const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data)
         });
         const msg = await res.text();
-        document.getElementById("response").innerText = "Respuesta: " + msg;
+        respEl.textContent = "Respuesta: " + msg;
       } catch (err) {
-        document.getElementById("response").innerText = "Error al enviar datos";
+        respEl.textContent = "Error al enviar datos: " + err.message;
       }
     });
   </script>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tabla de Comidas Efectuadas - PetCare</title>
+</head>
+<body>
+  <h1>Tabla de Comidas Efectuadas - PetCare</h1>
+
+  <form id="connForm">
+    <label for="ip">IP del ESP32:</label>
+    <input type="text" id="ip" placeholder="172.20.10.5" required>
+    <label for="port">Puerto:</label>
+    <input type="number" id="port" value="8080" required>
+    <button type="submit">Guardar conexión</button>
+    <button id="testBtn" type="button">Probar /status</button>
+    <button id="goPlan" type="button">Volver al plan semanal</button>
+  </form>
+
+  <p id="now"></p>
+  <p id="last"></p>
+
+  <table id="table" border="1" cellpadding="6" cellspacing="0">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Hora</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <p id="msg"></p>
+
+  <script>
+    const ipInput   = document.getElementById("ip");
+    const portInput = document.getElementById("port");
+    const nowEl  = document.getElementById("now");
+    const lastEl = document.getElementById("last");
+    const msgEl  = document.getElementById("msg");
+    const tbody  = document.querySelector("#table tbody");
+    const goPlanBtn = document.getElementById("goPlan");
+
+    // Cargar conexión guardada
+    ipInput.value   = localStorage.getItem("petcare_ip")   || "";
+    portInput.value = localStorage.getItem("petcare_port") || "8080";
+
+    document.getElementById("connForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      localStorage.setItem("petcare_ip", ipInput.value.trim());
+      localStorage.setItem("petcare_port", portInput.value.trim());
+      msgEl.textContent = "Conexión guardada.";
+    });
+
+    goPlanBtn.addEventListener("click", () => {
+      window.location.href = "plandecomidas.html";
+    });
+
+    document.getElementById("testBtn").addEventListener("click", fetchStatus);
+
+    function url(path) {
+      const ip = (localStorage.getItem("petcare_ip") || ipInput.value || "").trim();
+      const port = (localStorage.getItem("petcare_port") || portInput.value || "8080").trim();
+      if (!ip) throw new Error("Falta IP");
+      return `http://${ip}:${port}${path}`;
+    }
+
+    async function fetchStatus() {
+      try {
+        msgEl.textContent = "Actualizando...";
+        const res = await fetch(url("/status"));
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        render(data);
+        msgEl.textContent = "OK";
+      } catch (e) {
+        msgEl.textContent = "Error: " + e.message;
+      }
+    }
+
+    function render(data) {
+      if (!data.ok) {
+        nowEl.textContent = "Sin hora disponible.";
+        tbody.innerHTML = "";
+        return;
+      }
+
+      nowEl.textContent = `Ahora: ${data.now.dayName} ${data.now.hhmm}  |  Duración por comida: ${data.secondsOpen}s`;
+
+      if (data.lastFeed && data.lastFeed.wday >= 0) {
+        lastEl.textContent = `Última comida: ${data.lastFeed.dayName} ${data.lastFeed.hhmm} (índice ${data.lastFeed.index})`;
+      } else {
+        lastEl.textContent = "Aún no se registraron comidas hoy.";
+      }
+
+      tbody.innerHTML = "";
+      const plan = (data.today && data.today.plan) ? data.today.plan : [];
+      plan.forEach((p, idx) => {
+        const tr = document.createElement("tr");
+        const tdIdx = document.createElement("td");
+        const tdTime = document.createElement("td");
+        const tdState = document.createElement("td");
+
+        tdIdx.textContent = idx + 1;
+        tdTime.textContent = p.time;
+        tdState.textContent = p.fed ? "Hecha ✅" : "Pendiente ⏳";
+
+        tr.appendChild(tdIdx);
+        tr.appendChild(tdTime);
+        tr.appendChild(tdState);
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Actualización automática cada 5s
+    setInterval(fetchStatus, 5000);
+    // Primer fetch al abrir
+    fetchStatus();
+  </script>
+</body>
+</html>
