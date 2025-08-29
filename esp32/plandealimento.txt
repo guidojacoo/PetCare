@@ -7,8 +7,8 @@
 // ===========================
 // WiFi
 // ===========================
-const char* ssid     = "TU_SSID";
-const char* password = "TU_PASSWORD";
+const char* ssid     = "iPhone de Ignacio";
+const char* password = "britos77";
 
 // ===========================
 // Servo
@@ -35,6 +35,11 @@ float  secondsOpen = 1.0;
 
 // Para detectar cambio de día
 int lastWday = -1;
+
+// Último evento para el monitor
+int    lastFeedWday  = -1;     // 0=Domingo..6=Sábado
+int    lastFeedIndex = -1;     // índice de la comida del día
+String lastFeedTime  = "";     // HH:MM del disparo
 
 // ===========================
 // NTP (hora/día)
@@ -93,6 +98,62 @@ bool isValidHHMM(const String& s) {
   return (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59);
 }
 
+String getDayName(int wday) {
+  // 0=Domingo..6=Sábado
+  const char* names[7] = {"Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"};
+  if (wday < 0 || wday > 6) return "Desconocido";
+  return String(names[wday]);
+}
+
+// ===========================
+// Endpoint: /status (GET)
+// ===========================
+void handleStatus() {
+  enableCORS();
+
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    server.send(503, "application/json", "{\"ok\":false,\"error\":\"no_time\"}");
+    return;
+  }
+
+  int wday = timeinfo.tm_wday;  // 0..6
+  char nowbuf[6];
+  strftime(nowbuf, sizeof(nowbuf), "%H:%M", &timeinfo);
+  String nowHHMM = String(nowbuf);
+
+  String json = "{";
+  json += "\"ok\":true,";
+  json += "\"now\":{\"wday\":" + String(wday) + ",\"dayName\":\"" + getDayName(wday) + "\",\"hhmm\":\"" + nowHHMM + "\"},";
+  json += "\"secondsOpen\":" + String(secondsOpen, 2) + ",";
+
+  // Último evento
+  json += "\"lastFeed\":{";
+  json += "\"wday\":" + String(lastFeedWday) + ",";
+  json += "\"dayName\":\"" + ((lastFeedWday>=0)?getDayName(lastFeedWday):String("")) + "\",";
+  json += "\"index\":" + String(lastFeedIndex) + ",";
+  json += "\"hhmm\":\"" + lastFeedTime + "\"},";
+
+  // Plan de hoy
+  json += "\"today\":{";
+  json += "\"wday\":" + String(wday) + ",";
+  json += "\"dayName\":\"" + getDayName(wday) + "\",";
+  json += "\"total\":" + String(dayCount[wday]) + ",";
+  json += "\"plan\":[";
+  for (int i = 0; i < dayCount[wday]; i++) {
+    if (i>0) json += ",";
+    json += "{";
+    json += "\"index\":" + String(i) + ",";
+    json += "\"time\":\"" + dayTimes[wday][i] + "\",";
+    json += "\"fed\":" + String(fed[wday][i] ? "true" : "false");
+    json += "}";
+  }
+  json += "]}";
+  json += "}";
+
+  server.send(200, "application/json", json);
+}
+
 // ===========================
 // Endpoint: /setPlan  (POST)
 // body: { "secondsOpen": <float>, "weekplan": [ [..lunes..], [..martes..], ..., [..domingo..] ] }
@@ -136,14 +197,6 @@ void handleSetPlan() {
   }
 
   // Mapeo: ISO (Lun..Dom) -> tm_wday (Dom..Sab)
-  // ISO index -> tm_wday:
-  //   Lunes(0) -> 1
-  //   Martes(1) -> 2
-  //   Miércoles(2) -> 3
-  //   Jueves(3) -> 4
-  //   Viernes(4) -> 5
-  //   Sábado(5) -> 6
-  //   Domingo(6) -> 0
   auto isoToWday = [](int iso)->int {
     if (iso == 6) return 0;     // Domingo
     return iso + 1;             // Lunes..Sábado -> 1..6
@@ -165,6 +218,7 @@ void handleSetPlan() {
     dayCount[wday] = idx;
   }
 
+  // Al cargar nuevo plan: resetear banderas de comidas del día actual
   resetAllFed();
 
   // Log
@@ -181,6 +235,19 @@ void handleSetPlan() {
 
   enableCORS();
   server.send(200, "text/plain", "Plan semanal cargado");
+}
+
+// (Opcional) borrar plan rápido
+void handleClearPlan() {
+  for (int d=0; d<7; d++) {
+    dayCount[d] = 0;
+    for (int i=0; i<MAX_MEALS_PER_DAY; i++) fed[d][i] = false;
+  }
+  lastFeedWday = -1;
+  lastFeedIndex = -1;
+  lastFeedTime = "";
+  enableCORS();
+  server.send(200, "text/plain", "Plan borrado");
 }
 
 // ===========================
@@ -213,8 +280,14 @@ void setup() {
   }
 
   // Endpoints
-  server.on("/setPlan", HTTP_POST, handleSetPlan);
-  server.on("/setPlan", HTTP_OPTIONS, handleOptions);
+  server.on("/setPlan",   HTTP_POST,    handleSetPlan);
+  server.on("/setPlan",   HTTP_OPTIONS, handleOptions);
+
+  server.on("/status",    HTTP_GET,     handleStatus);
+  server.on("/status",    HTTP_OPTIONS, handleOptions);
+
+  server.on("/clearPlan", HTTP_POST,    handleClearPlan);
+  server.on("/clearPlan", HTTP_OPTIONS, handleOptions);
 
   server.begin();
 
@@ -263,6 +336,11 @@ void loop() {
       // Disparamos servo una sola vez por horario
       fed[wday][i] = true;
       Serial.printf("Alimentando (wday=%d) a las %s\n", wday, dayTimes[wday][i].c_str());
+
+      // Registrar último evento para /status
+      lastFeedWday  = wday;
+      lastFeedIndex = i;
+      lastFeedTime  = nowHHMM;
 
       servoMotor.write(90); // abrir
       delay((unsigned long)(secondsOpen * 1000));
