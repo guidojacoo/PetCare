@@ -250,6 +250,14 @@ void handleClearPlan() {
   server.send(200, "text/plain", "Plan borrado");
 }
 
+void handleServoManual() {
+  enableCORS();
+  servoMotor.write(90);      // abrir
+  delay(2000);               // esperar 2 segundos
+  servoMotor.write(0);       // volver a cerrado
+  server.send(200, "text/plain", "Servo movido manualmente");
+}
+
 // ===========================
 // Setup
 // ===========================
@@ -289,6 +297,9 @@ void setup() {
   server.on("/clearPlan", HTTP_POST,    handleClearPlan);
   server.on("/clearPlan", HTTP_OPTIONS, handleOptions);
 
+  server.on("/servo",     HTTP_GET,     handleServoManual);
+  server.on("/servo",     HTTP_OPTIONS, handleOptions);
+  
   server.begin();
 
   // Estado inicial: sin comidas dadas
