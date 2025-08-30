@@ -21,7 +21,7 @@ Servo servoMotor;
 // PIR HC-SR501
 // ===========================
 #define PIR_PIN 12                 // OUT del PIR ahora en GPIO12
-const unsigned long EAT_WINDOW_MS = 60000UL;  // ventana para detectar "comido" tras servir (60s)
+const unsigned long EAT_WINDOW_MS = 120000UL;  // ventana para detectar "comido" tras servir (60s)
 
 // ===========================
 // Web Server
