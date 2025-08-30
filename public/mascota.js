@@ -102,7 +102,8 @@ document.querySelector("#step-4 .next").addEventListener("click", () => {
 });
 
 // paso 5: fecha + enviar todo junto
-document.querySelector("#step-5 .finish").addEventListener("click", async () => {
+const finish5Btn = document.querySelector("#step-5 .finish");
+if (finish5Btn) finish5Btn.addEventListener("click", async () => {
   let fecha = (document.getElementById("fecha").value || "").trim();
   // validacion basica yyyy-mm-dd (si no hay, se permite null)
   if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { alert("fecha invalida"); return; }
@@ -132,4 +133,101 @@ document.querySelector("#step-5 .finish").addEventListener("click", async () => 
   } catch (e) {
     alert("error al guardar: " + (e.message || "desconocido"));
   }
+});
+
+// --- Extensión: Paso 6 (kcal/100g) ---
+if (!("kcal_100g" in datos)) datos.kcal_100g = null;
+
+(function wireStep6(){
+  const step6 = document.getElementById("step-6");      // Debe existir en el HTML
+  const kcalInput = document.getElementById("kcal");     // <input id="kcal">
+  const finish5 = document.querySelector("#step-5 .finish");
+
+  // Interceptar el "Finalizar" del paso 5 para llevar al paso 6 si está presente
+  if (step6 && finish5) {
+    finish5.addEventListener("click", function(e){
+      // Validaciones mínimas y guardado de fecha (igual que tu flujo)
+      let fecha = (document.getElementById("fecha").value || "").trim();
+      if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { alert("fecha invalida"); e.stopImmediatePropagation(); e.preventDefault(); return; }
+      datos.fecha_nacimiento = fecha || null;
+
+      if (!requireVal(!!datos.usuario_id, "usuario no valido")) { e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if (!requireVal(!!datos.nombre, "falta nombre"))         { e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if (!requireVal(!!datos.sexo, "falta sexo"))             { e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if (!requireVal(!!datos.peso_kg, "falta peso"))          { e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if (!requireVal(!!datos.raza, "falta raza"))             { e.stopImmediatePropagation(); e.preventDefault(); return; }
+
+      // Si existe el paso 6 y aún no cargamos kcal, desvío al paso 6 y evito el POST original
+      if (!datos.kcal_100g && kcalInput) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        showStep(6);
+      }
+      // Si ya hay kcal, dejo que siga el handler original (tu POST actual)
+    }, true); // capture=true para interceptar antes del listener existente
+  }
+
+  // Handler del botón "Finalizar" en el paso 6: valida kcal y hace el POST con kcal_100g
+  const finish6 = document.querySelector("#step-6 .finish");
+  if (step6 && finish6) {
+    finish6.addEventListener("click", async function(){
+      const kcalStr = (document.getElementById("kcal")?.value || "").trim();
+      const kcal = parseInt(kcalStr, 10);
+      if (!requireVal(!isNaN(kcal), "ingresa calorias por 100g")) return;
+      if (!requireVal(kcal >= 200 && kcal <= 600, "calorias fuera de rango (200-600)")) return;
+      datos.kcal_100g = kcal;
+
+      // Re-asegurar datos requeridos
+      if (!requireVal(!!datos.usuario_id, "usuario no valido")) return;
+      if (!requireVal(!!datos.nombre, "falta nombre")) return;
+      if (!requireVal(!!datos.sexo, "falta sexo")) return;
+      if (!requireVal(!!datos.peso_kg, "falta peso")) return;
+      if (!requireVal(!!datos.raza, "falta raza")) return;
+      if (!datos.fecha_nacimiento) {
+        const fecha = (document.getElementById("fecha")?.value || "").trim();
+        datos.fecha_nacimiento = fecha || null;
+      }
+
+      try {
+        const body = {
+          usuario_id: datos.usuario_id,
+          nombre: datos.nombre,
+          sexo: datos.sexo,
+          raza: datos.raza,
+          peso_kg: datos.peso_kg,
+          fecha_nacimiento: datos.fecha_nacimiento,
+          kcal_100g: datos.kcal_100g
+        };
+        const m = await post(`${API}/mascotas`, body);
+        if (!m || !m.id) throw new Error("no se pudo crear la mascota");
+        alert("mascota creada con exito");
+        location.href = "principal.html";
+      } catch (e) {
+        alert("error al guardar: " + (e.message || "desconocido"));
+      }
+    });
+  }
+})();
+
+// ---- Paso 5: botón "Siguiente" hacia el Paso 6 ----
+const next5Btn = document.querySelector("#step-5 .next");
+if (next5Btn) next5Btn.addEventListener("click", () => {
+  const fecha = (document.getElementById("fecha").value || "").trim();
+
+  // Validación básica de fecha
+  if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    alert("fecha invalida");
+    return;
+  }
+  datos.fecha_nacimiento = fecha || null;
+
+  // Requisitos previos ya cargados en pasos anteriores
+  if (!requireVal(!!datos.usuario_id, "usuario no valido")) return;
+  if (!requireVal(!!datos.nombre, "falta nombre")) return;
+  if (!requireVal(!!datos.sexo, "falta sexo")) return;
+  if (!requireVal(!!datos.peso_kg, "falta peso")) return;
+  if (!requireVal(!!datos.raza, "falta raza")) return;
+
+  // Ir al Paso 6 (kcal/100g)
+  showStep(6);
 });
