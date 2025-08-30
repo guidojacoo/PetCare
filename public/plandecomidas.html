@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Plan Semanal - PetCare</title>
+  <title>Plan de Comidas - PetCare</title>
 </head>
 <body>
-  <h1>Plan Semanal - PetCare</h1>
+  <h1>Plan de Comidas - PetCare</h1>
 
   <!-- Conexión -->
   <form id="connForm">
@@ -19,47 +19,58 @@
 
   <hr>
 
-  <!-- Plan semanal -->
-  <form id="weekForm">
+  <!-- Config -->
+  <form id="planForm">
     <label for="grams">Gramos por comida:</label>
-    <input type="number" id="grams" name="grams" min="10" step="5" required>
+    <input type="number" id="grams" min="10" step="5" required>
 
-    <p>Ingresá horarios por día en formato HH:MM separados por coma. Ej: <code>08:00, 13:30, 20:00</code></p>
+    <label for="mode">Modo de plan:</label>
+    <select id="mode" required>
+      <option value="repeat_week">Repetir toda la semana</option>
+      <option value="per_day">Por día</option>
+    </select>
 
-    <label for="mon">Lunes:</label>
-    <input type="text" id="mon" placeholder="08:00, 20:00">
+    <div id="repeatWeekBox" style="margin-top:10px;">
+      <p>Ingresá horarios (HH:MM) separados por coma. Ej: <code>08:00, 13:30, 20:00</code></p>
+      <label for="allWeek">Todos los días:</label>
+      <input type="text" id="allWeek" placeholder="08:00, 20:00">
+    </div>
 
-    <label for="tue">Martes:</label>
-    <input type="text" id="tue" placeholder="08:00, 20:00">
+    <div id="perDayBox" style="display:none; margin-top:10px;">
+      <p>Horarios por día (HH:MM) separados por coma.</p>
 
-    <label for="wed">Miércoles:</label>
-    <input type="text" id="wed" placeholder="08:00, 20:00">
+      <label for="mon">Lunes:</label>
+      <input type="text" id="mon" placeholder="08:00, 20:00">
 
-    <label for="thu">Jueves:</label>
-    <input type="text" id="thu" placeholder="08:00, 20:00">
+      <label for="tue">Martes:</label>
+      <input type="text" id="tue" placeholder="08:00, 20:00">
 
-    <label for="fri">Viernes:</label>
-    <input type="text" id="fri" placeholder="08:00, 20:00">
+      <label for="wed">Miércoles:</label>
+      <input type="text" id="wed" placeholder="08:00, 20:00">
 
-    <label for="sat">Sábado:</label>
-    <input type="text" id="sat" placeholder="09:00">
+      <label for="thu">Jueves:</label>
+      <input type="text" id="thu" placeholder="08:00, 20:00">
 
-    <label for="sun">Domingo:</label>
-    <input type="text" id="sun" placeholder="09:00">
+      <label for="fri">Viernes:</label>
+      <input type="text" id="fri" placeholder="08:00, 20:00">
 
-    <button type="submit">Guardar Plan Semanal</button>
+      <label for="sat">Sábado:</label>
+      <input type="text" id="sat" placeholder="09:00">
+
+      <label for="sun">Domingo:</label>
+      <input type="text" id="sun" placeholder="09:00">
+    </div>
+
+    <button type="submit" style="margin-top:10px;">Guardar plan</button>
   </form>
 
   <p id="response"></p>
 
   <script>
-    // ====== Persistencia de IP/puerto ======
-    const ipInput = document.getElementById("ip");
+    // ===== IP/puerto persistentes =====
+    const ipInput   = document.getElementById("ip");
     const portInput = document.getElementById("port");
-    const goTableBtn = document.getElementById("goTable");
-
-    // Cargar valores guardados
-    ipInput.value = localStorage.getItem("petcare_ip") || "";
+    ipInput.value   = localStorage.getItem("petcare_ip")   || "";
     portInput.value = localStorage.getItem("petcare_port") || "8080";
 
     document.getElementById("connForm").addEventListener("submit", (e) => {
@@ -69,8 +80,7 @@
       alert("Conexión guardada");
     });
 
-    goTableBtn.addEventListener("click", () => {
-      // Mismo folder /public
+    document.getElementById("goTable").addEventListener("click", () => {
       window.location.href = "tabladecomidasefectuadas.html";
     });
 
@@ -81,48 +91,61 @@
       return `http://${ip}:${port}${path}`;
     }
 
-    // ====== Helpers de horarios ======
+    // ===== Helpers =====
     function parseTimes(text) {
       if (!text) return [];
-      return text.split(",")
-                 .map(s => s.trim())
-                 .filter(s => /^\d{2}:\d{2}$/.test(s));
+      return text.split(",").map(s => s.trim()).filter(s => /^\d{2}:\d{2}$/.test(s));
     }
 
-    // ====== Envío del plan ======
-    document.getElementById("weekForm").addEventListener("submit", async (e) => {
+    // ===== UI modo =====
+    const modeSel      = document.getElementById("mode");
+    const repeatWeekBox= document.getElementById("repeatWeekBox");
+    const perDayBox    = document.getElementById("perDayBox");
+
+    modeSel.addEventListener("change", () => {
+      const mode = modeSel.value;
+      repeatWeekBox.style.display = (mode === "repeat_week") ? "block" : "none";
+      perDayBox.style.display     = (mode === "per_day") ? "block" : "none";
+    });
+
+    // ===== Envío plan =====
+    const planForm = document.getElementById("planForm");
+    planForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+
       const grams = parseInt(document.getElementById("grams").value, 10);
       const secondsOpen = grams / 10;
+      const mode = modeSel.value;
 
-      // Orden ISO: Lunes..Domingo (luego el .ino lo mapea a tm_wday)
-      const weekplan = [
-        parseTimes(document.getElementById("mon").value),
-        parseTimes(document.getElementById("tue").value),
-        parseTimes(document.getElementById("wed").value),
-        parseTimes(document.getElementById("thu").value),
-        parseTimes(document.getElementById("fri").value),
-        parseTimes(document.getElementById("sat").value),
-        parseTimes(document.getElementById("sun").value),
-      ];
+      let payload = { mode, secondsOpen };
 
-      const data = { secondsOpen, weekplan };
-      console.log("Plan semanal enviado:", data);
+      if (mode === "repeat_week") {
+        const times = parseTimes(document.getElementById("allWeek").value);
+        payload.dayplan = times;                 // un array de horarios
+      } else {
+        const weekplan = [
+          parseTimes(document.getElementById("mon").value),
+          parseTimes(document.getElementById("tue").value),
+          parseTimes(document.getElementById("wed").value),
+          parseTimes(document.getElementById("thu").value),
+          parseTimes(document.getElementById("fri").value),
+          parseTimes(document.getElementById("sat").value),
+          parseTimes(document.getElementById("sun").value),
+        ];
+        payload.weekplan = weekplan;             // 7 arrays (Lunes..Domingo)
+      }
 
-      const respEl = document.getElementById("response");
-      respEl.textContent = "Enviando...";
-
+      document.getElementById("response").textContent = "Enviando...";
       try {
-        const url = buildURL("/setPlan");
-        const res = await fetch(url, {
+        const res = await fetch(buildURL("/setPlan"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
+          body: JSON.stringify(payload)
         });
         const msg = await res.text();
-        respEl.textContent = "Respuesta: " + msg;
+        document.getElementById("response").textContent = "Respuesta: " + msg;
       } catch (err) {
-        respEl.textContent = "Error al enviar datos: " + err.message;
+        document.getElementById("response").textContent = "Error: " + err.message;
       }
     });
   </script>

@@ -25,7 +25,8 @@
       <tr>
         <th>#</th>
         <th>Hora</th>
-        <th>Estado</th>
+        <th>Entregado</th>
+        <th>Comido</th> <!-- NUEVO -->
       </tr>
     </thead>
     <tbody></tbody>
@@ -73,7 +74,7 @@
         if (!res.ok) throw new Error("HTTP " + res.status);
         const data = await res.json();
         render(data);
-        msgEl.textContent = "OK";
+        msgEl.textContent = data.eat_waiting ? "Esperando detección de 'comido'…" : "OK";
       } catch (e) {
         msgEl.textContent = "Error: " + e.message;
       }
@@ -82,6 +83,7 @@
     function render(data) {
       if (!data.ok) {
         nowEl.textContent = "Sin hora disponible.";
+        lastEl.textContent = "";
         tbody.innerHTML = "";
         return;
       }
@@ -100,15 +102,18 @@
         const tr = document.createElement("tr");
         const tdIdx = document.createElement("td");
         const tdTime = document.createElement("td");
-        const tdState = document.createElement("td");
+        const tdFed = document.createElement("td");
+        const tdEaten = document.createElement("td");
 
         tdIdx.textContent = idx + 1;
         tdTime.textContent = p.time;
-        tdState.textContent = p.fed ? "Hecha ✅" : "Pendiente ⏳";
+        tdFed.textContent = p.fed ? "Hecha ✅" : "Pendiente ⏳";
+        tdEaten.textContent = p.eaten ? "OK ✅" : "Pendiente ⏳";
 
         tr.appendChild(tdIdx);
         tr.appendChild(tdTime);
-        tr.appendChild(tdState);
+        tr.appendChild(tdFed);
+        tr.appendChild(tdEaten);
         tbody.appendChild(tr);
       });
     }
