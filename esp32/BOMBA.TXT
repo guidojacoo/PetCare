@@ -10,7 +10,6 @@
 const char *ssid = "Fibertel WiFi450 2.4GHz";
 const char *password = "mlc2009iB";
 
-
 // ===========================
 // Servo
 // ===========================
@@ -21,7 +20,13 @@ Servo servoMotor;
 // PIR HC-SR501
 // ===========================
 #define PIR_PIN 12                 // OUT del PIR ahora en GPIO12
-const unsigned long EAT_WINDOW_MS = 120000UL;  // ventana para detectar "comido" tras servir (60s)
+const unsigned long EAT_WINDOW_MS = 120000UL;  // ventana para detectar "comido" tras servir (120s)
+
+// ===========================
+// Bomba (relé/MOSFET de control)
+// ===========================
+#define PUMP_PIN 16
+bool pumpOn = false;               // estado actual de la bomba (refleja el pin)
 
 // ===========================
 // Web Server
@@ -33,10 +38,11 @@ WebServer server(8080);
 // ===========================
 #define MAX_MEALS_PER_DAY 12
 
-String dayTimes[7][MAX_MEALS_PER_DAY]; 
+String dayTimes[7][MAX_MEALS_PER_DAY];
 int    dayCount[7] = {0,0,0,0,0,0,0};
-bool   fed[7][MAX_MEALS_PER_DAY];      
-bool   eaten[7][MAX_MEALS_PER_DAY];    
+bool   fed[7][MAX_MEALS_PER_DAY];
+bool   eaten[7][MAX_MEALS_PER_DAY];
+bool   water[7][MAX_MEALS_PER_DAY];    // <-- NUEVO: agua servida
 float  secondsOpen = 1.0;
 
 int lastWday = -1;
@@ -56,7 +62,7 @@ unsigned long  eatWindowStartMs = 0;
 // NTP
 // ===========================
 const char* ntpServer = "pool.ntp.org";
-const long gmtOffset_sec = -10800;  
+const long gmtOffset_sec = -10800;
 const int  daylightOffset_sec = 0;
 
 // ===========================
@@ -81,8 +87,9 @@ bool isValidHHMM(const String& s) {
 void resetFedForDay(int wday) {
   if (wday < 0 || wday > 6) return;
   for (int i = 0; i < dayCount[wday]; i++) {
-    fed[wday][i] = false;
+    fed[wday][i]   = false;
     eaten[wday][i] = false;
+    water[wday][i] = false;    // reset agua
   }
 }
 void resetAllFed() { for (int d=0; d<7; d++) resetFedForDay(d); }
@@ -109,12 +116,15 @@ void handleStatus() {
   json += "\"ok\":true,";
   json += "\"now\":{\"wday\":" + String(wday) + ",\"dayName\":\"" + getDayName(wday) + "\",\"hhmm\":\"" + String(nowbuf) + "\"},";
   json += "\"secondsOpen\":" + String(secondsOpen,2) + ",";
-  json += "\"eat_waiting\":" + String(waitingEat ? "true":"false") + ",";   // <=== NUEVO
+  json += "\"eat_waiting\":" + String(waitingEat ? "true":"false") + ",";
+  json += "\"pumpOn\":" + String(pumpOn ? "true":"false") + ",";   // <-- NUEVO
+
   json += "\"lastFeed\":{";
   json += "\"wday\":" + String(lastFeedWday) + ",";
   json += "\"dayName\":\"" + ((lastFeedWday>=0)?getDayName(lastFeedWday):String("")) + "\",";
   json += "\"index\":" + String(lastFeedIndex) + ",";
   json += "\"hhmm\":\"" + lastFeedTime + "\"},";
+
   json += "\"today\":{";
   json += "\"wday\":" + String(wday) + ",";
   json += "\"dayName\":\"" + getDayName(wday) + "\",";
@@ -126,7 +136,8 @@ void handleStatus() {
     json += "\"index\":" + String(i) + ",";
     json += "\"time\":\"" + dayTimes[wday][i] + "\",";
     json += "\"fed\":" + String(fed[wday][i] ? "true":"false") + ",";
-    json += "\"eaten\":" + String(eaten[wday][i] ? "true":"false");
+    json += "\"eaten\":" + String(eaten[wday][i] ? "true":"false") + ",";
+    json += "\"water\":" + String(water[wday][i] ? "true":"false");       // <-- NUEVO
     json += "}";
   }
   json += "]}";
@@ -136,9 +147,6 @@ void handleStatus() {
 
 // ===========================
 // /setPlan  (POST)
-//  - mode: "repeat_week" + dayplan:["HH:MM",...]
-//  - mode: "per_day"     + weekplan:[ [..Lun..], ..., [..Dom..] ]
-//  - secondsOpen: float
 // ===========================
 void handleSetPlan() {
   if (!server.hasArg("plain")) { enableCORS(); server.send(400,"text/plain","Falta cuerpo JSON"); return; }
@@ -153,7 +161,12 @@ void handleSetPlan() {
   String mode = doc.containsKey("mode") ? String(doc["mode"].as<const char*>()) : "per_day";
 
   // limpiar plan actual
-  for (int d=0; d<7; d++){ dayCount[d]=0; for(int i=0;i<MAX_MEALS_PER_DAY;i++){ fed[d][i]=false; eaten[d][i]=false; } }
+  for (int d=0; d<7; d++){
+    dayCount[d]=0;
+    for(int i=0;i<MAX_MEALS_PER_DAY;i++){
+      fed[d][i]=false; eaten[d][i]=false; water[d][i]=false;
+    }
+  }
 
   auto isoToWday = [](int iso)->int { return (iso==6)?0:(iso+1); }; // ISO Lun..Dom -> tm_wday Dom..Sáb
 
@@ -199,7 +212,12 @@ void handleSetPlan() {
 // /clearPlan (POST)
 // ===========================
 void handleClearPlan() {
-  for (int d=0; d<7; d++){ dayCount[d]=0; for(int i=0;i<MAX_MEALS_PER_DAY;i++){ fed[d][i]=false; eaten[d][i]=false; } }
+  for (int d=0; d<7; d++){
+    dayCount[d]=0;
+    for(int i=0;i<MAX_MEALS_PER_DAY;i++){
+      fed[d][i]=false; eaten[d][i]=false; water[d][i]=false;
+    }
+  }
   lastFeedWday=-1; lastFeedIndex=-1; lastFeedTime="";
   waitingEat=false; pendingEatWday=-1; pendingEatIndex=-1;
   enableCORS(); server.send(200,"text/plain","Plan borrado");
@@ -207,12 +225,22 @@ void handleClearPlan() {
 
 // ===========================
 // /servo (GET) - manual (no abre ventana eaten)
+//   Ahora activa la bomba el mismo tiempo (2 s)
 // ===========================
 void handleServoManual() {
   enableCORS();
+  // abrir servo + encender bomba
   servoMotor.write(90);
+  digitalWrite(PUMP_PIN, HIGH);
+  pumpOn = true;
+
   delay(2000);
+
+  // cerrar servo + apagar bomba
   servoMotor.write(0);
+  digitalWrite(PUMP_PIN, LOW);
+  pumpOn = false;
+
   server.send(200, "text/plain", "Servo movido manualmente");
 }
 
@@ -225,7 +253,10 @@ void setup() {
   servoMotor.attach(SERVO_PIN, 500, 2400);
   servoMotor.write(0);
 
-  pinMode(PIR_PIN, INPUT);   // HC-SR501 OUT
+  pinMode(PIR_PIN, INPUT);     // HC-SR501 OUT
+  pinMode(PUMP_PIN, OUTPUT);   // salida a relé/MOSFET
+  digitalWrite(PUMP_PIN, LOW);
+  pumpOn = false;
 
   WiFi.begin(ssid, password);
   Serial.print("Conectando WiFi");
@@ -287,11 +318,22 @@ void loop() {
           lastFeedTime  = nowHHMM;
 
           Serial.printf("Alimentando (wday=%d) a las %s\n", wday, dayTimes[wday][i].c_str());
-          servoMotor.write(90);
-          delay((unsigned long)(secondsOpen * 1000));
-          servoMotor.write(0);
 
-          // Abrir ventana de detección "comido" SOLO para comidas programadas
+          // Abrir servo + encender bomba el mismo tiempo
+          servoMotor.write(90);
+          digitalWrite(PUMP_PIN, HIGH);
+          pumpOn = true;
+
+          delay((unsigned long)(secondsOpen * 1000));
+
+          servoMotor.write(0);
+          digitalWrite(PUMP_PIN, LOW);
+          pumpOn = false;
+
+          // Marcar agua servida
+          water[wday][i] = true;
+
+          // Abrir ventana PIR para "comido"
           waitingEat       = true;
           pendingEatWday   = wday;
           pendingEatIndex  = i;
