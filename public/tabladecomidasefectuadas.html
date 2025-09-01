@@ -161,6 +161,22 @@
         </div>
       </div>
 
+<!-- Panel de raciones restantes (NO reemplaza nada) -->
+<div id="stockPanel" style="display:none; margin-top:10px; padding:12px 14px;
+  border:1px solid #1f2a44; border-radius:10px; background:#0b1120; color:#e2e8f0; font-size:14px;">
+  <strong>Raciones restantes</strong> —
+  completas: <span id="mealsFull">0</span>
+  · exacto: <span id="mealsExact">0.00</span>
+  · queda: <span id="gramsLeft">0</span> g
+</div>
+
+<!-- Alerta de recarga -->
+<div id="rechargeBanner" style="display:none; margin-top:8px; padding:12px 14px;
+  border:1px solid rgba(251,191,36,.35); border-radius:10px; background:#1f1a0b; color:#fde68a; font-size:14px;">
+  ⚠️ Quedan ≤ 2 raciones completas. Por favor, recargar el almacén.
+</div>
+
+
       <!-- Tabla -->
       <div class="card">
         <h2>Hoy</h2>
@@ -282,5 +298,65 @@
     // Primer fetch al abrir
     fetchStatus();
   </script>
+
+<script>
+  // ===== Cálculo de raciones restantes (hook sin tocar tu render) =====
+  (function(){
+    const originalRender = window.render;
+  
+    function numbers(){
+      const hopper = parseFloat(localStorage.getItem('petcare_hopper') || '0');
+      const gramsPerMeal = parseFloat(localStorage.getItem('petcare_grams_per_meal') || '0');
+      return { hopper, gramsPerMeal };
+    }
+    function calcRemaining(hopper, gramsPerMeal, fedCount){
+      if (!Number.isFinite(hopper) || hopper < 0 || !Number.isFinite(gramsPerMeal) || gramsPerMeal <= 0){
+        return { gramsLeft: 0, mealsExact: 0, mealsFull: 0 };
+      }
+      const gramsLeft = Math.max(0, hopper - fedCount * gramsPerMeal);
+      const mealsExact = gramsLeft / gramsPerMeal;
+      const mealsFull = Math.floor(mealsExact);
+      return { gramsLeft, mealsExact, mealsFull };
+    }
+    function updateUI(gramsLeft, mealsExact, mealsFull){
+      const panel = document.getElementById('stockPanel');
+      const warn  = document.getElementById('rechargeBanner');
+      const gEl   = document.getElementById('gramsLeft');
+      const eEl   = document.getElementById('mealsExact');
+      const fEl   = document.getElementById('mealsFull');
+  
+      gEl.textContent = Math.round(gramsLeft);
+      eEl.textContent = mealsExact.toFixed(2);
+      fEl.textContent = String(mealsFull);
+  
+      // mostrar panel si tenemos datos válidos
+      panel.style.display = (mealsExact > 0 || gramsLeft > 0) ? 'block' : 'none';
+      // alerta si quedan 2 o menos raciones completas
+      warn.style.display = (mealsFull <= 2) ? 'block' : 'none';
+    }
+  
+    window.render = function(data){
+      // 1) render original (no tocamos tu lógica)
+      originalRender.call(this, data);
+  
+      try {
+        // 2) contar comidas hechas segun /status (fed === true)
+        const plan = (data && data.today && Array.isArray(data.today.plan)) ? data.today.plan : [];
+        const fedCount = plan.reduce((acc,p)=> acc + (p && p.fed ? 1 : 0), 0);
+  
+        // 3) tomar hopper y gramos por comida del localStorage
+        const { hopper, gramsPerMeal } = numbers();
+  
+        // 4) calcular y pintar
+        const { gramsLeft, mealsExact, mealsFull } = calcRemaining(hopper, gramsPerMeal, fedCount);
+        updateUI(gramsLeft, mealsExact, mealsFull);
+  
+      } catch (e) {
+        // silencioso para no romper UI si algo falta
+      }
+    };
+  })();
+  </script>
+  
 </body>
 </html>
