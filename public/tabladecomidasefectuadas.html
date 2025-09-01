@@ -1,40 +1,193 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Tabla de Comidas Efectuadas - PetCare</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --orange:#ff7a00;
+      --cyan:#05c2cc;
+      --bg:#0f172a;
+      --text:#ffffff;
+      --panel:#0f162b;
+      --panel-2:#0b1120;
+      --border:#1f2a44;
+      --good:#22c55e;
+      --pending:#fbbf24;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .phone{
+      max-width:980px;
+      margin:auto;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      background:linear-gradient(180deg,#0f172a 0%,#0b1120 100%);
+    }
+    .topbar{
+      padding:16px;
+      background:var(--panel);
+      border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:10;
+      text-align:center;
+    }
+    .topbar h1{margin:0;font-size:18px;letter-spacing:.3px}
+    .content{
+      padding:20px;
+      display:grid;
+      gap:20px;
+    }
+    .grid{
+      display:grid;
+      gap:20px;
+      grid-template-columns:1fr;
+    }
+    @media (min-width:900px){
+      .grid{grid-template-columns:380px 1fr;}
+    }
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    .card h2{margin:0 0 10px;font-size:16px;font-weight:600}
+    .subtle{color:#cbd5e1;font-size:13px;margin:4px 0 12px}
+
+    label{font-size:13px;color:#e2e8f0;display:block;margin:10px 0 6px}
+    input[type="text"], input[type="number"]{
+      width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);
+      background:var(--panel-2);color:#fff;outline:none;
+    }
+    input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(5,194,204,.15)}
+
+    .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      padding:12px 14px;border:none;border-radius:10px;cursor:pointer;
+      font-weight:700;transition:transform .04s ease,filter .2s ease;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background:var(--orange);color:#000}
+    .btn.secondary{background:#12213d;color:#e2e8f0;border:1px solid var(--border)}
+    .btn.ghost{background:transparent;color:#e2e8f0;border:1px solid var(--border)}
+    .btn-block{width:100%}
+
+    .info{
+      display:grid;gap:10px;
+      grid-template-columns:1fr; 
+    }
+    @media (min-width:600px){
+      .info{grid-template-columns:1fr 1fr}
+    }
+    .badge{
+      background:#0b1120;border:1px solid var(--border);border-radius:10px;padding:10px 12px;
+      font-size:14px;color:#e2e8f0
+    }
+
+    /* Tabla */
+    .table-wrap{
+      overflow:auto;border-radius:12px;border:1px solid var(--border);
+      background:var(--panel);
+    }
+    table{
+      width:100%;border-collapse:separate;border-spacing:0;min-width:520px;
+    }
+    thead th{
+      position:sticky;top:0;z-index:1;
+      background:#0f162b;border-bottom:1px solid var(--border);
+      padding:12px 10px;text-align:left;font-weight:600;font-size:13px;color:#e2e8f0;
+    }
+    tbody td{
+      padding:12px 10px;border-bottom:1px solid #152340;font-size:14px;color:#e2e8f0;
+    }
+    tbody tr:hover{background:#0e1a33}
+    .k{color:#94a3b8}
+    .status{
+      display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;
+      border:1px solid var(--border);background:#0b1120;font-size:13px
+    }
+    .status.good{border-color:rgba(34,197,94,.4)}
+    .status.pending{border-color:rgba(251,191,36,.35)}
+    .dot{width:8px;height:8px;border-radius:50%}
+    .good .dot{background:var(--good)}
+    .pending .dot{background:var(--pending)}
+
+    #msg{margin:0;padding:12px 14px;background:#0b1120;border:1px solid var(--border);
+      border-radius:10px;color:#e2e8f0;font-size:14px}
+  </style>
 </head>
 <body>
-  <h1>Tabla de Comidas Efectuadas - PetCare</h1>
+  <div class="phone">
+    <div class="topbar">
+      <h1>Tabla de Comidas • PetCare</h1>
+    </div>
 
-  <form id="connForm">
-    <label for="ip">IP del ESP32:</label>
-    <input type="text" id="ip" placeholder="172.20.10.5" required>
-    <label for="port">Puerto:</label>
-    <input type="number" id="port" value="8080" required>
-    <button type="submit">Guardar conexión</button>
-    <button id="testBtn" type="button">Probar /status</button>
-    <button id="goPlan" type="button">Volver al plan semanal</button>
-  </form>
+    <div class="content">
+      <div class="grid">
+        <!-- Conexión -->
+        <div class="card">
+          <h2>Conexión</h2>
+          <p class="subtle">Guardá la IP y el puerto del ESP32. Podés probar <code>/status</code> y volver al plan semanal.</p>
+          <form id="connForm" autocomplete="off">
+            <label for="ip">IP del ESP32</label>
+            <input type="text" id="ip" placeholder="172.20.10.5" required />
+            <label for="port">Puerto</label>
+            <input type="number" id="port" value="8080" required />
+            <div class="row" style="margin-top:10px">
+              <button type="submit" class="btn primary btn-block">Guardar conexión</button>
+              <button id="testBtn" type="button" class="btn secondary btn-block">Probar /status</button>
+              <button id="goPlan" type="button" class="btn ghost btn-block">Volver al plan</button>
+            </div>
+          </form>
+        </div>
 
-  <p id="now"></p>
-  <p id="last"></p>
+        <!-- Estado actual -->
+        <div class="card">
+          <h2>Estado</h2>
+          <div class="info" style="margin-top:6px">
+            <div class="badge"><span class="k">Ahora:</span> <span id="now">—</span></div>
+            <div class="badge"><span class="k">Última comida:</span> <span id="last">—</span></div>
+          </div>
+          <p id="msg" style="margin-top:12px">—</p>
+        </div>
+      </div>
 
-  <table id="table" border="1" cellpadding="6" cellspacing="0">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Hora</th>
-        <th>Entregado</th>
-        <th>Comido</th>
-        <th>Agua</th> <!-- NUEVO -->
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+      <!-- Tabla -->
+      <div class="card">
+        <h2>Hoy</h2>
+        <div class="table-wrap">
+          <table id="table" cellpadding="0" cellspacing="0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Hora</th>
+                <th>Entregado</th>
+                <th>Comido</th>
+                <th>Agua</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="subtle" style="margin-top:10px">
+          <span class="status good"><span class="dot"></span> OK</span>
+          &nbsp;·&nbsp;
+          <span class="status pending"><span class="dot"></span> Pendiente</span>
+        </p>
+      </div>
+    </div>
+  </div>
 
-  <p id="msg"></p>
-
+  <!-- === Script original SIN CAMBIOS === -->
   <script>
     const ipInput   = document.getElementById("ip");
     const portInput = document.getElementById("port");
