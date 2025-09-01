@@ -86,7 +86,21 @@ async function cargarMascotas(userId) {
 
     const mias = d.filter(m => m.usuario_id === userId);
     if (mias.length === 0) {
-      ul.innerHTML = "<li class='item'><span class='meta'>No tenés mascotas.</span></li>";
+      ul.innerHTML = `
+        <li class="item">
+          <span class="meta">No tenés mascotas.</span>
+          <br>
+          <button id="btn-crear-mascota" 
+                  style="margin-top:10px; padding:10px 16px; border:none; border-radius:8px; background:#22c55e; color:#fff; font-weight:bold; cursor:pointer;">
+            Crear Mascota
+          </button>
+        </li>
+      `;
+    
+      document.getElementById("btn-crear-mascota").addEventListener("click", () => {
+        location.href = "mascota.html";
+      });
+    
       return;
     }
 

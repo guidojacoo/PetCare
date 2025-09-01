@@ -36,6 +36,18 @@
       <button onclick="moverServo()"class="fab"> 🐾 </button>
       <button class="fab" aria-label="Tomar foto">📸</button>
     </div>
+    <script>
+      (function () {
+        try {
+          const u = JSON.parse(localStorage.getItem("usuario"));
+          if (!u || !u.id) {
+            window.location.replace("index.html");
+          }
+        } catch (_) {
+          window.location.replace("index.html");
+        }
+      })();
+    </script>
   </main>
 
 </body>

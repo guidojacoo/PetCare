@@ -1,6 +1,5 @@
 const API = "http://localhost:3000";
 
-// estado en memoria (se va completando por pasos)
 let datos = {
   usuario_id: null,
   nombre: null,
@@ -10,7 +9,6 @@ let datos = {
   fecha_nacimiento: null
 };
 
-// helpers simples
 async function post(url, body) {
   let r = await fetch(url, {
     method: "POST",
@@ -34,7 +32,6 @@ function requireVal(cond, msg) {
   return true;
 }
 
-// init usuario
 (function initUser(){
   let user = localStorage.getItem("usuario");
   if (!user) { alert("inicia sesion"); location.href = "login.html"; return; }
@@ -46,7 +43,6 @@ function requireVal(cond, msg) {
   showStep(1);
 })();
 
-// paso 1: nombre
 document.querySelector("#step-1 .next").addEventListener("click", () => {
   let nombre = (document.getElementById("nombre").value || "").trim();
   if (!requireVal(nombre.length >= 2, "ingresa un nombre valido")) return;
@@ -54,7 +50,6 @@ document.querySelector("#step-1 .next").addEventListener("click", () => {
   showStep(2);
 });
 
-// paso 2: sexo (chips .chip[data-sexo])
 let chipsSexo = document.querySelectorAll("#step-2 .chip");
 let iS = 0; while (iS < chipsSexo.length) {
   chipsSexo[iS].addEventListener("click", function(){
@@ -70,7 +65,6 @@ document.querySelector("#step-2 .next").addEventListener("click", () => {
   showStep(3);
 });
 
-// paso 3: peso (chips o input)
 let chipsPeso = document.querySelectorAll("#step-3 .chip");
 let iP = 0; while (iP < chipsPeso.length) {
   chipsPeso[iP].addEventListener("click", function(){
@@ -84,7 +78,6 @@ let iP = 0; while (iP < chipsPeso.length) {
   iP++;
 }
 document.querySelector("#step-3 .next").addEventListener("click", () => {
-  // si no uso chip, leer del input
   if (!datos.peso_kg) {
     let v = parseFloat(document.getElementById("peso").value || "0");
     if (v > 0) datos.peso_kg = v;
@@ -93,7 +86,6 @@ document.querySelector("#step-3 .next").addEventListener("click", () => {
   showStep(4);
 });
 
-// paso 4: raza
 document.querySelector("#step-4 .next").addEventListener("click", () => {
   let raza = (document.getElementById("raza").value || "").trim();
   if (!requireVal(raza.length >= 2, "ingresa una raza")) return;
@@ -101,22 +93,18 @@ document.querySelector("#step-4 .next").addEventListener("click", () => {
   showStep(5);
 });
 
-// paso 5: fecha + enviar todo junto
 const finish5Btn = document.querySelector("#step-5 .finish");
 if (finish5Btn) finish5Btn.addEventListener("click", async () => {
   let fecha = (document.getElementById("fecha").value || "").trim();
-  // validacion basica yyyy-mm-dd (si no hay, se permite null)
   if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { alert("fecha invalida"); return; }
   datos.fecha_nacimiento = fecha || null;
 
-  // validaciones finales
   if (!requireVal(!!datos.usuario_id, "usuario no valido")) return;
   if (!requireVal(!!datos.nombre, "falta nombre")) return;
   if (!requireVal(!!datos.sexo, "falta sexo")) return;
   if (!requireVal(!!datos.peso_kg, "falta peso")) return;
   if (!requireVal(!!datos.raza, "falta raza")) return;
 
-  // un unico POST con todo
   try {
     let body = {
       usuario_id: datos.usuario_id,
@@ -135,7 +123,6 @@ if (finish5Btn) finish5Btn.addEventListener("click", async () => {
   }
 });
 
-// --- Extensión: Paso 6 (kcal/100g) ---
 if (!("kcal_100g" in datos)) datos.kcal_100g = null;
 
 (function wireStep6(){
@@ -143,10 +130,8 @@ if (!("kcal_100g" in datos)) datos.kcal_100g = null;
   const kcalInput = document.getElementById("kcal");     // <input id="kcal">
   const finish5 = document.querySelector("#step-5 .finish");
 
-  // Interceptar el "Finalizar" del paso 5 para llevar al paso 6 si está presente
   if (step6 && finish5) {
     finish5.addEventListener("click", function(e){
-      // Validaciones mínimas y guardado de fecha (igual que tu flujo)
       let fecha = (document.getElementById("fecha").value || "").trim();
       if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { alert("fecha invalida"); e.stopImmediatePropagation(); e.preventDefault(); return; }
       datos.fecha_nacimiento = fecha || null;
@@ -157,17 +142,14 @@ if (!("kcal_100g" in datos)) datos.kcal_100g = null;
       if (!requireVal(!!datos.peso_kg, "falta peso"))          { e.stopImmediatePropagation(); e.preventDefault(); return; }
       if (!requireVal(!!datos.raza, "falta raza"))             { e.stopImmediatePropagation(); e.preventDefault(); return; }
 
-      // Si existe el paso 6 y aún no cargamos kcal, desvío al paso 6 y evito el POST original
       if (!datos.kcal_100g && kcalInput) {
         e.stopImmediatePropagation();
         e.preventDefault();
         showStep(6);
       }
-      // Si ya hay kcal, dejo que siga el handler original (tu POST actual)
     }, true); // capture=true para interceptar antes del listener existente
   }
 
-  // Handler del botón "Finalizar" en el paso 6: valida kcal y hace el POST con kcal_100g
   const finish6 = document.querySelector("#step-6 .finish");
   if (step6 && finish6) {
     finish6.addEventListener("click", async function(){

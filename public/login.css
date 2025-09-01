@@ -7,3 +7,20 @@ body { margin:0; font-family:sans-serif; background:#0b1e31; color:white; displa
 .label { font-size:12px; margin-top:10px; display:block; }
 .input { width: 94%; padding:10px; border-radius:8px; border:2px solid #4a6783; background:#0f2a43; color:white; }
 .btn { display:block; text-align:center; margin-top:20px; padding:12px; border-radius:8px; background:#f7a51a; color:#1b1302; font-weight:700; text-decoration:none; }
+
+.banner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #22c55e;
+    color: #fff;
+    font-weight: 700;
+    padding: 16px 24px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 9999;
+    min-width: 240px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+  }
+  

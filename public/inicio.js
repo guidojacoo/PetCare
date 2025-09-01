@@ -34,7 +34,25 @@ function limpiarErrores() {
   if (mensaje) mensaje.textContent = "";
 }
 
-async function registrarUsuario() {
+async function buscarLogin() {
+  let loginActual = null;
+  try { 
+    loginActual = JSON.parse(localStorage.getItem("usuario")); 
+  } catch {}
+
+  if (loginActual && loginActual.id) {
+    const banner = document.createElement("div");
+    banner.className = "banner";
+    banner.textContent = `Se detectó una sesión, bienvenido ${loginActual.nombre || "usuario"}`;
+    document.body.appendChild(banner);
+
+    setTimeout(() => {
+      banner.remove();
+      location.href = "principal.html";
+    }, 2000);
+  }
+}
+  async function registrarUsuario() {
   limpiarErrores();
   const nombreInput = document.getElementById("nombre");
   const emailInput = document.getElementById("email");
@@ -151,4 +169,5 @@ document.addEventListener("DOMContentLoaded", () => {
   const path = (location.pathname || "").toLowerCase();
   if (path.endsWith("registro.html")) prepararRegistro();
   if (path.endsWith("login.html")) prepararLogin();
-});
+  if(path.endsWith("login.html") || path.endsWith("registro.html")) buscarLogin();
+})
