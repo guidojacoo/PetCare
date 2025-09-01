@@ -79,6 +79,13 @@
         <input type="number" id="grams" min="10" step="5" placeholder="Ej: 40" required />
         <p class="hint">Se envía como <strong>secondsOpen = gramos / 10</strong>.</p>
 
+        <label for="hopper">Almacén (g) — comida disponible</label>
+        <input type="number" id="hopper" min="0" step="10" placeholder="Ej: 1000" />
+        <p class="hint">
+          (Se usa en la tabla para calcular cuántas raciones quedan.)
+        </p>
+        
+
         <label for="mode">Modo de plan</label>
         <select id="mode" required>
           <option value="repeat_week">Repetir toda la semana</option>
@@ -355,5 +362,27 @@
       }
     });
   </script>
+
+<script>
+  // === Almacén (frontend) ===
+  const gramsInput  = document.getElementById('grams');   // ya existe en tu plan
+  const hopperInput = document.getElementById('hopper');
+  
+  // cargar valor guardado
+  hopperInput.value = localStorage.getItem('petcare_hopper') || '';
+  
+  hopperInput.addEventListener('change', ()=>{
+    localStorage.setItem('petcare_hopper', hopperInput.value.trim());
+  });
+  
+  // cuando enviás el plan, guardamos también “gramos por comida” para que la otra página lo use
+  document.getElementById('planForm').addEventListener('submit', ()=>{
+    const grams = parseFloat(gramsInput.value);
+    if (Number.isFinite(grams) && grams > 0){
+      localStorage.setItem('petcare_grams_per_meal', String(grams));
+    }
+  });
+  </script>
+  
 </body>
 </html>
