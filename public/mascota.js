@@ -6,7 +6,8 @@ let datos = {
   sexo: null,
   peso_kg: null,
   raza: null,
-  fecha_nacimiento: null
+  fecha_nacimiento: null,
+  kcal_100g: null
 };
 
 async function post(url, body) {
