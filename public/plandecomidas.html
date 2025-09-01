@@ -1,73 +1,153 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Plan de Comidas - PetCare</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --orange:#ff7a00; --cyan:#05c2cc; --bg:#0f172a; --text:#ffffff;
+      --panel:#0f162b; --panel-2:#0b1120; --border:#1f2a44;
+      --good:#22c55e; --pending:#fbbf24; --bad:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;background:var(--bg);color:var(--text)}
+    .phone{max-width:520px;margin:auto;min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#0f172a 0%,#0b1120 100%)}
+    .topbar{padding:16px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;text-align:center}
+    .topbar h1{margin:0;font-size:18px;letter-spacing:.3px}
+    .content{padding:20px;display:grid;gap:20px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{margin:0 0 10px;font-size:16px;font-weight:600}
+    .subtle{color:#cbd5e1;font-size:13px;margin:4px 0 12px}
+    label{font-size:13px;color:#e2e8f0;display:block;margin:10px 0 6px}
+    input[type="text"],input[type="number"],select,input[type="time"]{
+      width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--panel-2);color:#fff;outline:none}
+    input:focus,select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(5,194,204,.15)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .row3{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 14px;border:none;border-radius:10px;cursor:pointer;font-weight:700;transition:transform .04s ease,filter .2s ease}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background:var(--orange);color:#000}
+    .btn.secondary{background:#12213d;color:#e2e8f0;border:1px solid var(--border)}
+    .btn.ghost{background:transparent;color:#e2e8f0;border:1px solid var(--border)}
+    .btn-block{width:100%}
+    .divider{height:1px;background:var(--border);margin:12px 0;opacity:.7}
+    #response{margin:0;padding:12px 14px;background:#0b1120;border:1px solid var(--border);border-radius:10px;color:#e2e8f0;font-size:14px}
+    .hint{font-size:12px;color:#94a3b8}
+    .tag{display:inline-flex;align-items:center;gap:6px;background:#0b1120;border:1px solid var(--border);color:#e2e8f0;padding:6px 10px;border-radius:999px;font-size:12px}
+
+    /* tablas de vista previa */
+    .table-wrap{overflow:auto;border-radius:12px;border:1px solid var(--border);background:var(--panel)}
+    table{width:100%;border-collapse:separate;border-spacing:0;min-width:360px}
+    thead th{position:sticky;top:0;z-index:1;background:#0f162b;border-bottom:1px solid var(--border);padding:10px;text-align:left;font-weight:600;font-size:13px;color:#e2e8f0}
+    tbody td{padding:10px;border-bottom:1px solid #152340;font-size:14px;color:#e2e8f0}
+    tbody tr:hover{background:#0e1a33}
+    .action{display:inline-flex;gap:6px}
+    .sm{padding:6px 10px;font-size:12px;border-radius:8px}
+    .danger{border:1px solid rgba(239,68,68,.4);background:#1b0f12;color:#fecaca}
+    .ok{border:1px solid rgba(34,197,94,.35);background:#0f1b14;color:#bbf7d0}
+    .navdays{display:flex;gap:8px;align-items:center}
+    .daylabel{font-weight:700}
+  </style>
 </head>
 <body>
-  <h1>Plan de Comidas - PetCare</h1>
+  <div class="phone">
+    <div class="topbar"><h1>Plan de Comidas • PetCare</h1></div>
 
-  <!-- Conexión -->
-  <form id="connForm">
-    <label for="ip">IP del ESP32 (sin http, sin /):</label>
-    <input type="text" id="ip" placeholder="172.20.10.5" required>
-    <label for="port">Puerto:</label>
-    <input type="number" id="port" value="8080" min="1" max="65535" required>
-    <button type="submit">Guardar conexión</button>
-    <button type="button" id="goTable">Ver tabla de comidas efectuadas</button>
-  </form>
+    <div class="content">
 
-  <hr>
+      <!-- CONEXIÓN -->
+      <form id="connForm" class="card" autocomplete="off">
+        <h2>Conexión</h2>
+        <p class="subtle">Guardá la IP y puerto del ESP32.</p>
+        <label for="ip">IP del ESP32 (sin http, sin /)</label>
+        <input type="text" id="ip" placeholder="172.20.10.5" required />
+        <label for="port">Puerto</label>
+        <input type="number" id="port" value="8080" min="1" max="65535" required />
+        <div class="row" style="margin-top:12px">
+          <button type="submit" class="btn primary btn-block">Guardar conexión</button>
+          <button type="button" id="goTable" class="btn secondary btn-block">Ver tabla de comidas</button>
+        </div>
+      </form>
 
-  <!-- Config -->
-  <form id="planForm">
-    <label for="grams">Gramos por comida:</label>
-    <input type="number" id="grams" min="10" step="5" required>
+      <!-- PLAN -->
+      <form id="planForm" class="card" autocomplete="off">
+        <h2>Configurar plan</h2>
+        <p class="subtle">Armá el plan, mirá la vista previa y cuando estés listo enviá al ESP32.</p>
 
-    <label for="mode">Modo de plan:</label>
-    <select id="mode" required>
-      <option value="repeat_week">Repetir toda la semana</option>
-      <option value="per_day">Por día</option>
-    </select>
+        <label for="grams">Gramos por comida</label>
+        <input type="number" id="grams" min="10" step="5" placeholder="Ej: 40" required />
+        <p class="hint">Se envía como <strong>secondsOpen = gramos / 10</strong>.</p>
 
-    <div id="repeatWeekBox" style="margin-top:10px;">
-      <p>Ingresá horarios (HH:MM) separados por coma. Ej: <code>08:00, 13:30, 20:00</code></p>
-      <label for="allWeek">Todos los días:</label>
-      <input type="text" id="allWeek" placeholder="08:00, 20:00">
+        <label for="mode">Modo de plan</label>
+        <select id="mode" required>
+          <option value="repeat_week">Repetir toda la semana</option>
+          <option value="per_day">Por día</option>
+        </select>
+
+        <!-- REPEAT WEEK -->
+        <div id="repeatWeekBox" style="margin-top:10px">
+          <div class="divider"></div>
+          <p class="subtle">Agregá uno o más horarios; abajo ves la tabla de vista previa.</p>
+
+          <div class="row3">
+            <input type="time" id="timeAll" />
+            <button type="button" id="addTimeAll" class="btn">Agregar</button>
+            <button type="button" id="clearAll" class="btn ghost">Limpiar</button>
+          </div>
+
+          <div class="table-wrap" style="margin-top:12px">
+            <table>
+              <thead><tr><th>#</th><th>Hora</th><th>Acciones</th></tr></thead>
+              <tbody id="tbodyAll"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PER DAY -->
+        <div id="perDayBox" class="divider" style="display:none;margin-top:10px"></div>
+        <div id="perDayContent" style="display:none">
+          <p class="subtle">Cargá horarios por día. Navegá con los botones y mirá la vista previa semanal.</p>
+          <div class="navdays" style="margin-bottom:10px">
+            <button type="button" id="prevDay" class="btn ghost sm">Anterior día</button>
+            <span class="daylabel" id="dayLabel">Lunes</span>
+            <button type="button" id="nextDay" class="btn ghost sm">Siguiente día</button>
+          </div>
+
+          <div class="row3">
+            <input type="time" id="timeDay" />
+            <button type="button" id="addTimeDay" class="btn">Agregar</button>
+            <button type="button" id="clearDay" class="btn ghost">Limpiar día</button>
+          </div>
+
+          <!-- Tabla del día actual -->
+          <div class="table-wrap" style="margin-top:12px">
+            <table>
+              <thead><tr><th>#</th><th>Hora</th><th>Acciones</th></tr></thead>
+              <tbody id="tbodyDay"></tbody>
+            </table>
+          </div>
+
+          <!-- Vista previa semanal -->
+          <h3 class="subtle" style="margin:14px 0 6px">Vista previa semanal</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Día</th><th>Horarios</th></tr></thead>
+              <tbody id="tbodyWeekPreview"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <button type="submit" class="btn primary btn-block">Enviar plan al ESP32</button>
+      </form>
+
+      <p id="response" class="card subtle">—</p>
     </div>
-
-    <div id="perDayBox" style="display:none; margin-top:10px;">
-      <p>Horarios por día (HH:MM) separados por coma.</p>
-
-      <label for="mon">Lunes:</label>
-      <input type="text" id="mon" placeholder="08:00, 20:00">
-
-      <label for="tue">Martes:</label>
-      <input type="text" id="tue" placeholder="08:00, 20:00">
-
-      <label for="wed">Miércoles:</label>
-      <input type="text" id="wed" placeholder="08:00, 20:00">
-
-      <label for="thu">Jueves:</label>
-      <input type="text" id="thu" placeholder="08:00, 20:00">
-
-      <label for="fri">Viernes:</label>
-      <input type="text" id="fri" placeholder="08:00, 20:00">
-
-      <label for="sat">Sábado:</label>
-      <input type="text" id="sat" placeholder="09:00">
-
-      <label for="sun">Domingo:</label>
-      <input type="text" id="sun" placeholder="09:00">
-    </div>
-
-    <button type="submit" style="margin-top:10px;">Guardar plan</button>
-  </form>
-
-  <p id="response"></p>
+  </div>
 
   <script>
-    // ===== IP/puerto persistentes =====
+    // ====== Conexión & helpers ======
     const ipInput   = document.getElementById("ip");
     const portInput = document.getElementById("port");
     ipInput.value   = localStorage.getItem("petcare_ip")   || "";
@@ -77,75 +157,201 @@
       e.preventDefault();
       localStorage.setItem("petcare_ip", ipInput.value.trim());
       localStorage.setItem("petcare_port", portInput.value.trim());
-      alert("Conexión guardada");
+      document.getElementById("response").textContent = "Conexión guardada.";
     });
 
-    document.getElementById("goTable").addEventListener("click", () => {
+    document.getElementById("goTable").addEventListener("click", (e) => {
+      e.preventDefault();
       window.location.href = "tabladecomidasefectuadas.html";
     });
 
-    function buildURL(path) {
-      const ip = (localStorage.getItem("petcare_ip") || ipInput.value || "").trim();
-      const port = (localStorage.getItem("petcare_port") || portInput.value || "8080").trim();
-      if (!ip) throw new Error("Falta IP del ESP32");
+    function buildURL(path){
+      const ip=(localStorage.getItem("petcare_ip")||ipInput?.value||"").trim();
+      const port=(localStorage.getItem("petcare_port")||portInput?.value||"8080").trim();
+      if(!ip) throw new Error("Falta IP del ESP32");
       return `http://${ip}:${port}${path}`;
     }
 
-    // ===== Helpers =====
-    function parseTimes(text) {
-      if (!text) return [];
-      return text.split(",").map(s => s.trim()).filter(s => /^\d{2}:\d{2}$/.test(s));
-    }
+    const modeSel = document.getElementById('mode');
+    const repeatWeekBox = document.getElementById('repeatWeekBox');
+    const perDayBox = document.getElementById('perDayBox');
+    const perDayContent = document.getElementById('perDayContent');
 
-    // ===== UI modo =====
-    const modeSel      = document.getElementById("mode");
-    const repeatWeekBox= document.getElementById("repeatWeekBox");
-    const perDayBox    = document.getElementById("perDayBox");
-
-    modeSel.addEventListener("change", () => {
-      const mode = modeSel.value;
-      repeatWeekBox.style.display = (mode === "repeat_week") ? "block" : "none";
-      perDayBox.style.display     = (mode === "per_day") ? "block" : "none";
+    modeSel.addEventListener('change', ()=>{
+      const perday = modeSel.value === 'per_day';
+      repeatWeekBox.style.display = perday ? 'none' : 'block';
+      perDayBox.style.display = perday ? 'block' : 'none';
+      perDayContent.style.display = perday ? 'block' : 'none';
+      refreshWeekPreview();
     });
 
-    // ===== Envío plan =====
-    const planForm = document.getElementById("planForm");
-    planForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+    // ====== Repeat Week ======
+    const timeAll = document.getElementById('timeAll');
+    const addTimeAll = document.getElementById('addTimeAll');
+    const clearAll = document.getElementById('clearAll');
+    const tbodyAll = document.getElementById('tbodyAll');
 
-      const grams = parseInt(document.getElementById("grams").value, 10);
-      const secondsOpen = grams / 10;
+    let dayplan = []; // ["08:00","20:00",...]
+
+    function renderAllTable(){
+      tbodyAll.innerHTML = "";
+      dayplan.forEach((t, i)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td>${t}</td>
+          <td class="action">
+            <button type="button" data-i="${i}" class="btn ghost sm danger">Quitar</button>
+          </td>`;
+        tr.querySelector('button').addEventListener('click', (e)=>{
+          const idx = Number(e.currentTarget.dataset.i);
+          dayplan.splice(idx,1);
+          renderAllTable();
+        });
+        tbodyAll.appendChild(tr);
+      });
+    }
+
+    addTimeAll.addEventListener('click', ()=>{
+      const v = timeAll.value;
+      if(!v) return;
+      if(!/^\d{2}:\d{2}$/.test(v)) return;
+      if(!dayplan.includes(v)) {
+        dayplan.push(v);
+        dayplan.sort(); // opcional: orden cronológico simple
+        renderAllTable();
+      }
+      timeAll.value = "";
+    });
+
+    clearAll.addEventListener('click', ()=>{
+      dayplan = [];
+      renderAllTable();
+    });
+
+    // ====== Per Day ======
+    const dayNames = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+    const dayKeys  = ["mon","tue","wed","thu","fri","sat","sun"];
+    let currentDayIndex = 0;
+    const dayLabel = document.getElementById('dayLabel');
+    const prevDay  = document.getElementById('prevDay');
+    const nextDay  = document.getElementById('nextDay');
+    const timeDay  = document.getElementById('timeDay');
+    const addTimeDay = document.getElementById('addTimeDay');
+    const clearDay = document.getElementById('clearDay');
+    const tbodyDay = document.getElementById('tbodyDay');
+    const tbodyWeekPreview = document.getElementById('tbodyWeekPreview');
+
+    const weekplan = { mon:[], tue:[], wed:[], thu:[], fri:[], sat:[], sun:[] };
+
+    function setDayLabel(){
+      dayLabel.textContent = dayNames[currentDayIndex];
+    }
+    function renderDayTable(){
+      const key = dayKeys[currentDayIndex];
+      const arr = weekplan[key];
+      tbodyDay.innerHTML = "";
+      arr.forEach((t, i)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td>${t}</td>
+          <td class="action">
+            <button type="button" data-i="${i}" class="btn ghost sm danger">Quitar</button>
+          </td>`;
+        tr.querySelector('button').addEventListener('click', (e)=>{
+          const idx = Number(e.currentTarget.dataset.i);
+          arr.splice(idx,1);
+          renderDayTable();
+          refreshWeekPreview();
+        });
+        tbodyDay.appendChild(tr);
+      });
+    }
+    function refreshWeekPreview(){
+      tbodyWeekPreview.innerHTML = "";
+      dayKeys.forEach((k, idx)=>{
+        const tr = document.createElement('tr');
+        const list = (weekplan[k]||[]).join(", ");
+        tr.innerHTML = `<td>${dayNames[idx]}</td><td>${list || "<span class='hint'>— sin horarios —</span>"}</td>`;
+        tbodyWeekPreview.appendChild(tr);
+      });
+    }
+
+    setDayLabel(); renderDayTable(); refreshWeekPreview();
+
+    prevDay.addEventListener('click', ()=>{
+      currentDayIndex = (currentDayIndex+6)%7;
+      setDayLabel(); renderDayTable();
+    });
+    nextDay.addEventListener('click', ()=>{
+      currentDayIndex = (currentDayIndex+1)%7;
+      setDayLabel(); renderDayTable();
+    });
+
+    addTimeDay.addEventListener('click', ()=>{
+      const v = timeDay.value;
+      if(!v) return;
+      if(!/^\d{2}:\d{2}$/.test(v)) return;
+      const key = dayKeys[currentDayIndex];
+      if(!weekplan[key].includes(v)){
+        weekplan[key].push(v);
+        weekplan[key].sort();
+        renderDayTable();
+        refreshWeekPreview();
+      }
+      timeDay.value = "";
+    });
+
+    clearDay.addEventListener('click', ()=>{
+      const key = dayKeys[currentDayIndex];
+      weekplan[key] = [];
+      renderDayTable();
+      refreshWeekPreview();
+    });
+
+    // ====== Envío a placa (idéntico formato a tu versión anterior) ======
+    const planForm = document.getElementById('planForm');
+    planForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const grams = parseInt(document.getElementById('grams').value, 10);
+      if(!Number.isFinite(grams) || grams<=0){
+        document.getElementById('response').textContent = "❌ Gramos inválidos.";
+        return;
+      }
+      const secondsOpen = grams/10;
       const mode = modeSel.value;
 
       let payload = { mode, secondsOpen };
-
-      if (mode === "repeat_week") {
-        const times = parseTimes(document.getElementById("allWeek").value);
-        payload.dayplan = times;                 // un array de horarios
+      if(mode === 'repeat_week'){
+        payload.dayplan = [...dayplan]; // string[]
+        if(payload.dayplan.length===0){
+          document.getElementById('response').textContent = "⚠️ Agregá al menos un horario para toda la semana.";
+          return;
+        }
       } else {
-        const weekplan = [
-          parseTimes(document.getElementById("mon").value),
-          parseTimes(document.getElementById("tue").value),
-          parseTimes(document.getElementById("wed").value),
-          parseTimes(document.getElementById("thu").value),
-          parseTimes(document.getElementById("fri").value),
-          parseTimes(document.getElementById("sat").value),
-          parseTimes(document.getElementById("sun").value),
-        ];
-        payload.weekplan = weekplan;             // 7 arrays (Lunes..Domingo)
+        const wp = dayKeys.map(k => weekplan[k]); // string[][]
+        payload.weekplan = wp;
+        const any = wp.some(arr=>arr.length>0);
+        if(!any){
+          document.getElementById('response').textContent = "⚠️ Cargá al menos un horario en algún día.";
+          return;
+        }
       }
 
-      document.getElementById("response").textContent = "Enviando...";
-      try {
-        const res = await fetch(buildURL("/setPlan"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+      const respEl = document.getElementById('response');
+      respEl.textContent = "Enviando plan…";
+
+      try{
+        const res = await fetch(buildURL('/setPlan'), {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
           body: JSON.stringify(payload)
         });
         const msg = await res.text();
-        document.getElementById("response").textContent = "Respuesta: " + msg;
-      } catch (err) {
-        document.getElementById("response").textContent = "Error: " + err.message;
+        respEl.textContent = res.ok ? `✅ Plan enviado. ${msg}` : `⚠️ Error ${res.status}: ${msg}`;
+      }catch(err){
+        respEl.textContent = `❌ No se pudo conectar: ${err.message}`;
       }
     });
   </script>
