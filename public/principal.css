@@ -11,7 +11,7 @@ body {
 
 .phone {
   position: relative;
-  width: min(260px, 94vw);
+  width: min(300px, 94vw);
   aspect-ratio: 248 / 512;
   background: #0d1e2c;
   border: 2px solid #0b1520;
@@ -34,7 +34,7 @@ body {
   height: 58px;
   border-radius: 50%;
   border: 3px solid #0b1520;
-  background: #f7a51a;
+  background: #FCB527;
   color: #111;
   font-size: 26px;
   display: grid;
@@ -113,11 +113,11 @@ body {
 }
 
 .fab {
-  width: 58px;
-  height: 58px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   border: 3px solid #0b1520;
-  background: #f7a51a;
+  background: #FCB527;
   color: #111;
   font-size: 26px;
   display: grid;
@@ -129,3 +129,4 @@ body {
 
 .fab:hover { filter: brightness(1.05); }
 .fab:active { transform: scale(.97); }
+
