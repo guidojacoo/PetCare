@@ -31,9 +31,9 @@ CREATE TABLE mascotas (
 -- Tabla: configuracion de dispensador
 CREATE TABLE dispensador_config (
   mascota_id INTEGER PRIMARY KEY REFERENCES mascotas(id) ON DELETE CASCADE,
-  dias_activos VARCHAR(14) NOT NULL DEFAULT '',
-  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT chk_dias_activos_formato CHECK (dias_activos ~ '^[1-7]*$')
+  mode TEXT NOT NULL CHECK (mode IN ('per_day','per_week')),
+  seconds_open INT NOT NULL CHECK (seconds_open BETWEEN 1 AND 60),
+  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Tabla: comidas programadas

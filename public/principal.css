@@ -11,7 +11,7 @@ body {
 
 .phone {
   position: relative;
-  width: min(260px, 94vw);
+  width: min(300px, 94vw);
   aspect-ratio: 248 / 512;
   background: #0d1e2c;
   border: 2px solid #0b1520;
@@ -34,7 +34,7 @@ body {
   height: 58px;
   border-radius: 50%;
   border: 3px solid #0b1520;
-  background: #f7a51a;
+  background: #FCB527;
   color: #111;
   font-size: 26px;
   display: grid;
@@ -113,11 +113,11 @@ body {
 }
 
 .fab {
-  width: 58px;
-  height: 58px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   border: 3px solid #0b1520;
-  background: #f7a51a;
+  background: #FCB527;
   color: #111;
   font-size: 26px;
   display: grid;
@@ -129,3 +129,23 @@ body {
 
 .fab:hover { filter: brightness(1.05); }
 .fab:active { transform: scale(.97); }
+
+.bottom-actions .fab:nth-child(1) img{
+  width:60%;
+  height:60%;
+  object-fit:contain;
+  transition:transform .28s ease,opacity .25s ease
+}
+.bottom-actions .fab:nth-child(1).mic-on img{transform:scale(1.1) rotate(10deg)}
+.bottom-actions .fab:nth-child(1).fading img{opacity:.35}
+
+#mic-toast{
+  margin-top:10px;
+  text-align:center;
+  font-weight:bold;
+  opacity:0;
+  transition:opacity .4s ease;
+  font-size:14px;
+  color:#1eb6ff
+}
+#mic-toast.show{opacity:1}
