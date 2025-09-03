@@ -6,123 +6,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --orange:#ff7a00;
-      --cyan:#05c2cc;
-      --bg:#0f172a;
-      --text:#ffffff;
-      --panel:#0f162b;
-      --panel-2:#0b1120;
-      --border:#1f2a44;
-      --good:#22c55e;
-      --pending:#fbbf24;
+      --orange:#ff7a00; --cyan:#05c2cc; --bg:#0f172a; --text:#ffffff;
+      --panel:#0f162b; --panel-2:#0b1120; --border:#1f2a44;
+      --good:#22c55e; --pending:#fbbf24;
     }
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;
-      background:var(--bg);
-      color:var(--text);
-    }
-    .phone{
-      max-width:980px;
-      margin:auto;
-      min-height:100vh;
-      display:flex;
-      flex-direction:column;
-      background:linear-gradient(180deg,#0f172a 0%,#0b1120 100%);
-    }
-    .topbar{
-      padding:16px;
-      background:var(--panel);
-      border-bottom:1px solid var(--border);
-      position:sticky;top:0;z-index:10;
-      text-align:center;
-    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;background:var(--bg);color:var(--text)}
+    .phone{max-width:980px;margin:auto;min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#0f172a 0%,#0b1120 100%)}
+    .topbar{padding:16px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;text-align:center}
     .topbar h1{margin:0;font-size:18px;letter-spacing:.3px}
-    .content{
-      padding:20px;
-      display:grid;
-      gap:20px;
-    }
-    .grid{
-      display:grid;
-      gap:20px;
-      grid-template-columns:1fr;
-    }
-    @media (min-width:900px){
-      .grid{grid-template-columns:380px 1fr;}
-    }
-    .card{
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:16px;
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
-    }
+    .content{padding:20px;display:grid;gap:20px}
+    .grid{display:grid;gap:20px;grid-template-columns:1fr}
+    @media (min-width:900px){ .grid{grid-template-columns:380px 1fr;} }
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
     .card h2{margin:0 0 10px;font-size:16px;font-weight:600}
     .subtle{color:#cbd5e1;font-size:13px;margin:4px 0 12px}
-
     label{font-size:13px;color:#e2e8f0;display:block;margin:10px 0 6px}
-    input[type="text"], input[type="number"]{
-      width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);
-      background:var(--panel-2);color:#fff;outline:none;
-    }
+    input[type="text"], input[type="number"]{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--panel-2);color:#fff;outline:none}
     input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(5,194,204,.15)}
-
     .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-    .btn{
-      display:inline-flex;align-items:center;justify-content:center;gap:8px;
-      padding:12px 14px;border:none;border-radius:10px;cursor:pointer;
-      font-weight:700;transition:transform .04s ease,filter .2s ease;
-    }
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 14px;border:none;border-radius:10px;cursor:pointer;font-weight:700;transition:transform .04s ease,filter .2s ease}
     .btn:active{transform:translateY(1px)}
     .btn.primary{background:var(--orange);color:#000}
     .btn.secondary{background:#12213d;color:#e2e8f0;border:1px solid var(--border)}
     .btn.ghost{background:transparent;color:#e2e8f0;border:1px solid var(--border)}
     .btn-block{width:100%}
-
-    .info{
-      display:grid;gap:10px;
-      grid-template-columns:1fr; 
-    }
-    @media (min-width:600px){
-      .info{grid-template-columns:1fr 1fr}
-    }
-    .badge{
-      background:#0b1120;border:1px solid var(--border);border-radius:10px;padding:10px 12px;
-      font-size:14px;color:#e2e8f0
-    }
-
-    /* Tabla */
-    .table-wrap{
-      overflow:auto;border-radius:12px;border:1px solid var(--border);
-      background:var(--panel);
-    }
-    table{
-      width:100%;border-collapse:separate;border-spacing:0;min-width:520px;
-    }
-    thead th{
-      position:sticky;top:0;z-index:1;
-      background:#0f162b;border-bottom:1px solid var(--border);
-      padding:12px 10px;text-align:left;font-weight:600;font-size:13px;color:#e2e8f0;
-    }
-    tbody td{
-      padding:12px 10px;border-bottom:1px solid #152340;font-size:14px;color:#e2e8f0;
-    }
+    .info{display:grid;gap:10px;grid-template-columns:1fr}
+    @media (min-width:600px){ .info{grid-template-columns:1fr 1fr} }
+    .badge{background:#0b1120;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;color:#e2e8f0}
+    .table-wrap{overflow:auto;border-radius:12px;border:1px solid var(--border);background:var(--panel)}
+    table{width:100%;border-collapse:separate;border-spacing:0;min-width:520px}
+    thead th{position:sticky;top:0;z-index:1;background:#0f162b;border-bottom:1px solid var(--border);padding:12px 10px;text-align:left;font-weight:600;font-size:13px;color:#e2e8f0}
+    tbody td{padding:12px 10px;border-bottom:1px solid #152340;font-size:14px;color:#e2e8f0}
     tbody tr:hover{background:#0e1a33}
     .k{color:#94a3b8}
-    .status{
-      display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;
-      border:1px solid var(--border);background:#0b1120;font-size:13px
-    }
+    .status{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:#0b1120;font-size:13px}
     .status.good{border-color:rgba(34,197,94,.4)}
     .status.pending{border-color:rgba(251,191,36,.35)}
     .dot{width:8px;height:8px;border-radius:50%}
     .good .dot{background:var(--good)}
     .pending .dot{background:var(--pending)}
-
-    #msg{margin:0;padding:12px 14px;background:#0b1120;border:1px solid var(--border);
-      border-radius:10px;color:#e2e8f0;font-size:14px}
+    #msg{margin:0;padding:12px 14px;background:#0b1120;border:1px solid var(--border);border-radius:10px;color:#e2e8f0;font-size:14px}
   </style>
 </head>
 <body>
@@ -161,21 +85,15 @@
         </div>
       </div>
 
-<!-- Panel de raciones restantes (NO reemplaza nada) -->
-<div id="stockPanel" style="display:none; margin-top:10px; padding:12px 14px;
-  border:1px solid #1f2a44; border-radius:10px; background:#0b1120; color:#e2e8f0; font-size:14px;">
-  <strong>Raciones restantes</strong> —
-  completas: <span id="mealsFull">0</span>
-  · exacto: <span id="mealsExact">0.00</span>
-  · queda: <span id="gramsLeft">0</span> g
-</div>
+      <!-- Panel raciones restantes -->
+      <div id="stockPanel" style="display:none; margin-top:10px; padding:12px 14px; border:1px solid #1f2a44; border-radius:10px; background:#0b1120; color:#e2e8f0; font-size:14px;">
+        <strong>Raciones restantes</strong> — completas: <span id="mealsFull">0</span> · exacto: <span id="mealsExact">0.00</span> · queda: <span id="gramsLeft">0</span> g
+      </div>
 
-<!-- Alerta de recarga -->
-<div id="rechargeBanner" style="display:none; margin-top:8px; padding:12px 14px;
-  border:1px solid rgba(251,191,36,.35); border-radius:10px; background:#1f1a0b; color:#fde68a; font-size:14px;">
-  ⚠️ Quedan ≤ 2 raciones completas. Por favor, recargar el almacén.
-</div>
-
+      <!-- Alerta de recarga -->
+      <div id="rechargeBanner" style="display:none; margin-top:8px; padding:12px 14px; border:1px solid rgba(251,191,36,.35); border-radius:10px; background:#1f1a0b; color:#fde68a; font-size:14px;">
+        ⚠️ Quedan ≤ 2 raciones completas. Por favor, recargar el almacén.
+      </div>
 
       <!-- Tabla -->
       <div class="card">
@@ -203,8 +121,12 @@
     </div>
   </div>
 
-  <!-- === Script original SIN CAMBIOS === -->
+  <!-- === Script === -->
   <script>
+    // ======= CONFIGURA ACÁ TU BACKEND =======
+    const BACKEND_URL = "http://localhost:3000"; // <-- CAMBIAR SI ES NECESARIO
+    // ========================================
+
     const ipInput   = document.getElementById("ip");
     const portInput = document.getElementById("port");
     const nowEl  = document.getElementById("now");
@@ -276,87 +198,104 @@
         const tdTime  = document.createElement("td");
         const tdFed   = document.createElement("td");
         const tdEaten = document.createElement("td");
-        const tdWater = document.createElement("td"); // NUEVO
+        const tdWater = document.createElement("td");
 
         tdIdx.textContent = idx + 1;
         tdTime.textContent = p.time;
         tdFed.textContent   = p.fed   ? "Hecha ✅"    : "Pendiente ⏳";
         tdEaten.textContent = p.eaten ? "OK ✅"       : "Pendiente ⏳";
-        tdWater.textContent = p.water ? "Servida ✅"  : "Pendiente ⏳"; // NUEVO
+        tdWater.textContent = p.water ? "Servida ✅"  : "Pendiente ⏳";
 
         tr.appendChild(tdIdx);
         tr.appendChild(tdTime);
         tr.appendChild(tdFed);
         tr.appendChild(tdEaten);
-        tr.appendChild(tdWater); // NUEVO
+        tr.appendChild(tdWater);
         tbody.appendChild(tr);
       });
     }
 
-    // Actualización automática cada 5s
-    setInterval(fetchStatus, 5000);
-    // Primer fetch al abrir
-    fetchStatus();
-  </script>
+    // ======= Sincronizar con el ÚLTIMO plan de la DB =======
+    async function syncFromDB(){
+      try{
+        // 1) Trae la lista (últimos primero)
+        const res = await fetch(`${BACKEND_URL}/db/planes`);
+        if (!res.ok) return;
+        const list = await res.json();
+        if (!Array.isArray(list) || list.length === 0) return;
 
-<script>
-  // ===== Cálculo de raciones restantes (hook sin tocar tu render) =====
-  (function(){
-    const originalRender = window.render;
-  
-    function numbers(){
-      const hopper = parseFloat(localStorage.getItem('petcare_hopper') || '0');
-      const gramsPerMeal = parseFloat(localStorage.getItem('petcare_grams_per_meal') || '0');
-      return { hopper, gramsPerMeal };
+        const latest = list[0]; // el más nuevo
+        // guardo en localStorage para que el cálculo de raciones funcione
+        if (Number.isFinite(latest.grams_per_meal)) {
+          localStorage.setItem('petcare_grams_per_meal', String(latest.grams_per_meal));
+        }
+        if (Number.isFinite(latest.hopper_g)) {
+          localStorage.setItem('petcare_hopper', String(latest.hopper_g));
+        }
+
+        // 2) (Opcional) si querés leer el JSON del plan:
+        // const res2 = await fetch(`${BACKEND_URL}/db/plan/${latest.id}`);
+        // const planDoc = await res2.json(); // planDoc.plan tiene el JSON
+
+      }catch(_){}
     }
-    function calcRemaining(hopper, gramsPerMeal, fedCount){
-      if (!Number.isFinite(hopper) || hopper < 0 || !Number.isFinite(gramsPerMeal) || gramsPerMeal <= 0){
-        return { gramsLeft: 0, mealsExact: 0, mealsFull: 0 };
+
+    // ===== Cálculo de raciones restantes (hook sin tocar tu render) =====
+    (function(){
+      const originalRender = window.render;
+
+      function numbers(){
+        const hopper = parseFloat(localStorage.getItem('petcare_hopper') || '0');
+        const gramsPerMeal = parseFloat(localStorage.getItem('petcare_grams_per_meal') || '0');
+        return { hopper, gramsPerMeal };
       }
-      const gramsLeft = Math.max(0, hopper - fedCount * gramsPerMeal);
-      const mealsExact = gramsLeft / gramsPerMeal;
-      const mealsFull = Math.floor(mealsExact);
-      return { gramsLeft, mealsExact, mealsFull };
-    }
-    function updateUI(gramsLeft, mealsExact, mealsFull){
-      const panel = document.getElementById('stockPanel');
-      const warn  = document.getElementById('rechargeBanner');
-      const gEl   = document.getElementById('gramsLeft');
-      const eEl   = document.getElementById('mealsExact');
-      const fEl   = document.getElementById('mealsFull');
-  
-      gEl.textContent = Math.round(gramsLeft);
-      eEl.textContent = mealsExact.toFixed(2);
-      fEl.textContent = String(mealsFull);
-  
-      // mostrar panel si tenemos datos válidos
-      panel.style.display = (mealsExact > 0 || gramsLeft > 0) ? 'block' : 'none';
-      // alerta si quedan 2 o menos raciones completas
-      warn.style.display = (mealsFull <= 2) ? 'block' : 'none';
-    }
-  
-    window.render = function(data){
-      // 1) render original (no tocamos tu lógica)
-      originalRender.call(this, data);
-  
-      try {
-        // 2) contar comidas hechas segun /status (fed === true)
-        const plan = (data && data.today && Array.isArray(data.today.plan)) ? data.today.plan : [];
-        const fedCount = plan.reduce((acc,p)=> acc + (p && p.fed ? 1 : 0), 0);
-  
-        // 3) tomar hopper y gramos por comida del localStorage
-        const { hopper, gramsPerMeal } = numbers();
-  
-        // 4) calcular y pintar
-        const { gramsLeft, mealsExact, mealsFull } = calcRemaining(hopper, gramsPerMeal, fedCount);
-        updateUI(gramsLeft, mealsExact, mealsFull);
-  
-      } catch (e) {
-        // silencioso para no romper UI si algo falta
+      function calcRemaining(hopper, gramsPerMeal, fedCount){
+        if (!Number.isFinite(hopper) || hopper < 0 || !Number.isFinite(gramsPerMeal) || gramsPerMeal <= 0){
+          return { gramsLeft: 0, mealsExact: 0, mealsFull: 0 };
+        }
+        const gramsLeft = Math.max(0, hopper - fedCount * gramsPerMeal);
+        const mealsExact = gramsLeft / gramsPerMeal;
+        const mealsFull = Math.floor(mealsExact);
+        return { gramsLeft, mealsExact, mealsFull };
       }
-    };
-  })();
+      function updateUI(gramsLeft, mealsExact, mealsFull){
+        const panel = document.getElementById('stockPanel');
+        const warn  = document.getElementById('rechargeBanner');
+        const gEl   = document.getElementById('gramsLeft');
+        const eEl   = document.getElementById('mealsExact');
+        const fEl   = document.getElementById('mealsFull');
+
+        gEl.textContent = Math.round(gramsLeft);
+        eEl.textContent = mealsExact.toFixed(2);
+        fEl.textContent = String(mealsFull);
+
+        panel.style.display = (mealsExact > 0 || gramsLeft > 0) ? 'block' : 'none';
+        warn.style.display = (mealsFull <= 2) ? 'block' : 'none';
+      }
+
+      window.render = function(data){
+        // 1) render original
+        originalRender.call(this, data);
+
+        try {
+          // 2) contar comidas hechas
+          const plan = (data && data.today && Array.isArray(data.today.plan)) ? data.today.plan : [];
+          const fedCount = plan.reduce((acc,p)=> acc + (p && p.fed ? 1 : 0), 0);
+
+          // 3) números desde localStorage
+          const { hopper, gramsPerMeal } = numbers();
+
+          // 4) calcular y pintar
+          const { gramsLeft, mealsExact, mealsFull } = calcRemaining(hopper, gramsPerMeal, fedCount);
+          updateUI(gramsLeft, mealsExact, mealsFull);
+
+        } catch (e) { /* silencioso */ }
+      };
+    })();
+
+    // Primeras acciones al abrir:
+    syncFromDB().then(fetchStatus);
+    setInterval(fetchStatus, 5000);
   </script>
-  
 </body>
 </html>
