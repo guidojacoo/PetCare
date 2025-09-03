@@ -11,7 +11,7 @@ body {
 
 .phone {
   position: relative;
-  width: min(300px, 94vw);
+  width: min(260px, 94vw);
   aspect-ratio: 248 / 512;
   background: #0d1e2c;
   border: 2px solid #0b1520;
@@ -34,7 +34,7 @@ body {
   height: 58px;
   border-radius: 50%;
   border: 3px solid #0b1520;
-  background: #FCB527;
+  background: #f7a51a;
   color: #111;
   font-size: 26px;
   display: grid;
@@ -113,11 +113,11 @@ body {
 }
 
 .fab {
-  width: 70px;
-  height: 70px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   border: 3px solid #0b1520;
-  background: #FCB527;
+  background: #f7a51a;
   color: #111;
   font-size: 26px;
   display: grid;
@@ -127,8 +127,10 @@ body {
   transition: transform .08s ease, filter .12s ease;
 }
 
-.fab:hover { filter: brightness(1.05); }
-.fab:active { transform: scale(.97); }
+.fab:hover { filter: brightness(1.05); } 
+.fab:active { transform: scale(.97); } 
+
+.phone{max-height:94vh;overflow:hidden}
 
 .bottom-actions .fab:nth-child(1) img{
   width:60%;
@@ -140,12 +142,21 @@ body {
 .bottom-actions .fab:nth-child(1).fading img{opacity:.35}
 
 #mic-toast{
-  margin-top:10px;
+  position:absolute;
+  left:12px;right:12px;
+  top:75px;
+  margin:0;
+  z-index:5;
+  pointer-events:none;
   text-align:center;
   font-weight:bold;
   opacity:0;
   transition:opacity .4s ease;
   font-size:14px;
-  color:#1eb6ff
+  color:#26ff1e
 }
 #mic-toast.show{opacity:1}
+
+@media (max-height:560px){
+  .btn,.fab{transform:scale(.92)}
+}
