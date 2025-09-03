@@ -1,6 +1,7 @@
 // Forzar zona horaria Argentina
 process.env.TZ = 'America/Argentina/Buenos_Aires';
 
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import * as mascotas from "./controllers/mascotas.js";

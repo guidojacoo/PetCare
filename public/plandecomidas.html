@@ -35,8 +35,6 @@
     #response{margin:0;padding:12px 14px;background:#0b1120;border:1px solid var(--border);border-radius:10px;color:#e2e8f0;font-size:14px}
     .hint{font-size:12px;color:#94a3b8}
     .tag{display:inline-flex;align-items:center;gap:6px;background:#0b1120;border:1px solid var(--border);color:#e2e8f0;padding:6px 10px;border-radius:999px;font-size:12px}
-
-    /* tablas de vista previa */
     .table-wrap{overflow:auto;border-radius:12px;border:1px solid var(--border);background:var(--panel)}
     table{width:100%;border-collapse:separate;border-spacing:0;min-width:360px}
     thead th{position:sticky;top:0;z-index:1;background:#0f162b;border-bottom:1px solid var(--border);padding:10px;text-align:left;font-weight:600;font-size:13px;color:#e2e8f0}
@@ -55,7 +53,6 @@
     <div class="topbar"><h1>Plan de Comidas • PetCare</h1></div>
 
     <div class="content">
-
       <!-- CONEXIÓN -->
       <form id="connForm" class="card" autocomplete="off">
         <h2>Conexión</h2>
@@ -81,10 +78,7 @@
 
         <label for="hopper">Almacén (g) — comida disponible</label>
         <input type="number" id="hopper" min="0" step="10" placeholder="Ej: 1000" />
-        <p class="hint">
-          (Se usa en la tabla para calcular cuántas raciones quedan.)
-        </p>
-        
+        <p class="hint">(Se usa en la tabla para calcular cuántas raciones quedan.)</p>
 
         <label for="mode">Modo de plan</label>
         <select id="mode" required>
@@ -154,6 +148,10 @@
   </div>
 
   <script>
+    // ======= CONFIGURA ACÁ TU BACKEND =======
+    const BACKEND_URL = "http://localhost:3000"; // <-- CAMBIAR SI ES NECESARIO
+    // ========================================
+
     // ====== Conexión & helpers ======
     const ipInput   = document.getElementById("ip");
     const portInput = document.getElementById("port");
@@ -225,7 +223,7 @@
       if(!/^\d{2}:\d{2}$/.test(v)) return;
       if(!dayplan.includes(v)) {
         dayplan.push(v);
-        dayplan.sort(); // opcional: orden cronológico simple
+        dayplan.sort();
         renderAllTable();
       }
       timeAll.value = "";
@@ -251,9 +249,7 @@
 
     const weekplan = { mon:[], tue:[], wed:[], thu:[], fri:[], sat:[], sun:[] };
 
-    function setDayLabel(){
-      dayLabel.textContent = dayNames[currentDayIndex];
-    }
+    function setDayLabel(){ dayLabel.textContent = dayNames[currentDayIndex]; }
     function renderDayTable(){
       const key = dayKeys[currentDayIndex];
       const arr = weekplan[key];
@@ -317,7 +313,34 @@
       refreshWeekPreview();
     });
 
-    // ====== Envío a placa (idéntico formato a tu versión anterior) ======
+    // ====== Guardar hopper/grams en localStorage ======
+    const gramsInput  = document.getElementById('grams');
+    const hopperInput = document.getElementById('hopper');
+    hopperInput.value = localStorage.getItem('petcare_hopper') || '';
+    hopperInput.addEventListener('change', ()=>{
+      localStorage.setItem('petcare_hopper', hopperInput.value.trim());
+    });
+
+    async function savePlanToDB(planPayload){
+      const grams = parseFloat(localStorage.getItem('petcare_grams_per_meal') || gramsInput.value || '0');
+      const hopper = parseFloat(localStorage.getItem('petcare_hopper') || 'NaN');
+      const ip   = (localStorage.getItem("petcare_ip")   || ipInput.value || "").trim();
+      const port = (localStorage.getItem("petcare_port") || portInput.value || "8080").trim();
+      try{
+        await fetch(`${BACKEND_URL}/db/plan`,{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({
+            plan: planPayload,
+            gramsPerMeal: grams,
+            hopper: Number.isFinite(hopper)? hopper : null,
+            esp: { ip, port }
+          })
+        });
+      }catch(_){ /* silencioso */ }
+    }
+
+    // ====== Envío a placa ======
     const planForm = document.getElementById('planForm');
     planForm.addEventListener('submit', async (e)=>{
       e.preventDefault();
@@ -326,18 +349,21 @@
         document.getElementById('response').textContent = "❌ Gramos inválidos.";
         return;
       }
+      // guardo para la otra página
+      localStorage.setItem('petcare_grams_per_meal', String(grams));
+
       const secondsOpen = grams/10;
       const mode = modeSel.value;
 
       let payload = { mode, secondsOpen };
       if(mode === 'repeat_week'){
-        payload.dayplan = [...dayplan]; // string[]
+        payload.dayplan = [...dayplan];
         if(payload.dayplan.length===0){
           document.getElementById('response').textContent = "⚠️ Agregá al menos un horario para toda la semana.";
           return;
         }
       } else {
-        const wp = dayKeys.map(k => weekplan[k]); // string[][]
+        const wp = dayKeys.map(k => weekplan[k]);
         payload.weekplan = wp;
         const any = wp.some(arr=>arr.length>0);
         if(!any){
@@ -357,32 +383,15 @@
         });
         const msg = await res.text();
         respEl.textContent = res.ok ? `✅ Plan enviado. ${msg}` : `⚠️ Error ${res.status}: ${msg}`;
+
+        if (res.ok){
+          // también guardamos en DB (no bloquea la UI)
+          savePlanToDB(payload);
+        }
       }catch(err){
         respEl.textContent = `❌ No se pudo conectar: ${err.message}`;
       }
     });
   </script>
-
-<script>
-  // === Almacén (frontend) ===
-  const gramsInput  = document.getElementById('grams');   // ya existe en tu plan
-  const hopperInput = document.getElementById('hopper');
-  
-  // cargar valor guardado
-  hopperInput.value = localStorage.getItem('petcare_hopper') || '';
-  
-  hopperInput.addEventListener('change', ()=>{
-    localStorage.setItem('petcare_hopper', hopperInput.value.trim());
-  });
-  
-  // cuando enviás el plan, guardamos también “gramos por comida” para que la otra página lo use
-  document.getElementById('planForm').addEventListener('submit', ()=>{
-    const grams = parseFloat(gramsInput.value);
-    if (Number.isFinite(grams) && grams > 0){
-      localStorage.setItem('petcare_grams_per_meal', String(grams));
-    }
-  });
-  </script>
-  
 </body>
 </html>

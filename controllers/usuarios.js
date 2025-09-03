@@ -1,6 +1,7 @@
 import { query } from "../db.js"
 import bcrypt from "bcryptjs"
 
+
 export const Listar = async (req, res) => {
   let r = await query("select id,nombre,email,fecha_registro,rol from usuarios order by id asc")
   res.json(r.rows)
