@@ -34,9 +34,15 @@
     <div class="bottom-actions">
       <button class="fab" aria-label="Micrófono silenciado">🔇</button>
       <button onclick="moverServo()"class="fab"> 🐾 </button>
-      <button class="fab" aria-label="Tomar foto">📸</button>
+      <button class="fab" id = "plan" aria-label="Tomar foto">📸</button>
     </div>
     <script>
+
+document.getElementById("plan").addEventListener("click", (e) => {
+      e.preventDefault();
+      window.location.href = "plandecomidas.html";
+    });
+
       (function () {
         try {
           const u = JSON.parse(localStorage.getItem("usuario"));
