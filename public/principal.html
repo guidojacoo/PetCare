@@ -10,7 +10,8 @@
 
   <main class="phone">
     <header class="top">
-      <a href="perfil.html" class="btn btn-gear" aria-label="Configuración"><img src="/Fotos/configuracion.png" alt="Configuración" width="40px" height="40px"></a>      <div class="dot"></div>
+      <a href="perfil.html" class="btn btn-gear" aria-label="Configuración">⚙️</a>      
+      <div class="dot"></div>
     </header>
 
     <section class="camera">
@@ -18,9 +19,7 @@
            src="http://192.168.0.244:81/stream" 
            style="width:200px; height:200px;border-radius:8px;" 
            alt="Cámara en vivo">
-  </section>
-    
-    
+    </section>
     
     <script>
       function moverServo() {
@@ -29,19 +28,22 @@
           .then(t => console.log(t));
       }
     </script>
-    
 
     <div class="bottom-actions">
-      <button class="fab" aria-label="Micrófono silenciado">🔇</button>
-      <button onclick="moverServo()"class="fab"> 🐾 </button>
-      <button class="fab" id = "plan" aria-label="Tomar foto"><img src="/Fotos/Notas.png" alt="Notas" width="40px" height="40px"></button>
+      <button class="fab" id="mic" aria-label="Micrófono silenciado" data-state="off">
+        <img class="mic-img" src="../micDesactivado.png" alt="Imagen de un microfono">
+      </button>
+      <button onclick="moverServo()" class="fab"> 🐾 </button>
+      <button class="fab" id="plan" aria-label="Tomar foto"><img src=".../Fotos/Notas.png" alt="Imagen de unas notas"></button>
     </div>
-    <script>
 
-document.getElementById("plan").addEventListener("click", (e) => {
-      e.preventDefault();
-      window.location.href = "plandecomidas.html";
-    });
+    <div id="mic-toast">microfono activo</div>
+
+    <script>
+      document.getElementById("plan").addEventListener("click", (e) => {
+        e.preventDefault();
+        window.location.href = "plandecomidas.html";
+      });
 
       (function () {
         try {
@@ -53,6 +55,33 @@ document.getElementById("plan").addEventListener("click", (e) => {
           window.location.replace("index.html");
         }
       })();
+
+      let micBtn = document.getElementById("mic");
+      let micImg = micBtn.querySelector(".mic-img");
+      let toast = document.getElementById("mic-toast");
+      let hideTimer = null;
+
+      function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.remove("show");
+        void toast.offsetWidth;
+        toast.classList.add("show");
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => { toast.classList.remove("show"); }, 2000);
+      }
+
+      micBtn.addEventListener("click", () => {
+        let state = micBtn.getAttribute("data-state");
+        if (state === "off") {
+          micBtn.setAttribute("data-state", "on");
+          micImg.src = "../micActivado.png";
+          showToast("Tu perro te esta escuchando");
+        } else {
+          micBtn.setAttribute("data-state", "off");
+          micImg.src = "../micDesactivado.png";
+          showToast("Tu perro no te esta escuchando");
+        }
+      });
     </script>
   </main>
 
