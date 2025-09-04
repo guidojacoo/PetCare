@@ -104,9 +104,9 @@
               <tr>
                 <th>#</th>
                 <th>Hora</th>
-                <th>Entregado</th>
-                <th>Comido</th>
-                <th>Agua</th>
+                <th>Comida Entregada</th>
+                <th>Alimentado/Hidratado</th>
+                <th>Agua Entregada</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -202,9 +202,9 @@
 
         tdIdx.textContent = idx + 1;
         tdTime.textContent = p.time;
-        tdFed.textContent   = p.fed   ? "Hecha ✅"    : "Pendiente ⏳";
-        tdEaten.textContent = p.eaten ? "OK ✅"       : "Pendiente ⏳";
-        tdWater.textContent = p.water ? "Servida ✅"  : "Pendiente ⏳";
+        tdFed.textContent   = p.fed   ? "✅"  : "❌";
+        tdEaten.textContent = p.eaten ? "✅"  : "❌";
+        tdWater.textContent = p.water ? "✅"  : "❌";
 
         tr.appendChild(tdIdx);
         tr.appendChild(tdTime);
