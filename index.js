@@ -30,6 +30,13 @@ app.get("/db/plan/:id", planes.ObtenerPlanDB);
 app.get("/db/mismascotas/:id", planes.MisMascotasDB);  
 app.get("/db/planes", planes.Listar);  
 
+// Rutas Planes extra (además de las tuyas)
+app.get("/db/plan/ultimo/:userId", planes.UltimoPlanDeUsuario);
+app.post("/db/plan/:id/activar", planes.Activar);
+app.post("/db/plan/:id/desactivar", planes.Desactivar);
+app.post("/db/plan/:id/sync", planes.RegistrarSync);
+
+
 // Rutas Usuarios
 app.get("/usuarios", usuarios.Listar)
 app.get("/usuarios/:id", usuarios.Obtener)
