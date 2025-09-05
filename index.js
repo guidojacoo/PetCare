@@ -8,6 +8,8 @@ import * as mascotas from "./controllers/mascotas.js";
 import * as horarios from "./controllers/horarios.js";
 import * as usuarios from "./controllers/usuarios.js";
 import * as planes from "./controllers/planes.js";
+import * as eventos from "./controllers/eventos.js";
+
 
 let app = express();
 app.use(cors());
@@ -44,6 +46,10 @@ app.post("/usuarios", usuarios.Crear)
 app.put("/usuarios/:id", usuarios.Actualizar)
 app.delete("/usuarios/:id", usuarios.Eliminar)
 app.post("/login", usuarios.Login)
+
+app.post("/eventos", eventos.Crear);                        
+app.get("/mascotas/:id/eventos", eventos.Listar);           
+app.get("/mascotas/:id/ticks", eventos.TicksDelDia);        
 
 
 // Iniciar servidor
