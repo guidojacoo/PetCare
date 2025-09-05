@@ -34,7 +34,9 @@ body {
   height: 58px;
   border-radius: 50%;
   border: 3px solid #0b1520;
-  background: #f7a51a;
+  background: #fcb527
+
+  ;
   color: #111;
   font-size: 26px;
   display: grid;
@@ -117,7 +119,7 @@ body {
   height: 58px;
   border-radius: 50%;
   border: 3px solid #0b1520;
-  background: #f7a51a;
+  background: #fcb527;
   color: #111;
   font-size: 26px;
   display: grid;
