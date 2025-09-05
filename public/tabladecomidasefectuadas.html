@@ -104,9 +104,9 @@
               <tr>
                 <th>#</th>
                 <th>Hora</th>
-                <th>Entregado</th>
-                <th>Comido</th>
-                <th>Agua</th>
+                <th>Comida Entregada</th>
+                <th>Alimentado/Hidratado</th>
+                <th>Agua Entregada</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -166,6 +166,9 @@
         if (!res.ok) throw new Error("HTTP " + res.status);
         const data = await res.json();
         render(data);
+        // ===== NUEVO: repintar desde DB luego del render =====
+        await repintarDesdeDB();
+        // =====================================================
         msgEl.textContent = data.eat_waiting ? "Esperando detección de 'comido'…" : "OK";
       } catch (e) {
         msgEl.textContent = "Error: " + e.message;
@@ -202,9 +205,9 @@
 
         tdIdx.textContent = idx + 1;
         tdTime.textContent = p.time;
-        tdFed.textContent   = p.fed   ? "Hecha ✅"    : "Pendiente ⏳";
-        tdEaten.textContent = p.eaten ? "OK ✅"       : "Pendiente ⏳";
-        tdWater.textContent = p.water ? "Servida ✅"  : "Pendiente ⏳";
+        tdFed.textContent   = p.fed   ? "✅"  : "❌";
+        tdEaten.textContent = p.eaten ? "✅"  : "❌";
+        tdWater.textContent = p.water ? "✅"  : "❌";
 
         tr.appendChild(tdIdx);
         tr.appendChild(tdTime);
@@ -218,25 +221,18 @@
     // ======= Sincronizar con el ÚLTIMO plan de la DB =======
     async function syncFromDB(){
       try{
-        // 1) Trae la lista (últimos primero)
         const res = await fetch(`${BACKEND_URL}/db/planes`);
         if (!res.ok) return;
         const list = await res.json();
         if (!Array.isArray(list) || list.length === 0) return;
 
         const latest = list[0]; // el más nuevo
-        // guardo en localStorage para que el cálculo de raciones funcione
         if (Number.isFinite(latest.grams_per_meal)) {
           localStorage.setItem('petcare_grams_per_meal', String(latest.grams_per_meal));
         }
         if (Number.isFinite(latest.hopper_g)) {
           localStorage.setItem('petcare_hopper', String(latest.hopper_g));
         }
-
-        // 2) (Opcional) si querés leer el JSON del plan:
-        // const res2 = await fetch(`${BACKEND_URL}/db/plan/${latest.id}`);
-        // const planDoc = await res2.json(); // planDoc.plan tiene el JSON
-
       }catch(_){}
     }
 
@@ -292,6 +288,40 @@
         } catch (e) { /* silencioso */ }
       };
     })();
+
+    // ======== NUEVO: rehidratar ticks persistidos desde la DB (Opción A) ========
+    async function repintarDesdeDB(){
+      try {
+        const mascotaId = Number(localStorage.getItem("petcare_mascota_id") || "1");
+
+        const q = (params) =>
+          fetch(`${BACKEND_URL}/mascotas/${mascotaId}/ticks${params}`)
+            .then(r => r.json())
+            .catch(() => ({ ok:false, ticks:[] }));
+
+        // Comida/servo -> "Comida Entregada"
+        // Comida/sensor -> "Alimentado/Hidratado"
+        // Agua/servo   -> "Agua Entregada"
+        const [comida, eaten, agua] = await Promise.all([
+          q(`?accion=comida&tipo=servo`),
+          q(`?accion=comida&tipo=sensor`),
+          q(`?accion=agua&tipo=servo`)
+        ]);
+
+        const setC = new Set((comida.ok ? comida.ticks : []) || []);
+        const setE = new Set((eaten.ok  ? eaten.ticks  : []) || []);
+        const setA = new Set((agua.ok   ? agua.ticks   : []) || []);
+
+        document.querySelectorAll("#table tbody tr").forEach(tr => {
+          const hora = tr.children[1]?.textContent?.trim();
+          if (!hora) return;
+          if (setC.has(hora)) tr.children[2].textContent = "✅"; // Comida Entregada
+          if (setE.has(hora)) tr.children[3].textContent = "✅"; // Alimentado/Hidratado
+          if (setA.has(hora)) tr.children[4].textContent = "✅"; // Agua Entregada
+        });
+      } catch (_) { /* silencioso */ }
+    }
+    // =========================================================================
 
     // Primeras acciones al abrir:
     syncFromDB().then(fetchStatus);

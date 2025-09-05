@@ -37,7 +37,7 @@ function limpiarErrores() {
 async function buscarLogin() {
   let loginActual = null;
   try { 
-    loginActual = JSON.parse(localStorage.getItem("usuario")); 
+    loginActual = JSON.parse(localStorage.getItem("petcare_user")); 
   } catch {}
 
   if (loginActual && loginActual.id) {
@@ -52,7 +52,8 @@ async function buscarLogin() {
     }, 2000);
   }
 }
-  async function registrarUsuario() {
+
+async function registrarUsuario() {
   limpiarErrores();
   const nombreInput = document.getElementById("nombre");
   const emailInput = document.getElementById("email");
@@ -134,7 +135,8 @@ function prepararLogin() {
       const d = await r.json();
 
       if (r.ok) {
-        localStorage.setItem("usuario", JSON.stringify(d));
+        // GUARDADO UNIFICADO
+        localStorage.setItem("petcare_user", JSON.stringify(d));
         await irSegunMascotas();
       } else {
         mostrarError(passInput,"El usuario o contraseña son incorrectos");
@@ -158,16 +160,15 @@ async function tieneMascotas(userId) {
 
 async function irSegunMascotas() {
   let u = null;
-  try { u = JSON.parse(localStorage.getItem("usuario")); } catch {}
+  try { u = JSON.parse(localStorage.getItem("petcare_user")); } catch {}
   if (!u || !u.id) { location.href = "login.html"; return; }
   const hay = await tieneMascotas(u.id);
   location.href = hay ? "principal.html" : "mascota.html";
 }
 
-
 document.addEventListener("DOMContentLoaded", () => {
   const path = (location.pathname || "").toLowerCase();
   if (path.endsWith("registro.html")) prepararRegistro();
   if (path.endsWith("login.html")) prepararLogin();
-  if(path.endsWith("login.html") || path.endsWith("registro.html")) buscarLogin();
-})
+  if (path.endsWith("login.html") || path.endsWith("registro.html")) buscarLogin();
+});
