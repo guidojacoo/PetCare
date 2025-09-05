@@ -47,6 +47,23 @@
     .good .dot{background:var(--good)}
     .pending .dot{background:var(--pending)}
     #msg{margin:0;padding:12px 14px;background:#0b1120;border:1px solid var(--border);border-radius:10px;color:#e2e8f0;font-size:14px}
+    .stock-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;          /* si no entra, baja a otra línea */
+}
+.stock-right{
+  color:#cbd5e1;
+  font-size:13px;
+  opacity:.9;
+  text-align:right;
+}
+@media (max-width:600px){
+  .stock-right{ flex-basis:100%; text-align:left; margin-top:6px; }
+}
+
   </style>
 </head>
 <body>
@@ -85,15 +102,17 @@
         </div>
       </div>
 
-      <!-- Panel raciones restantes -->
       <div id="stockPanel" style="display:none; margin-top:10px; padding:12px 14px; border:1px solid #1f2a44; border-radius:10px; background:#0b1120; color:#e2e8f0; font-size:14px;">
-        <strong>Raciones restantes</strong> — completas: <span id="mealsFull">0</span> · exacto: <span id="mealsExact">0.00</span> · queda: <span id="gramsLeft">0</span> g
-      </div>
+  <div class="stock-row">
+    <div class="stock-left">
+      <strong>Raciones restantes</strong> — completas: <span id="mealsFull">0</span> · exacto: <span id="mealsExact">0.00</span> · queda: <span id="gramsLeft">0</span> g
+    </div>
+    <div class="stock-right">
+      Acuerdese de todos los dias chekear tanto el agua como la comida para prevenir la salud de su mascota
+    </div>
+  </div>
+</div>
 
-      <!-- Alerta de recarga -->
-      <div id="rechargeBanner" style="display:none; margin-top:8px; padding:12px 14px; border:1px solid rgba(251,191,36,.35); border-radius:10px; background:#1f1a0b; color:#fde68a; font-size:14px;">
-        ⚠️ Quedan ≤ 2 raciones completas. Por favor, recargar el almacén.
-      </div>
 
       <!-- Tabla -->
       <div class="card">
@@ -113,9 +132,9 @@
           </table>
         </div>
         <p class="subtle" style="margin-top:10px">
-          <span class="status good"><span class="dot"></span> OK</span>
+          <span class="status good"><span class="dot"></span> SI SE ENTREGO</span>
           &nbsp;·&nbsp;
-          <span class="status pending"><span class="dot"></span> Pendiente</span>
+          <span class="status pending"><span class="dot"></span> NO SE ENTREGO</span>
         </p>
       </div>
     </div>
@@ -176,47 +195,50 @@
     }
 
     function render(data) {
-      if (!data.ok) {
-        nowEl.textContent = "Sin hora disponible.";
-        lastEl.textContent = "";
-        tbody.innerHTML = "";
-        return;
-      }
+  if (!data.ok) {
+    nowEl.textContent = "Sin hora disponible.";
+    lastEl.textContent = "";
+    tbody.innerHTML = "";
+    return;
+  }
 
-      const pumpTxt = (data.pumpOn ? "Bomba: ON" : "Bomba: OFF");
-      nowEl.textContent = `Ahora: ${data.now.dayName} ${data.now.hhmm} | Duración por comida: ${data.secondsOpen}s | ${pumpTxt}`;
+  const pumpTxt = (data.pumpOn ? "Bomba: ON" : "Bomba: OFF");
+  nowEl.textContent = `Ahora: ${data.now.dayName} ${data.now.hhmm} | Duración por comida: ${data.secondsOpen}s | ${pumpTxt}`;
 
-      if (data.lastFeed && data.lastFeed.wday >= 0) {
-        lastEl.textContent = `Última comida: ${data.lastFeed.dayName} ${data.lastFeed.hhmm} (índice ${data.lastFeed.index})`;
-      } else {
-        lastEl.textContent = "Aún no se registraron comidas hoy.";
-      }
+  if (data.lastFeed && data.lastFeed.wday >= 0) {
+    lastEl.textContent = `Última comida: ${data.lastFeed.dayName} ${data.lastFeed.hhmm} (índice ${data.lastFeed.index})`;
+  } else {
+    lastEl.textContent = "Aún no se registraron comidas hoy.";
+  }
 
-      tbody.innerHTML = "";
-      const plan = (data.today && data.today.plan) ? data.today.plan : [];
-      plan.forEach((p, idx) => {
-        const tr = document.createElement("tr");
+  tbody.innerHTML = "";
+  const plan = (data.today && data.today.plan) ? data.today.plan : [];
+  plan.forEach((p, idx) => {
+    const tr = document.createElement("tr");
 
-        const tdIdx   = document.createElement("td");
-        const tdTime  = document.createElement("td");
-        const tdFed   = document.createElement("td");
-        const tdEaten = document.createElement("td");
-        const tdWater = document.createElement("td");
+    const tdIdx   = document.createElement("td");
+    const tdTime  = document.createElement("td");
+    const tdFed   = document.createElement("td");
+    const tdEaten = document.createElement("td");
+    const tdWater = document.createElement("td");
 
-        tdIdx.textContent = idx + 1;
-        tdTime.textContent = p.time;
-        tdFed.textContent   = p.fed   ? "✅"  : "❌";
-        tdEaten.textContent = p.eaten ? "✅"  : "❌";
-        tdWater.textContent = p.water ? "✅"  : "❌";
+    tdIdx.textContent = idx + 1;
+    tdTime.textContent = p.time;
+    tdFed.textContent   = p.fed   ? "✅" : "❌";
+    tdEaten.textContent = p.eaten ? "✅" : "❌";
 
-        tr.appendChild(tdIdx);
-        tr.appendChild(tdTime);
-        tr.appendChild(tdFed);
-        tr.appendChild(tdEaten);
-        tr.appendChild(tdWater);
-        tbody.appendChild(tr);
-      });
-    }
+    // REGLA: comida ⇒ agua (aunque p.water sea false o no venga)
+    tdWater.textContent = (p.water || p.fed) ? "✅" : "❌";
+
+    tr.appendChild(tdIdx);
+    tr.appendChild(tdTime);
+    tr.appendChild(tdFed);
+    tr.appendChild(tdEaten);
+    tr.appendChild(tdWater);
+    tbody.appendChild(tr);
+  });
+}
+
 
     // ======= Sincronizar con el ÚLTIMO plan de la DB =======
     async function syncFromDB(){
@@ -289,38 +311,57 @@
       };
     })();
 
-    // ======== NUEVO: rehidratar ticks persistidos desde la DB (Opción A) ========
-    async function repintarDesdeDB(){
-      try {
-        const mascotaId = Number(localStorage.getItem("petcare_mascota_id") || "1");
+   
+async function repintarDesdeDB(){
+  try {
+    const mascotaId = Number(localStorage.getItem("petcare_mascota_id") || "1");
 
-        const q = (params) =>
-          fetch(`${BACKEND_URL}/mascotas/${mascotaId}/ticks${params}`)
-            .then(r => r.json())
-            .catch(() => ({ ok:false, ticks:[] }));
+    const q = (params) =>
+      fetch(`${BACKEND_URL}/mascotas/${mascotaId}/ticks${params}`)
+        .then(r => r.ok ? r.json() : { ok:false, ticks:[] })
+        .catch(() => ({ ok:false, ticks:[] }));
 
-        // Comida/servo -> "Comida Entregada"
-        // Comida/sensor -> "Alimentado/Hidratado"
-        // Agua/servo   -> "Agua Entregada"
-        const [comida, eaten, agua] = await Promise.all([
-          q(`?accion=comida&tipo=servo`),
-          q(`?accion=comida&tipo=sensor`),
-          q(`?accion=agua&tipo=servo`)
-        ]);
+    // Comida/servo -> "Comida Entregada"
+    // Comida/sensor -> "Alimentado/Hidratado"
+    // Agua/servo   -> "Agua Entregada"
+    const [comida, eaten, agua] = await Promise.all([
+      q(`?accion=comida&tipo=servo`),
+      q(`?accion=comida&tipo=sensor`),
+      q(`?accion=agua&tipo=servo`)
+    ]);
 
-        const setC = new Set((comida.ok ? comida.ticks : []) || []);
-        const setE = new Set((eaten.ok  ? eaten.ticks  : []) || []);
-        const setA = new Set((agua.ok   ? agua.ticks   : []) || []);
+    // Normaliza a Set de strings "HH:MM"
+    const norm = (arr) => (arr || []).map(x => {
+      if (typeof x === "string") return x.trim();
+      if (x && typeof x.hora === "string") return x.hora.trim();
+      return "";
+    }).filter(Boolean);
 
-        document.querySelectorAll("#table tbody tr").forEach(tr => {
-          const hora = tr.children[1]?.textContent?.trim();
-          if (!hora) return;
-          if (setC.has(hora)) tr.children[2].textContent = "✅"; // Comida Entregada
-          if (setE.has(hora)) tr.children[3].textContent = "✅"; // Alimentado/Hidratado
-          if (setA.has(hora)) tr.children[4].textContent = "✅"; // Agua Entregada
-        });
-      } catch (_) { /* silencioso */ }
-    }
+    const setC = new Set(norm(comida.ok ? comida.ticks : []));
+    const setE = new Set(norm(eaten.ok  ? eaten.ticks  : []));
+    const setA = new Set(norm(agua.ok   ? agua.ticks   : []));
+
+    document.querySelectorAll("#table tbody tr").forEach(tr => {
+      const hora = tr.children[1]?.textContent?.trim();
+      if (!hora) return;
+
+      // Comida Entregada
+      if (setC.has(hora)) tr.children[2].textContent = "✅";
+
+      // Alimentado/Hidratado (PIR)
+      if (setE.has(hora)) tr.children[3].textContent = "✅";
+
+      // Agua Entregada:
+      // REGLA persistida: si hubo comida (servo) ⇒ agua ✅,
+      // independientemente de que exista tick de agua.
+      if (setA.has(hora) || setC.has(hora)) {
+        tr.children[4].textContent = "✅";
+      }
+    });
+  } catch (_) { /* silencioso */ }
+}
+
+
     // =========================================================================
 
     // Primeras acciones al abrir:
