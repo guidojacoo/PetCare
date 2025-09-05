@@ -31,7 +31,7 @@
 
     <div class="bottom-actions">
       <button class="fab" id="mic" aria-label="Micrófono silenciado" data-state="off">
-        <img class="mic-img" src="../micDesactivado.png" alt="Imagen de un microfono">
+        <img class="mic-img" src="imagenes/micDesactivado.png" alt="Imagen de un microfono">
       </button>
       <button onclick="moverServo()" class="fab">  
       <img class="" src="../imagenPata.png" alt="Imagen de">
@@ -76,11 +76,11 @@
         let state = micBtn.getAttribute("data-state");
         if (state === "off") {
           micBtn.setAttribute("data-state", "on");
-          micImg.src = "../micActivado.png";
+          micImg.src = "imagenes/micActivado.png";
           showToast("Tu perro te esta escuchando");
         } else {
           micBtn.setAttribute("data-state", "off");
-          micImg.src = "../micDesactivado.png";
+          micImg.src = "imagenes/micDesactivado.png";
           showToast("Tu perro no te esta escuchando");
         }
       });
