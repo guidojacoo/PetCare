@@ -5,11 +5,7 @@
   <title>Plan de Comidas - PetCare</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-      --orange:#ff7a00; --cyan:#05c2cc; --bg:#0f172a; --text:#ffffff;
-      --panel:#0f162b; --panel-2:#0b1120; --border:#1f2a44;
-      --good:#22c55e; --pending:#fbbf24; --bad:#ef4444;
-    }
+    :root{ --orange:#ff7a00; --cyan:#05c2cc; --bg:#0f172a; --text:#ffffff; --panel:#0f162b; --panel-2:#0b1120; --border:#1f2a44; --good:#22c55e; --pending:#fbbf24; --bad:#ef4444 }
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;background:var(--bg);color:var(--text)}
     .phone{max-width:520px;margin:auto;min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#0f172a 0%,#0b1120 100%)}
@@ -20,8 +16,7 @@
     .card h2{margin:0 0 10px;font-size:16px;font-weight:600}
     .subtle{color:#cbd5e1;font-size:13px;margin:4px 0 12px}
     label{font-size:13px;color:#e2e8f0;display:block;margin:10px 0 6px}
-    input[type="text"],input[type="number"],select,input[type="time"]{
-      width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--panel-2);color:#fff;outline:none}
+    input[type="text"],input[type="number"],select,input[type="time"]{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--panel-2);color:#fff;outline:none}
     input:focus,select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(5,194,204,.15)}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .row3{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
@@ -46,24 +41,34 @@
     .ok{border:1px solid rgba(34,197,94,.35);background:#0f1b14;color:#bbf7d0}
     .navdays{display:flex;gap:8px;align-items:center}
     .daylabel{font-weight:700}
+
+    /* modal ia */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:50}
+    .modal.open{display:flex}
+    .modal-card{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative}
+    .close-x{position:absolute;top:10px;right:12px;background:transparent;border:none;color:#94a3b8;font-size:20px;cursor:pointer}
+    .list{display:grid;gap:8px;max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:10px;padding:8px;background:var(--panel-2)}
+    .item{display:flex;justify-content:space-between;gap:10px;padding:10px;border:1px solid #1f2a44;border-radius:10px}
+    .pill{padding:3px 8px;border:1px solid var(--border);border-radius:999px;font-size:15px;color:#cbd5e1;}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   </style>
 </head>
 <body>
   <div class="phone">
     <div class="topbar"><h1>Plan de Comidas • PetCare</h1></div>
     <a class="back" href="principal.html" aria-label="Volver"> <img src="imagenes/flecha.png" alt="flecha" height="20px" width="20px"></a>
-      
+
     <div class="content">
-      <!-- CONEXIÓN -->
+      <!-- CONEXION -->
       <form id="connForm" class="card" autocomplete="off">
-        <h2>Conexión</h2>
-        <p class="subtle">Guardá la IP y puerto del ESP32.</p>
+        <h2>Conexion</h2>
+        <p class="subtle">Guarda la IP y puerto del ESP32.</p>
         <label for="ip">IP del ESP32 (sin http, sin /)</label>
         <input type="text" id="ip" placeholder="172.20.10.5" required />
         <label for="port">Puerto</label>
         <input type="number" id="port" value="8080" min="1" max="65535" required />
         <div class="row" style="margin-top:12px">
-          <button type="submit" class="btn primary btn-block">Guardar conexión</button>
+          <button type="submit" class="btn primary btn-block">Guardar conexion</button>
           <button type="button" id="goTable" class="btn secondary btn-block">Ver tabla de comidas</button>
         </div>
       </form>
@@ -71,26 +76,29 @@
       <!-- PLAN -->
       <form id="planForm" class="card" autocomplete="off">
         <h2>Configurar plan</h2>
-        <p class="subtle">Armá el plan, mirá la vista previa y cuando estés listo enviá al ESP32.</p>
+        <p class="subtle">Arma el plan, mira la vista previa y cuando estes listo envia al ESP32.</p>
 
         <label for="grams">Gramos por comida</label>
-        <input type="number" id="grams" min="10" step="5" placeholder="Ej: 40" required />
-        <p class="hint">Se envía como <strong>secondsOpen = gramos / 10</strong>.</p>
+        <div class="row">
+          <input type="number" id="grams" min="10" step="5" placeholder="Ej: 40" required />
+          <button type="button" id="openIA" class="btn secondary">Calcular con IA</button>
+        </div>
+        <p class="hint" id="iaResult"></p>
 
-        <label for="hopper">Almacén (g) — comida disponible</label>
+        <label for="hopper">Almacen (g) — comida disponible</label>
         <input type="number" id="hopper" min="0" step="10" placeholder="Ej: 1000" />
-        <p class="hint">(Se usa en la tabla para calcular cuántas raciones quedan.)</p>
+        <p class="hint">(Se usa en la tabla para calcular cuantas raciones quedan.)</p>
 
         <label for="mode">Modo de plan</label>
         <select id="mode" required>
           <option value="repeat_week">Repetir toda la semana</option>
-          <option value="per_day">Por día</option>
+          <option value="per_day">Por dia</option>
         </select>
 
         <!-- REPEAT WEEK -->
         <div id="repeatWeekBox" style="margin-top:10px">
           <div class="divider"></div>
-          <p class="subtle">Agregá uno o más horarios; abajo ves la tabla de vista previa.</p>
+          <p class="subtle">Agrega uno o mas horarios; abajo ves la vista previa.</p>
 
           <div class="row3">
             <input type="time" id="timeAll" />
@@ -109,20 +117,20 @@
         <!-- PER DAY -->
         <div id="perDayBox" class="divider" style="display:none;margin-top:10px"></div>
         <div id="perDayContent" style="display:none">
-          <p class="subtle">Cargá horarios por día. Navegá con los botones y mirá la vista previa semanal.</p>
+          <p class="subtle">Carga horarios por dia. Navega con los botones y mira la vista previa semanal.</p>
           <div class="navdays" style="margin-bottom:10px">
-            <button type="button" id="prevDay" class="btn ghost sm">Anterior día</button>
+            <button type="button" id="prevDay" class="btn ghost sm">Anterior dia</button>
             <span class="daylabel" id="dayLabel">Lunes</span>
-            <button type="button" id="nextDay" class="btn ghost sm">Siguiente día</button>
+            <button type="button" id="nextDay" class="btn ghost sm">Siguiente dia</button>
           </div>
 
           <div class="row3">
             <input type="time" id="timeDay" />
             <button type="button" id="addTimeDay" class="btn">Agregar</button>
-            <button type="button" id="clearDay" class="btn ghost">Limpiar día</button>
+            <button type="button" id="clearDay" class="btn ghost">Limpiar dia</button>
           </div>
 
-          <!-- Tabla del día actual -->
+          <!-- Tabla del dia actual -->
           <div class="table-wrap" style="margin-top:12px">
             <table>
               <thead><tr><th>#</th><th>Hora</th><th>Acciones</th></tr></thead>
@@ -134,7 +142,7 @@
           <h3 class="subtle" style="margin:14px 0 6px">Vista previa semanal</h3>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Día</th><th>Horarios</th></tr></thead>
+              <thead><tr><th>Dia</th><th>Horarios</th></tr></thead>
               <tbody id="tbodyWeekPreview"></tbody>
             </table>
           </div>
@@ -148,12 +156,67 @@
     </div>
   </div>
 
-  <script>
-    // ======= CONFIGURA ACÁ TU BACKEND =======
-    const BACKEND_URL = "http://localhost:3000"; // <-- CAMBIAR SI ES NECESARIO
-    // ========================================
+  <!-- MODAL IA -->
+  <div class="modal" id="iaModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <button class="close-x" id="closeIA" aria-label="cerrar">✕</button>
+      <h2 style="margin:0 0 8px">Herramienta IA para raciones</h2>
 
-    // ====== Conexión & helpers ======
+      <h3 style="margin:8px 0 6px">Mis mascotas</h3>
+      <div class="list" id="listMascotas"><div class="subtle">cargando...</div></div>
+
+      <div class="divider" style="margin:12px 0"></div>
+
+      <h3 style="margin:8px 0 6px">Otra mascota</h3>
+      <div class="row2">
+        <div>
+          <label>peso (kg)</label>
+          <input type="number" id="ia_peso" min="0.5" step="0.1" placeholder="ej: 12" required>
+        </div>
+        <div>
+          <label>edad (meses)</label>
+          <input type="number" id="ia_edad" min="0" step="1" placeholder="ej: 24" required>
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>kcal por 100 g</label>
+          <input type="number" id="ia_kcal" min="250" max="500" step="10" placeholder="ej: 360">
+        </div>
+        <div>
+          <label>actividad</label>
+          <select id="ia_actividad">
+            <option value="baja">baja</option>
+            <option value="media">media</option>
+            <option value="alta">alta</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>castrado</label>
+          <select id="ia_castrado">
+            <option value="no">no</option>
+            <option value="si">si</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button class="btn primary" id="calcIA">Calcular racion</button>
+        </div>
+      </div>
+      <p class="subtle" id="ia_hint">Hace click en el boton de calcular</p>
+    </div>
+  </div>
+
+  <script>
+    // ======= urls =======
+    const BACKEND_URL = "http://localhost:3000"
+    const DBURL = BACKEND_URL
+
+    // ======= helpers usuario =======
+    function getUsuario(){ try{ return JSON.parse(localStorage.getItem("usuario")) } catch { return null } }
+
+    // ====== conexion & helpers ======
     const ipInput   = document.getElementById("ip");
     const portInput = document.getElementById("port");
     ipInput.value   = localStorage.getItem("petcare_ip")   || "";
@@ -163,7 +226,7 @@
       e.preventDefault();
       localStorage.setItem("petcare_ip", ipInput.value.trim());
       localStorage.setItem("petcare_port", portInput.value.trim());
-      document.getElementById("response").textContent = "Conexión guardada.";
+      document.getElementById("response").textContent = "Conexion guardada.";
     });
 
     document.getElementById("goTable").addEventListener("click", (e) => {
@@ -318,9 +381,7 @@
     const gramsInput  = document.getElementById('grams');
     const hopperInput = document.getElementById('hopper');
     hopperInput.value = localStorage.getItem('petcare_hopper') || '';
-    hopperInput.addEventListener('change', ()=>{
-      localStorage.setItem('petcare_hopper', hopperInput.value.trim());
-    });
+    hopperInput.addEventListener('change', ()=>{ localStorage.setItem('petcare_hopper', hopperInput.value.trim()); });
 
     async function savePlanToDB(planPayload){
       const grams = parseFloat(localStorage.getItem('petcare_grams_per_meal') || gramsInput.value || '0');
@@ -341,16 +402,15 @@
       }catch(_){ /* silencioso */ }
     }
 
-    // ====== Envío a placa ======
+    // ====== Envio a placa ======
     const planForm = document.getElementById('planForm');
     planForm.addEventListener('submit', async (e)=>{
       e.preventDefault();
       const grams = parseInt(document.getElementById('grams').value, 10);
       if(!Number.isFinite(grams) || grams<=0){
-        document.getElementById('response').textContent = "❌ Gramos inválidos.";
+        document.getElementById('response').textContent = "❌ Gramos invalidos.";
         return;
       }
-      // guardo para la otra página
       localStorage.setItem('petcare_grams_per_meal', String(grams));
 
       const secondsOpen = grams/10;
@@ -360,7 +420,7 @@
       if(mode === 'repeat_week'){
         payload.dayplan = [...dayplan];
         if(payload.dayplan.length===0){
-          document.getElementById('response').textContent = "⚠️ Agregá al menos un horario para toda la semana.";
+          document.getElementById('response').textContent = "⚠️ Agrega al menos un horario para toda la semana.";
           return;
         }
       } else {
@@ -368,7 +428,7 @@
         payload.weekplan = wp;
         const any = wp.some(arr=>arr.length>0);
         if(!any){
-          document.getElementById('response').textContent = "⚠️ Cargá al menos un horario en algún día.";
+          document.getElementById('response').textContent = "⚠️ Carga al menos un horario en algun dia.";
           return;
         }
       }
@@ -385,14 +445,94 @@
         const msg = await res.text();
         respEl.textContent = res.ok ? `✅ Plan enviado. ${msg}` : `⚠️ Error ${res.status}: ${msg}`;
 
-        if (res.ok){
-          // también guardamos en DB (no bloquea la UI)
-          savePlanToDB(payload);
-        }
+        if (res.ok){ savePlanToDB(payload); }
       }catch(err){
         respEl.textContent = `❌ No se pudo conectar: ${err.message}`;
       }
     });
+
+    // ====== modal ia ======
+    const iaModal=document.getElementById('iaModal'), openIA=document.getElementById('openIA'), closeIA=document.getElementById('closeIA')
+    const listMascotas=document.getElementById('listMascotas')
+    const iaPeso=document.getElementById('ia_peso'), iaEdad=document.getElementById('ia_edad'), iaKcal=document.getElementById('ia_kcal')
+    const iaAct=document.getElementById('ia_actividad'), iaCas=document.getElementById('ia_castrado')
+    const iaHint=document.getElementById('ia_hint'), iaResult=document.getElementById('iaResult')
+
+    openIA.addEventListener('click', ()=>{ iaModal.classList.add('open'); cargarMascotasIA() })
+    closeIA.addEventListener('click', ()=> iaModal.classList.remove('open'))
+    iaModal.addEventListener('click', (e)=>{ if(e.target===iaModal) iaModal.classList.remove('open') })
+
+    async function cargarMascotasIA(){
+      const u = getUsuario()
+      if(!u || !u.id){ location.href="login.html"; return }
+      listMascotas.innerHTML = '<div class="subtle">Cargando...</div>'
+      try{
+        const r = await fetch(`${DBURL}/mascotas`)
+        const text = await r.text()
+        let d; try{ d = JSON.parse(text) } catch{ d = text }
+        const lista = Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : [])
+        const mias = lista.filter(m => m.usuario_id === u.id)
+        if(mias.length===0){ listMascotas.innerHTML = '<div class="subtle">No tenes mascotas.</div>'; return }
+        listMascotas.innerHTML = ""
+        mias.forEach(m=>{
+          const div=document.createElement('div'); div.className="item"
+          const peso = (m.peso_kg!=null) ? `${m.peso_kg} kg` : "?"
+          const edad = (m.edad_meses!=null) ? `${Math.round(m.edad_meses)} m` : (m.fecha_nacimiento? String(m.fecha_nacimiento).slice(0,10) : "?")
+          div.innerHTML = `
+            <div><strong>${m.nombre||("mascota #"+m.id)}</strong><div class="subtle">${m.raza||""}</div></div>
+            <div style="display:flex;gap:6px"><span class="pill">${peso}</span><span class="pill">${edad}</span></div>
+            <button class="btn primary">Seleccionar</button>
+          `
+          div.querySelector('button').onclick = ()=> llenarDesdeMascota(m)
+          listMascotas.appendChild(div)
+        })
+      }catch(_){
+        listMascotas.innerHTML = '<div class="subtle">Ocurrio un error al cargar mascotas.</div>'
+      }
+    }
+
+    function monthsFromDate(iso){
+      if(!iso) return ""
+      const d = new Date(iso); if(isNaN(d)) return ""
+      const now = new Date()
+      return Math.max(0, (now.getFullYear()-d.getFullYear())*12 + (now.getMonth()-d.getMonth()))
+    }
+    function llenarDesdeMascota(m){
+      if(m.peso_kg!=null) iaPeso.value = String(m.peso_kg)
+      if(m.edad_meses!=null) iaEdad.value = String(Math.round(m.edad_meses))
+      else if(m.fecha_nacimiento) iaEdad.value = String(monthsFromDate(m.fecha_nacimiento))
+      if(m.kcal_100g!=null) iaKcal.value = String(m.kcal_100g)
+      if(m.actividad) iaAct.value = String(m.actividad).toLowerCase()
+      if(typeof m.castrado!=="undefined") iaCas.value = (m.castrado===true || String(m.castrado).toLowerCase()==="si")?"si":"no"
+    }
+
+    document.getElementById('calcIA').addEventListener('click', async ()=>{
+      const payload = {
+        peso_kg:   Math.max(0.5, Math.min(90,  Number(iaPeso.value||0))),
+        edad_meses:Math.max(0,   Math.min(240, Number(iaEdad.value||0))),
+        kcal_100g: Math.max(250, Math.min(500, Number(iaKcal.value||360))),
+        actividad: iaAct.value,
+        castrado:  iaCas.value
+      }
+      iaHint.textContent = "Calculando..."
+      try{
+        const res = await fetch(`${BACKEND_URL}/api/v1/racion_ml`, {
+          method:"POST", headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        })
+        const text = await res.text()
+        let j; try{ j = JSON.parse(text) } catch { throw new Error(`respuesta no json (${res.status})`) }
+        if(!res.ok || !j?.ok) throw new Error(j?.error || `http ${res.status}`)
+        const gd  = Number(j.data?.gramos_dia)
+        const gpc = Number(j.data?.gramos_por_comida)
+        if(!Number.isFinite(gpc)) throw new Error("resultado invalido")
+        document.getElementById('grams').value = String(Math.round(gpc))
+        document.getElementById('iaResult').textContent = `Sugerencia IA: ${Math.round(gd)} g/dia → ${Math.round(gpc)} g dividido en 2 raciones`
+        setTimeout(()=> iaModal.classList.remove('open'), 700)
+      }catch(e){
+        iaHint.textContent = `no se pudo calcular: ${e.message}`
+      }
+    })
   </script>
 </body>
 </html>
