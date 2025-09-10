@@ -1,7 +1,13 @@
 import fs from "fs"
 
 const MODEL_PATH = process.env.RACION_MODEL_PATH || "racion_model_es.json"
-const M = JSON.parse(fs.readFileSync(MODEL_PATH,"utf8"))
+let M
+try {
+  M = JSON.parse(fs.readFileSync(MODEL_PATH, "utf8"))
+} catch (err) {
+  console.error(`Error al cargar el modelo de ración (${MODEL_PATH}):`, err)
+  throw err
+}
 
 export function predecirRacionES(features){
   let y = M.intercept
