@@ -26,6 +26,8 @@ app.post("/mascotas", mascotas.Crear)
 app.put("/mascotas/:id", mascotas.Actualizar)
 app.delete("/mascotas/:id", mascotas.Eliminar)
 app.get("/mascotas/:id/horarios", mascotas.HorariosDeMascota)
+app.post("/mascotas/:id/pesos", mascotas.RegistrarPeso)
+app.get("/mascotas/:id/stats", mascotas.Stats)
 
 // Rutas Planes
 app.post("/db/plan", planes.GuardarPlanDB);

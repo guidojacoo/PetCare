@@ -1,6 +1,7 @@
 BEGIN;
 
 -- Eliminar tablas si ya existen
+DROP TABLE IF EXISTS mascota_pesos CASCADE;
 DROP TABLE IF EXISTS comidas_programadas CASCADE;
 DROP TABLE IF EXISTS dispensador_config CASCADE;
 DROP TABLE IF EXISTS mascotas CASCADE;
@@ -27,6 +28,16 @@ CREATE TABLE mascotas (
   creado_en TIMESTAMPTZ DEFAULT now(),
   usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+-- Tabla: registros de peso
+CREATE TABLE mascota_pesos (
+  id SERIAL PRIMARY KEY,
+  mascota_id INTEGER NOT NULL REFERENCES mascotas(id) ON DELETE CASCADE,
+  peso_kg NUMERIC(5,2) NOT NULL,
+  registrado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pesos_mascota ON mascota_pesos (mascota_id);
 
 -- Tabla: configuracion de dispensador
 CREATE TABLE dispensador_config (
