@@ -1,26 +1,40 @@
 // controllers/planes.js
 import { query } from "../db.js";
+import { z } from "zod";
 
-/**
- * Normaliza strings "HH:MM" a tipo TIME[] (Postgres) cuando el modo es repeat_week
- */
-function toTimeArray(arr) {
-  if (!Array.isArray(arr)) return null;
-  // Validar HH:MM
-  const ok = arr.every(s => typeof s === "string" && /^\d{2}:\d{2}$/.test(s));
-  return ok ? arr : null;
-}
+const time = z.string().regex(/^\d{2}:\d{2}$/);
 
-/**
- * Valida que weekplan sea un array de 7 arrays con "HH:MM"
- */
-function validateWeekplan(wp) {
-  if (!Array.isArray(wp) || wp.length !== 7) return false;
-  return wp.every(dayArr =>
-    Array.isArray(dayArr) &&
-    dayArr.every(s => typeof s === "string" && /^\d{2}:\d{2}$/.test(s))
-  );
-}
+const PlanSchema = z.object({
+  mode: z.enum(['repeat_week', 'per_day']),
+  secondsOpen: z.number().positive(),
+  dayplan: z.array(time).optional(),
+  weekplan: z.array(z.array(time)).optional()
+}).superRefine((data, ctx) => {
+  if (data.mode === 'repeat_week') {
+    if (!data.dayplan || data.dayplan.length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'dayplan requerido para repeat_week', path: ['dayplan'] });
+    }
+  } else if (data.mode === 'per_day') {
+    if (!data.weekplan || data.weekplan.length !== 7) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'weekplan inválido para per_day', path: ['weekplan'] });
+    }
+  }
+});
+
+const GuardarPlanSchema = z.object({
+  userId: z.number(),
+  plan: PlanSchema,
+  gramsPerMeal: z.number().positive(),
+  hopper: z.number().nullable().optional(),
+  esp: z.object({ ip: z.string(), port: z.string() }).optional()
+});
+
+const RegistrarSyncSchema = z.object({
+  userId: z.number(),
+  ok: z.boolean(),
+  message: z.string().optional(),
+  esp: z.object({ ip: z.string(), port: z.string() }).optional()
+});
 
 /**
  * POST /db/plan
@@ -35,35 +49,11 @@ function validateWeekplan(wp) {
  */
 export const GuardarPlanDB = async (req, res) => {
   try {
-    const { userId, plan, gramsPerMeal, hopper, esp } = req.body || {};
-    if (!userId || !plan || typeof plan.mode !== "string" || !plan.secondsOpen) {
-      return res.status(400).json({ error: "Faltan campos obligatorios (userId, plan.mode, plan.secondsOpen)" });
-    }
-    if (!Number.isFinite(gramsPerMeal) || gramsPerMeal <= 0) {
-      return res.status(400).json({ error: "gramsPerMeal inválido" });
-    }
-    const secondsOpen = Number(plan.secondsOpen);
-    if (!Number.isFinite(secondsOpen) || secondsOpen <= 0) {
-      return res.status(400).json({ error: "secondsOpen inválido" });
-    }
-
-    let mode = plan.mode;
-    let dayplan = null;
-    let weekplan = null;
-
-    if (mode === "repeat_week") {
-      dayplan = toTimeArray(plan.dayplan);
-      if (!dayplan || dayplan.length === 0) {
-        return res.status(400).json({ error: "dayplan inválido o vacío para repeat_week" });
-      }
-    } else if (mode === "per_day") {
-      if (!validateWeekplan(plan.weekplan)) {
-        return res.status(400).json({ error: "weekplan inválido (debe ser 7 arrays de HH:MM)" });
-      }
-      weekplan = plan.weekplan;
-    } else {
-      return res.status(400).json({ error: "mode debe ser 'repeat_week' o 'per_day'" });
-    }
+    const { userId, plan, gramsPerMeal, hopper, esp } = GuardarPlanSchema.parse(req.body);
+    const mode = plan.mode;
+    const secondsOpen = plan.secondsOpen;
+    const dayplan = mode === 'repeat_week' ? plan.dayplan : null;
+    const weekplan = mode === 'per_day' ? plan.weekplan : null;
 
     const r = await query(
       `INSERT INTO planes (user_id, mode, seconds_open, dayplan, weekplan, grams_per_meal, hopper_g, esp)
@@ -73,8 +63,8 @@ export const GuardarPlanDB = async (req, res) => {
         userId,
         mode,
         secondsOpen,
-        dayplan,           // ::time[]
-        weekplan ? JSON.stringify(weekplan) : null, // ::jsonb
+        dayplan,
+        weekplan ? JSON.stringify(weekplan) : null,
         gramsPerMeal,
         Number.isFinite(hopper) ? hopper : null,
         esp ? JSON.stringify(esp) : null
@@ -83,6 +73,9 @@ export const GuardarPlanDB = async (req, res) => {
 
     res.status(201).json(r.rows[0]);
   } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.errors });
+    }
     console.error("GuardarPlanDB error:", err);
     res.status(500).json({ error: "Error al guardar el plan" });
   }
@@ -207,9 +200,9 @@ export const MisMascotasDB = async (_req, res) => {
 export const RegistrarSync = async (req, res) => {
   try {
     const planId = Number(req.params.id);
-    const { userId, ok, message, esp } = req.body || {};
-    if (!Number.isFinite(planId) || !userId || typeof ok !== "boolean") {
-      return res.status(400).json({ error: "Faltan datos (planId, userId, ok)" });
+    const { userId, ok, message, esp } = RegistrarSyncSchema.parse(req.body);
+    if (!Number.isFinite(planId)) {
+      return res.status(400).json({ error: "planId inválido" });
     }
     const r = await query(
       `INSERT INTO plan_syncs (plan_id, user_id, ok, message, esp)
@@ -219,6 +212,9 @@ export const RegistrarSync = async (req, res) => {
     );
     res.status(201).json({ ok: true, id: r.rows[0].id, created_at: r.rows[0].created_at });
   } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.errors });
+    }
     console.error("RegistrarSync error:", err);
     res.status(500).json({ error: "Error al registrar sincronización" });
   }
