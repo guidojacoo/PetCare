@@ -10,28 +10,34 @@ import * as horarios from "./controllers/horarios.js";
 import * as usuarios from "./controllers/usuarios.js";
 import * as planes from "./controllers/planes.js";
 import * as eventos from "./controllers/eventos.js";
+import { verifyToken } from "./middlewares/verifyToken.js";
 
 
 let app = express();
 app.use(cors());
 app.use(express.json());
 
-// Ruta de prueba
+// Rutas públicas
 app.get("/", (req, res) => res.json({ ok: true, api: "PetCare" }));
+app.post("/login", usuarios.Login);
+app.post("/usuarios", usuarios.Crear);
+
+// Middleware de verificación
+app.use(verifyToken);
 
 // Rutas Mascotas
-app.get("/mascotas", mascotas.Listar)
-app.get("/mascotas/:id", mascotas.Obtener)
-app.post("/mascotas", mascotas.Crear)
-app.put("/mascotas/:id", mascotas.Actualizar)
-app.delete("/mascotas/:id", mascotas.Eliminar)
-app.get("/mascotas/:id/horarios", mascotas.HorariosDeMascota)
+app.get("/mascotas", mascotas.Listar);
+app.get("/mascotas/:id", mascotas.Obtener);
+app.post("/mascotas", mascotas.Crear);
+app.put("/mascotas/:id", mascotas.Actualizar);
+app.delete("/mascotas/:id", mascotas.Eliminar);
+app.get("/mascotas/:id/horarios", mascotas.HorariosDeMascota);
 
 // Rutas Planes
 app.post("/db/plan", planes.GuardarPlanDB);
-app.get("/db/plan/:id", planes.ObtenerPlanDB);             
-app.get("/db/mismascotas/:id", planes.MisMascotasDB);  
-app.get("/db/planes", planes.Listar);  
+app.get("/db/plan/:id", planes.ObtenerPlanDB);
+app.get("/db/mismascotas/:id", planes.MisMascotasDB);
+app.get("/db/planes", planes.Listar);
 
 // Rutas Planes extra (además de las tuyas)
 app.get("/db/plan/ultimo/:userId", planes.UltimoPlanDeUsuario);
@@ -39,18 +45,15 @@ app.post("/db/plan/:id/activar", planes.Activar);
 app.post("/db/plan/:id/desactivar", planes.Desactivar);
 app.post("/db/plan/:id/sync", planes.RegistrarSync);
 
-
 // Rutas Usuarios
-app.get("/usuarios", usuarios.Listar)
-app.get("/usuarios/:id", usuarios.Obtener)
-app.post("/usuarios", usuarios.Crear)
-app.put("/usuarios/:id", usuarios.Actualizar)
-app.delete("/usuarios/:id", usuarios.Eliminar)
-app.post("/login", usuarios.Login)
+app.get("/usuarios", usuarios.Listar);
+app.get("/usuarios/:id", usuarios.Obtener);
+app.put("/usuarios/:id", usuarios.Actualizar);
+app.delete("/usuarios/:id", usuarios.Eliminar);
 
-app.post("/eventos", eventos.Crear);                        
-app.get("/mascotas/:id/eventos", eventos.Listar);           
-app.get("/mascotas/:id/ticks", eventos.TicksDelDia);      
+app.post("/eventos", eventos.Crear);
+app.get("/mascotas/:id/eventos", eventos.Listar);
+app.get("/mascotas/:id/ticks", eventos.TicksDelDia);
 
 const M = JSON.parse(fs.readFileSync("./ml/racion_model_es.json","utf8"))
 
