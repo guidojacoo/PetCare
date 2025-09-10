@@ -33,7 +33,7 @@ function requireVal(cond, msg) {
   return true;
 }
 
-(function initUser(){
+(async function initUser(){
   let user = localStorage.getItem("usuario");
   if (!user) { alert("inicia sesion"); location.href = "login.html"; return; }
   try {
@@ -41,6 +41,13 @@ function requireVal(cond, msg) {
     datos.usuario_id = u?.id || null;
   } catch(e) {}
   if (!datos.usuario_id) { alert("no se encontro el usuario"); location.href = "login.html"; return; }
+  try {
+    const r = await fetch(`${API}/mascotas?usuario_id=${datos.usuario_id}`);
+    if (r.ok) {
+      const lista = await r.json();
+      if (Array.isArray(lista) && lista.length) { location.href = "principal.html"; return; }
+    }
+  } catch(e) {}
   showStep(1);
 })();
 

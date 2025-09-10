@@ -27,6 +27,7 @@ CREATE TABLE mascotas (
   creado_en TIMESTAMPTZ DEFAULT now(),
   usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE
 );
+ALTER TABLE mascotas ADD CONSTRAINT unique_usuario UNIQUE (usuario_id);
 
 -- Tabla: configuracion de dispensador
 CREATE TABLE dispensador_config (
