@@ -13,7 +13,8 @@ import * as eventos from "./controllers/eventos.js";
 
 
 let app = express();
-app.use(cors());
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || "";
+app.use(cors({ origin: ALLOWED_ORIGINS.split(',') }));
 app.use(express.json());
 
 // Ruta de prueba
@@ -101,5 +102,5 @@ app.post("/api/v1/racion_ml", (req,res)=>{
 
 
 // Iniciar servidor
-let puerto = 3000;
+const puerto = process.env.PORT || 3000;
 app.listen(puerto, () => console.log(`Servidor corriendo en puerto ${puerto}`));
