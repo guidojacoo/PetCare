@@ -176,6 +176,14 @@ function wireEditorMascota(userId) {
         const d = await r.json();
         if (!r.ok) throw new Error(d.error || "Error");
 
+        if (body.peso_kg != null) {
+          await fetch(`${DBURL}/mascotas/${id}/pesos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ peso_kg: body.peso_kg })
+          });
+        }
+
         alert("Mascota actualizada");
         await cargarMascotas(userId);
       } catch (e) {
