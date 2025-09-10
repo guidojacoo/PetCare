@@ -1,5 +1,6 @@
-import { query } from "../db.js"
-import bcrypt from "bcryptjs"
+import { query } from "../db.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 
 export const Listar = async (req, res) => {
@@ -48,5 +49,6 @@ export const Login = async (req, res) => {
   let u = r.rows[0]
   let ok = await bcrypt.compare(password, u.password)
   if (!ok) return res.status(401).json({ error: "Credenciales" })
-  res.json({ id: u.id, nombre: u.nombre, email: u.email, rol: u.rol })
+  let token = jwt.sign({ id: u.id, rol: u.rol }, process.env.JWT_SECRET, { expiresIn: '1h' })
+  res.json({ token, id: u.id, nombre: u.nombre, email: u.email, rol: u.rol })
 }
