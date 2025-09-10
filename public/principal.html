@@ -45,11 +45,17 @@
         window.location.href = "plandecomidas.html";
       });
 
-      (function () {
+      (async function () {
         try {
           const u = JSON.parse(localStorage.getItem("usuario"));
           if (!u || !u.id) {
             window.location.replace("index.html");
+            return;
+          }
+          const r = await fetch(`/mascotas?usuario_id=${u.id}`);
+          const lista = await r.json();
+          if (Array.isArray(lista) && lista.length) {
+            localStorage.setItem("mascota", JSON.stringify(lista[0]));
           }
         } catch (_) {
           window.location.replace("index.html");

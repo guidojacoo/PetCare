@@ -13,6 +13,8 @@ export const Obtener = async (req, res) => {
 
 export const Crear = async (req, res) => {
   let { nombre, sexo, raza, peso_kg, fecha_nacimiento, usuario_id, kcal_100g } = req.body;
+  const existe = await query('SELECT 1 FROM mascotas WHERE usuario_id=$1', [usuario_id]);
+  if (existe.rowCount) return res.status(409).json({ error: "Mascota ya registrada" });
   let r = await query(
     "INSERT INTO mascotas(nombre, sexo, raza, peso_kg, fecha_nacimiento, usuario_id, kcal_100g) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *",
     [nombre, sexo, raza, peso_kg, fecha_nacimiento || null, usuario_id, kcal_100g || null]
