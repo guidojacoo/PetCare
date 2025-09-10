@@ -50,15 +50,16 @@ app.post("/login", usuarios.Login)
 
 app.post("/eventos", eventos.Crear);                        
 app.get("/mascotas/:id/eventos", eventos.Listar);           
-app.get("/mascotas/:id/ticks", eventos.TicksDelDia);      
+app.get("/mascotas/:id/ticks", eventos.TicksDelDia);
 
-const M = JSON.parse(fs.readFileSync("./ml/racion_model_es.json","utf8"))
+let M;
 
 function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)) }
 function clasificarTamanio(p){ if(p<10) return "mini"; if(p<25) return "mediana"; return "grande" }
 
 app.post("/api/v1/racion_ml", (req,res)=>{
   try{
+    if (!M) return res.status(503).json({ ok:false, error:"model_not_loaded" })
     const p = req.body || {}
     const peso_kg   = clamp(Number(p.peso_kg||0), 0.5, 90)
     const edad_meses= clamp(Number(p.edad_meses||0), 0, 240)
@@ -102,4 +103,13 @@ app.post("/api/v1/racion_ml", (req,res)=>{
 
 // Iniciar servidor
 let puerto = 3000;
-app.listen(puerto, () => console.log(`Servidor corriendo en puerto ${puerto}`));
+app.listen(puerto, async () => {
+  try {
+    const data = await fs.promises.readFile("./ml/racion_model_es.json", "utf8")
+    M = JSON.parse(data)
+    console.log(`Servidor corriendo en puerto ${puerto}`)
+  } catch (err) {
+    console.error("No se pudo cargar el modelo de ración:", err)
+    process.exit(1)
+  }
+});
