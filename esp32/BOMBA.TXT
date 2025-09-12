@@ -25,8 +25,18 @@ const unsigned long EAT_WINDOW_MS = 120000UL;  // ventana para detectar "comido"
 // ===========================
 // Bomba (relé/MOSFET de control)
 // ===========================
-#define PUMP_PIN 16
-bool pumpOn = false;               // estado actual de la bomba (refleja el pin)
+#define PUMP_PIN 2
+// Relé ACTIVO EN LOW:
+const uint8_t PUMP_ON_LEVEL  = LOW;   // LOW = relé activado
+const uint8_t PUMP_OFF_LEVEL = HIGH;  // HIGH = relé desactivado
+bool pumpOn = false;                  // estado lógico de la bomba
+
+// Espera entre servo y bomba (para no superponer consumo)
+const unsigned long PUMP_GAP_MS = 2000; // 2 s
+
+// Helpers de bomba
+inline void pump_on()  { digitalWrite(PUMP_PIN, PUMP_ON_LEVEL);  pumpOn = true;  }
+inline void pump_off() { digitalWrite(PUMP_PIN, PUMP_OFF_LEVEL); pumpOn = false; }
 
 // ===========================
 // Web Server
@@ -42,7 +52,7 @@ String dayTimes[7][MAX_MEALS_PER_DAY];
 int    dayCount[7] = {0,0,0,0,0,0,0};
 bool   fed[7][MAX_MEALS_PER_DAY];
 bool   eaten[7][MAX_MEALS_PER_DAY];
-bool   water[7][MAX_MEALS_PER_DAY];    // <-- NUEVO: agua servida
+bool   water[7][MAX_MEALS_PER_DAY];    // agua servida
 float  secondsOpen = 1.0;
 
 int lastWday = -1;
@@ -117,7 +127,7 @@ void handleStatus() {
   json += "\"now\":{\"wday\":" + String(wday) + ",\"dayName\":\"" + getDayName(wday) + "\",\"hhmm\":\"" + String(nowbuf) + "\"},";
   json += "\"secondsOpen\":" + String(secondsOpen,2) + ",";
   json += "\"eat_waiting\":" + String(waitingEat ? "true":"false") + ",";
-  json += "\"pumpOn\":" + String(pumpOn ? "true":"false") + ",";   // <-- NUEVO
+  json += "\"pumpOn\":" + String(pumpOn ? "true":"false") + ",";
 
   json += "\"lastFeed\":{";
   json += "\"wday\":" + String(lastFeedWday) + ",";
@@ -137,7 +147,7 @@ void handleStatus() {
     json += "\"time\":\"" + dayTimes[wday][i] + "\",";
     json += "\"fed\":" + String(fed[wday][i] ? "true":"false") + ",";
     json += "\"eaten\":" + String(eaten[wday][i] ? "true":"false") + ",";
-    json += "\"water\":" + String(water[wday][i] ? "true":"false");       // <-- NUEVO
+    json += "\"water\":" + String(water[wday][i] ? "true":"false");
     json += "}";
   }
   json += "]}";
@@ -224,24 +234,17 @@ void handleClearPlan() {
 }
 
 // ===========================
-// /servo (GET) - manual (no abre ventana eaten)
-//   Ahora activa la bomba el mismo tiempo (2 s)
+// /servo (GET) - manual
+//   Ahora: servo -> gap 2s -> bomba (2s)
 // ===========================
 void handleServoManual() {
   enableCORS();
-  // abrir servo + encender bomba
+
   servoMotor.write(90);
-  digitalWrite(PUMP_PIN, HIGH);
-  pumpOn = true;
-
   delay(2000);
-
-  // cerrar servo + apagar bomba
   servoMotor.write(0);
-  digitalWrite(PUMP_PIN, LOW);
-  pumpOn = false;
-
-  server.send(200, "text/plain", "Servo movido manualmente");
+  
+  server.send(200, "text/plain", "Servo ");
 }
 
 // ===========================
@@ -254,9 +257,12 @@ void setup() {
   servoMotor.write(0);
 
   pinMode(PIR_PIN, INPUT);     // HC-SR501 OUT
-  pinMode(PUMP_PIN, OUTPUT);   // salida a relé/MOSFET
-  digitalWrite(PUMP_PIN, LOW);
-  pumpOn = false;
+
+  // Mantener la bomba APAGADA al arrancar (relé activo en LOW)
+  pinMode(PUMP_PIN, INPUT_PULLUP);      // ayuda a que arranque en HIGH
+  delay(5);
+  pinMode(PUMP_PIN, OUTPUT);
+  pump_off(); // = digitalWrite(PUMP_PIN, PUMP_OFF_LEVEL)
 
   WiFi.begin(ssid, password);
   Serial.print("Conectando WiFi");
@@ -319,16 +325,19 @@ void loop() {
 
           Serial.printf("Alimentando (wday=%d) a las %s\n", wday, dayTimes[wday][i].c_str());
 
-          // Abrir servo + encender bomba el mismo tiempo
+          // === Secuencia SECUENCIAL para bajar pico de consumo ===
+          // 1) Servo por secondsOpen
           servoMotor.write(90);
-          digitalWrite(PUMP_PIN, HIGH);
-          pumpOn = true;
-
           delay((unsigned long)(secondsOpen * 1000));
-
           servoMotor.write(0);
-          digitalWrite(PUMP_PIN, LOW);
-          pumpOn = false;
+
+          // 2) Gap
+          delay(PUMP_GAP_MS);
+
+          // 3) Bomba por secondsOpen (activo en LOW)
+          pump_on();
+          delay((unsigned long)(secondsOpen * 1000));
+          pump_off();
 
           // Marcar agua servida
           water[wday][i] = true;
