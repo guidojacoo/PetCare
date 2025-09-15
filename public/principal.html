@@ -10,31 +10,68 @@
 
   <main class="phone">
     <header class="top">
-      <a href="perfil.html" class="btn btn-gear" aria-label="Configuración"><img src="/Fotos/configuracion.png" alt="Configuración" height="40" width="40"></a>      
+      <a href="perfil.html" class="btn btn-gear" aria-label="Configuración">
+        <img src="/Fotos/configuracion.png" alt="Configuración" height="40" width="40">
+      </a>
       <div class="dot"></div>
     </header>
 
-    <section class="camera">
-      <img id="camara-stream" 
-           src="http://192.168.0.244:81/stream" 
-           style="width:200px; height:200px;border-radius:8px;" 
-           alt="Cámara en vivo">
+    <!-- Cámara: solo setea src al stream cuando /cam/status dice que está ON -->
+    <section class="camera" style="text-align:center">
+      <img id="camara-stream"
+           alt="Cámara en vivo"
+           style="width:200px; height:200px; border-radius:8px; display:none;">
     </section>
     
     <script>
+      const CAM_IP = "192.168.0.244";           // <-- ajustá si cambia
+      const CAM_STATUS_URL = `http://${CAM_IP}:8080/cam/status`;
+      const STREAM_URL     = `http://${CAM_IP}:81/stream`;
+
       function moverServo() {
-        fetch("http://192.168.0.244:8080/servo")   
+        fetch(`http://${CAM_IP}:8080/servo`)
           .then(r => r.text())
-          .then(t => console.log(t));
+          .then(t => console.log(t))
+          .catch(err => console.error("Error servo:", err));
       }
+
+      // Mostrar/ocultar el stream según el estado real de la cámara
+      const img = document.getElementById("camara-stream");
+      let checkTimer = null;
+      async function checkCam(){
+        try{
+          const r = await fetch(CAM_STATUS_URL, { cache:"no-store" });
+          const j = await r.json();
+          if(j.running){
+            if (img.style.display === "none") {
+              img.style.display = "inline-block";
+              img.src = STREAM_URL; // MJPEG real
+            }
+            checkTimer = setTimeout(checkCam, 3000); // cada 3s basta
+          }else{
+            img.style.display = "none";
+            if (img.src) img.removeAttribute("src"); // corta el stream
+            checkTimer = setTimeout(checkCam, 3000);
+          }
+        }catch(e){
+          img.style.display = "none";
+          if (img.src) img.removeAttribute("src");
+          checkTimer = setTimeout(checkCam, 3000);
+        }
+      }
+      checkCam();
     </script>
 
     <div class="bottom-actions">
       <button class="fab" id="mic" aria-label="Micrófono silenciado" data-state="off">
         <img class="mic-img" src="/Fotos/micDesactivado.png" alt="Imagen de un microfono">
       </button>
-      <button onclick="moverServo()" class="fab"><img src="/Fotos/PataDePerro.png" alt="Pata" height="40px" width="50px"></button>
-      <button class="fab" id="plan" aria-label="Tomar foto"><img src="/Fotos/Notas.png" alt="Imagen de unas notas" height="40px" width="40px"></button>
+      <button onclick="moverServo()" class="fab">
+        <img src="/Fotos/PataDePerro.png" alt="Pata" height="40" width="50">
+      </button>
+      <button class="fab" id="plan" aria-label="Plan de comidas">
+        <img src="/Fotos/Notas.png" alt="Imagen de unas notas" height="40" width="40">
+      </button>
     </div>
 
     <div id="mic-toast">microfono activo</div>
@@ -74,11 +111,11 @@
         let state = micBtn.getAttribute("data-state");
         if (state === "off") {
           micBtn.setAttribute("data-state", "on");
-          micImg.src = "imagenes/micActivado.png";
+          micImg.src = "/Fotos/micActivado.png";
           showToast("Tu perro te esta escuchando");
         } else {
           micBtn.setAttribute("data-state", "off");
-          micImg.src = "imagenes/micDesactivado.png";
+          micImg.src = "/Fotos/micDesactivado.png";
           showToast("Tu perro no te esta escuchando");
         }
       });
