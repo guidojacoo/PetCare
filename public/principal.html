@@ -16,7 +16,7 @@
       <div class="dot"></div>
     </header>
 
-    <!-- Cámara: solo setea src al stream cuando /cam/status dice que está ON -->
+    <!-- Cámara: sólo muestra stream si /cam/status => running:true -->
     <section class="camera" style="text-align:center">
       <img id="camara-stream"
            alt="Cámara en vivo"
@@ -24,7 +24,8 @@
     </section>
     
     <script>
-      const CAM_IP = "192.168.0.244";           // <-- ajustá si cambia
+      // Ajustá CAM_IP si cambia tu placa
+      const CAM_IP = "192.168.0.244";
       const CAM_STATUS_URL = `http://${CAM_IP}:8080/cam/status`;
       const STREAM_URL     = `http://${CAM_IP}:81/stream`;
 
@@ -35,27 +36,28 @@
           .catch(err => console.error("Error servo:", err));
       }
 
-      // Mostrar/ocultar el stream según el estado real de la cámara
+      // Muestra/oculta el stream según el estado real
       const img = document.getElementById("camara-stream");
       let checkTimer = null;
-      async function checkCam(){
-        try{
-          const r = await fetch(CAM_STATUS_URL, { cache:"no-store" });
+
+      async function checkCam() {
+        try {
+          const r = await fetch(CAM_STATUS_URL, { cache: "no-store" });
           const j = await r.json();
-          if(j.running){
+          if (j.running) {
             if (img.style.display === "none") {
               img.style.display = "inline-block";
-              img.src = STREAM_URL; // MJPEG real
+              img.src = STREAM_URL; // MJPEG
             }
-            checkTimer = setTimeout(checkCam, 3000); // cada 3s basta
-          }else{
+          } else {
             img.style.display = "none";
-            if (img.src) img.removeAttribute("src"); // corta el stream
-            checkTimer = setTimeout(checkCam, 3000);
+            if (img.src) img.removeAttribute("src"); // corta stream
           }
-        }catch(e){
+        } catch (e) {
           img.style.display = "none";
           if (img.src) img.removeAttribute("src");
+        } finally {
+          // Revisa cada 3s: suficiente y liviano
           checkTimer = setTimeout(checkCam, 3000);
         }
       }
@@ -82,17 +84,17 @@
         window.location.href = "plandecomidas.html";
       });
 
+      // Redirección si no hay usuario
       (function () {
         try {
           const u = JSON.parse(localStorage.getItem("usuario"));
-          if (!u || !u.id) {
-            window.location.replace("index.html");
-          }
+          if (!u || !u.id) window.location.replace("index.html");
         } catch (_) {
           window.location.replace("index.html");
         }
       })();
 
+      // Toggle mic (UI local)
       let micBtn = document.getElementById("mic");
       let micImg = micBtn.querySelector(".mic-img");
       let toast = document.getElementById("mic-toast");
@@ -112,11 +114,11 @@
         if (state === "off") {
           micBtn.setAttribute("data-state", "on");
           micImg.src = "/Fotos/micActivado.png";
-          showToast("Tu perro te esta escuchando");
+          showToast("Tu perro te está escuchando");
         } else {
           micBtn.setAttribute("data-state", "off");
           micImg.src = "/Fotos/micDesactivado.png";
-          showToast("Tu perro no te esta escuchando");
+          showToast("Tu perro no te está escuchando");
         }
       });
     </script>
