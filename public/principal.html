@@ -25,7 +25,7 @@
     
     <script>
       // Ajustá CAM_IP si cambia tu placa
-      const CAM_IP = "192.168.0.244";
+      const CAM_IP = "172.20.10.5";
       const CAM_STATUS_URL = `http://${CAM_IP}:8080/cam/status`;
       const STREAM_URL     = `http://${CAM_IP}:81/stream`;
 
@@ -35,6 +35,33 @@
           .then(t => console.log(t))
           .catch(err => console.error("Error servo:", err));
       }
+
+      
+
+      async function camOn(mins = 15) {
+    try {
+      await fetch(`http://${CAM_HOST || CAM_IP}:8080/cam/on?minutes=${mins}`, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+      });
+      // Forzá un check inmediato para mostrar el stream
+      setTimeout(checkCam, 500);
+    } catch (e) {
+      console.error("Cam ON error:", e);
+    }
+  }
+
+  async function camOff() {
+    try {
+      await fetch(`http://${CAM_HOST || CAM_IP}:8080/cam/off`, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+      });
+      setTimeout(checkCam, 300);
+    } catch (e) {
+      console.error("Cam OFF error:", e);
+    }
+  }
 
       // Muestra/oculta el stream según el estado real
       const img = document.getElementById("camara-stream");
@@ -74,7 +101,13 @@
       <button class="fab" id="plan" aria-label="Plan de comidas">
         <img src="/Fotos/Notas.png" alt="Imagen de unas notas" height="40" width="40">
       </button>
+
+      <button class="fab" onclick="camOn(15)" title="Encender cámara 15 min">Cam ON</button>
+      <button class="fab" onclick="camOff()"  title="Apagar cámara">Cam OFF</button>
+
     </div>
+
+
 
     <div id="mic-toast">microfono activo</div>
 
