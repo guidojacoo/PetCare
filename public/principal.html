@@ -26,8 +26,9 @@
     <script>
       // Ajustá CAM_IP si cambia tu placa
       const CAM_IP = "172.20.10.5";
-      const CAM_STATUS_URL = `http://${CAM_IP}:8080/cam/status`;
-      const STREAM_URL     = `http://${CAM_IP}:81/stream`;
+      const CAM_HOST = CAM_IP; 
+      const CAM_STATUS_URL = `http://${CAM_HOST}:8080/cam/status`;
+      const STREAM_URL     = `http://${CAM_HOST}:81/stream`;
 
       function moverServo() {
         fetch(`http://${CAM_IP}:8080/servo`)
@@ -40,7 +41,7 @@
 
       async function camOn(mins = 15) {
     try {
-      await fetch(`http://${CAM_HOST || CAM_IP}:8080/cam/on?minutes=${mins}`, {
+      await fetch(`http://${CAM_HOST}:8080/cam/on?minutes=${mins}`, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
       });
