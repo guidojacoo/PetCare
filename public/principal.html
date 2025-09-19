@@ -36,9 +36,14 @@
     </section>
     
     <script>
-      const CAM_IP   = "192.168.0.244";
+      // ======================
+      // CONFIGURACIÓN DE IPs
+      // ======================
+      const CTRL_IP   = "192.168.0.133";   // ESP32 de control (servo, planes, etc.)
+      const CAM_IP    = "192.168.0.244";   // ESP32-CAM (stream)
+
       const STREAM_URL = `http://${CAM_IP}:81/stream`;
-      const SERVO_URL  = `http://${CAM_IP}:8080/servo`;
+      const SERVO_URL  = `http://${CTRL_IP}:8080/servo`;
 
       const img = document.getElementById("camara-stream");
 
@@ -154,8 +159,8 @@
         const AUTO_CAM_MS = 600000; // 10 * 60 * 1000
         // Polling del estado de la ESP32
         const POLL_MS = 1500;
-        // Endpoint de estado (mismo host del servidor de control)
-        const STATUS_URL = `http://${CAM_IP}:8080/status`;
+        // Endpoint de estado del ESP32 de control
+        const STATUS_URL = `http://${CTRL_IP}:8080/status`;
 
         let prevEatWaiting = null; // estado anterior (null al inicio)
         let autoOpened = false;    // si la encendimos automáticamente
