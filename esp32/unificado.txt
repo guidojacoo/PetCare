@@ -26,7 +26,7 @@ const unsigned long EAT_WINDOW_MS = 120000UL;  // ventana para detectar "comido"
 // ===========================
 // Bomba (relé/MOSFET de control)
 // ===========================
-#define PUMP_PIN 2
+#define PUMP_PIN 25
 // Relé ACTIVO EN LOW:
 const uint8_t PUMP_ON_LEVEL  = LOW;   // LOW = relé activado
 const uint8_t PUMP_OFF_LEVEL = HIGH;  // HIGH = relé desactivado
@@ -87,7 +87,7 @@ void enableCORS() {
 void handleOptions() { enableCORS(); server.send(204); }
 
 // ===========================
-// NVS (Preferences) para persistir plan
+// NVS (Preferences) para persistir plan y ticks
 // ===========================
 Preferences prefs;
 
@@ -107,6 +107,41 @@ String loadPlanJSONFromNVS() {
     prefs.end();
   }
   return out;
+}
+
+// ===== Persistencia de flags (fed/eaten/water) por día =====
+void saveDayFlags(int wday) {
+  if (wday < 0 || wday > 6) return;
+  if (prefs.begin("petcare", false)) {
+    String kf = "fed_"    + String(wday);
+    String ke = "eaten_"  + String(wday);
+    String kw = "water_"  + String(wday);
+    prefs.putBytes(kf.c_str(),   fed[wday],   MAX_MEALS_PER_DAY);
+    prefs.putBytes(ke.c_str(),   eaten[wday], MAX_MEALS_PER_DAY);
+    prefs.putBytes(kw.c_str(),   water[wday], MAX_MEALS_PER_DAY);
+    prefs.end();
+  }
+}
+
+void loadDayFlags(int wday) {
+  if (wday < 0 || wday > 6) return;
+  if (prefs.begin("petcare", true)) {
+    String kf = "fed_"    + String(wday);
+    String ke = "eaten_"  + String(wday);
+    String kw = "water_"  + String(wday);
+    // Si no existían, getBytes devuelve 0 y mantenemos los false por defecto
+    prefs.getBytes(kf.c_str(),   fed[wday],   MAX_MEALS_PER_DAY);
+    prefs.getBytes(ke.c_str(),   eaten[wday], MAX_MEALS_PER_DAY);
+    prefs.getBytes(kw.c_str(),   water[wday], MAX_MEALS_PER_DAY);
+    prefs.end();
+  }
+}
+
+void saveAllFlags() {
+  for (int d=0; d<7; d++) saveDayFlags(d);
+}
+void loadAllFlags() {
+  for (int d=0; d<7; d++) loadDayFlags(d);
 }
 
 // ===========================
@@ -164,7 +199,7 @@ void handleStatus() {
   json += "\"dayName\":\"" + getDayName(wday) + "\",";
   json += "\"total\":" + String(dayCount[wday]) + ",";
   json += "\"plan\":[";
-  for (int i=0;i<dayCount[wday];i++){
+  for (int i = 0; i < dayCount[wday]; i++) {
     if (i) json += ",";
     json += "{";
     json += "\"index\":" + String(i) + ",";
@@ -233,8 +268,11 @@ void handleSetPlan() {
   resetAllFed();
   waitingEat=false; pendingEatWday=-1; pendingEatIndex=-1;
 
-  // === NUEVO: persistir JSON crudo en NVS para restaurar al reiniciar ===
+  // Persistir plan
   savePlanJSONToNVS(server.arg("plain"));
+
+  // Persistir reset de flags
+  saveAllFlags();
 
   Serial.println("=== Plan cargado ===");
   Serial.printf("mode: %s  secondsOpen: %.2f s\n", mode.c_str(), secondsOpen);
@@ -254,6 +292,7 @@ void handleClearPlan() {
     for(int i=0;i<MAX_MEALS_PER_DAY;i++){
       fed[d][i]=false; eaten[d][i]=false; water[d][i]=false;
     }
+    saveDayFlags(d); // persistir reset de cada día
   }
   lastFeedWday=-1; lastFeedIndex=-1; lastFeedTime="";
   waitingEat=false; pendingEatWday=-1; pendingEatIndex=-1;
@@ -275,9 +314,7 @@ void handleServoManual() {
 }
 
 // ===========================
-// /getPlan (GET) - NUEVO
-// Devuelve el último plan guardado (tal cual JSON de /setPlan).
-// Si no hay, construye uno desde el estado actual.
+// /getPlan (GET)
 // ===========================
 void handleGetPlan() {
   enableCORS();
@@ -335,7 +372,7 @@ void setup() {
   if (getLocalTime(&timeinfo)) { lastWday = timeinfo.tm_wday; Serial.printf("Hora inicial: %02d:%02d  wday=%d\n", timeinfo.tm_hour, timeinfo.tm_min, lastWday); }
   else                          { Serial.println("No se pudo obtener hora inicial (NTP)"); }
 
-  // === NUEVO: Intentar cargar el último plan guardado y aplicarlo
+  // Restaurar plan desde NVS
   {
     String saved = loadPlanJSONFromNVS();
     if (saved.length() > 0) {
@@ -390,6 +427,9 @@ void setup() {
     }
   }
 
+  // Cargar flags previos (si existían)
+  loadAllFlags();
+
   // Rutas HTTP
   server.on("/setPlan",   HTTP_POST,    handleSetPlan);
   server.on("/setPlan",   HTTP_OPTIONS, handleOptions);
@@ -400,7 +440,7 @@ void setup() {
   server.on("/servo",     HTTP_GET,     handleServoManual);
   server.on("/servo",     HTTP_OPTIONS, handleOptions);
 
-  // NUEVO endpoint para obtener el último plan guardado
+  // Endpoint para obtener el último plan guardado
   server.on("/getPlan",   HTTP_GET,     handleGetPlan);
   server.on("/getPlan",   HTTP_OPTIONS, handleOptions);
 
@@ -429,6 +469,7 @@ void loop() {
       if (wday != lastWday) {
         resetFedForDay(wday);
         lastWday = wday;
+        saveDayFlags(wday); // persistir reset del nuevo día
         Serial.printf("Cambio de dia: wday=%d, reset flags\n", wday);
       }
 
@@ -463,6 +504,9 @@ void loop() {
           // Marcar agua servida
           water[wday][i] = true;
 
+          // Guardar cambios del día (fed/agua)
+          saveDayFlags(wday);
+
           // Abrir ventana PIR para "comido"
           waitingEat       = true;
           pendingEatWday   = wday;
@@ -483,6 +527,9 @@ void loop() {
             pendingEatWday<=6 && pendingEatIndex<dayCount[pendingEatWday]) {
           eaten[pendingEatWday][pendingEatIndex] = true;
           Serial.printf("Comido detectado (wday=%d, idx=%d)\n", pendingEatWday, pendingEatIndex);
+
+          // Guardar cambios del día (eaten)
+          saveDayFlags(pendingEatWday);
         }
         waitingEat = false; // cerrar ventana al primer movimiento
       }
