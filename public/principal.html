@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pantalla principal</title>
   <link rel="stylesheet" href="principal.css">
+  <style>
+    .fab {
+      width:60px; height:60px;
+      border-radius:50%;
+      border:none;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+    }
+    #cam-toggle.off { background:#388e3c; } /* verde */
+    #cam-toggle.on  { background:#d32f2f; } /* rojo */
+    #cam-toggle img { width:30px; height:30px; }
+  </style>
 </head>
 <body>
 
@@ -16,7 +28,7 @@
       <div class="dot"></div>
     </header>
 
-    <!-- Cámara: sólo muestra stream si /cam/status => running:true -->
+    <!-- Cámara oculta por defecto -->
     <section class="camera" style="text-align:center">
       <img id="camara-stream"
            alt="Cámara en vivo"
@@ -24,12 +36,11 @@
     </section>
     
     <script>
-      // Ajustá CAM_IP si cambia tu placa
-      const CAM_IP = "172.20.10.5";
-      const CAM_HOST = CAM_IP; 
-      const CAM_STATUS_URL = `http://${CAM_HOST}:8080/cam/status`;
-      const STREAM_URL     = `http://${CAM_HOST}:81/stream`;
+      const CAM_IP   = "192.168.0.244";
+      const STREAM_URL = `http://${CAM_IP}:81/stream`;
+      const SERVO_URL  = `http://${CAM_IP}:8080/servo`;
 
+<<<<<<< HEAD
       function moverServo() {
         fetch(`http://${CAM_HOST}:8080/servo`)
           .then(r => r.text())
@@ -65,31 +76,50 @@
   }
 
       // Muestra/oculta el stream según el estado real
+=======
+>>>>>>> 10e365eab0beb7a8597497eaeb4b17758dc2cc66
       const img = document.getElementById("camara-stream");
-      let checkTimer = null;
 
-      async function checkCam() {
-        try {
-          const r = await fetch(CAM_STATUS_URL, { cache: "no-store" });
-          const j = await r.json();
-          if (j.running) {
-            if (img.style.display === "none") {
-              img.style.display = "inline-block";
-              img.src = STREAM_URL; // MJPEG
-            }
-          } else {
-            img.style.display = "none";
-            if (img.src) img.removeAttribute("src"); // corta stream
-          }
-        } catch (e) {
-          img.style.display = "none";
-          if (img.src) img.removeAttribute("src");
-        } finally {
-          // Revisa cada 3s: suficiente y liviano
-          checkTimer = setTimeout(checkCam, 3000);
-        }
+      // Crear botón circular cámara
+      const camBtn = document.createElement("button");
+      camBtn.id = "cam-toggle";
+      camBtn.className = "fab off";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        document.querySelector(".bottom-actions").appendChild(camBtn);
+      });
+
+      function showStream() {
+        img.style.display = "inline-block";
+        img.src = STREAM_URL;
+        camBtn.classList.remove("off");
+        camBtn.classList.add("on");
       }
-      checkCam();
+      function hideStream() {
+        img.style.display = "none";
+        img.removeAttribute("src");
+        camBtn.classList.remove("on");
+        camBtn.classList.add("off");
+      }
+
+      // Toggle único
+      camBtn.addEventListener("click", () => {
+        if (camBtn.classList.contains("off")) {
+          showStream();
+        } else {
+          hideStream();
+        }
+      });
+
+      // Mover servo y mostrar cámara unos segundos
+      function moverServo() {
+        showStream();
+        setTimeout(hideStream, 30000); // Ocultar tras 30s
+        fetch(SERVO_URL).catch(err => console.error("Error servo:", err));
+      }
+
+      // Exponer moverServo para el botón de la pata
+      window.moverServo = moverServo;
     </script>
 
     <div class="bottom-actions">
@@ -102,13 +132,8 @@
       <button class="fab" id="plan" aria-label="Plan de comidas">
         <img src="/Fotos/Notas.png" alt="Imagen de unas notas" height="40" width="40">
       </button>
-
-      <button class="fab" onclick="camOn(15)" title="Encender cámara 15 min">Cam ON</button>
-      <button class="fab" onclick="camOff()"  title="Apagar cámara">Cam OFF</button>
-
+      <!-- El botón de cámara se agrega por JS -->
     </div>
-
-
 
     <div id="mic-toast">microfono activo</div>
 
