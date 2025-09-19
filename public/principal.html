@@ -40,44 +40,6 @@
       const STREAM_URL = `http://${CAM_IP}:81/stream`;
       const SERVO_URL  = `http://${CAM_IP}:8080/servo`;
 
-<<<<<<< HEAD
-      function moverServo() {
-        fetch(`http://${CAM_HOST}:8080/servo`)
-          .then(r => r.text())
-          .then(t => console.log(t))
-          .catch(err => console.error("Error servo:", err));
-      }
-
-      
-
-      async function camOn(mins = 15) {
-    try {
-      await fetch(`http://${CAM_HOST}:8080/cam/on?minutes=${mins}`, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-      });
-      // Forzá un check inmediato para mostrar el stream
-      setTimeout(checkCam, 500);
-    } catch (e) {
-      console.error("Cam ON error:", e);
-    }
-  }
-
-  async function camOff() {
-    try {
-      await fetch(`http://${CAM_HOST}:8080/cam/off`, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-      });
-      setTimeout(checkCam, 300);
-    } catch (e) {
-      console.error("Cam OFF error:", e);
-    }
-  }
-
-      // Muestra/oculta el stream según el estado real
-=======
->>>>>>> 10e365eab0beb7a8597497eaeb4b17758dc2cc66
       const img = document.getElementById("camara-stream");
 
       // Crear botón circular cámara
@@ -120,6 +82,9 @@
 
       // Exponer moverServo para el botón de la pata
       window.moverServo = moverServo;
+      // Exponer helpers por si otro script los necesita
+      window.showStream = showStream;
+      window.hideStream = hideStream;
     </script>
 
     <div class="bottom-actions">
@@ -180,6 +145,87 @@
           showToast("Tu perro no te está escuchando");
         }
       });
+    </script>
+
+    <!-- === NUEVO: Auto-mostrar cámara 10 min tras finalizar la ventana del sensor (eat_waiting: true -> false) === -->
+    <script>
+      (function(){
+        // Cámara visible por 10 minutos DESPUÉS de terminar la brecha + ventana del PIR
+        const AUTO_CAM_MS = 600000; // 10 * 60 * 1000
+        // Polling del estado de la ESP32
+        const POLL_MS = 1500;
+        // Endpoint de estado (mismo host del servidor de control)
+        const STATUS_URL = `http://${CAM_IP}:8080/status`;
+
+        let prevEatWaiting = null; // estado anterior (null al inicio)
+        let autoOpened = false;    // si la encendimos automáticamente
+        let userTouched = false;   // si el usuario tocó el botón durante el auto
+        let hideTimer = null;
+        let pollTimer = null;
+
+        function getCamBtn() {
+          return document.getElementById('cam-toggle');
+        }
+        function isCamOn() {
+          const btn = getCamBtn();
+          return btn && btn.classList.contains('on');
+        }
+
+        function ensureUserIntentHook() {
+          const btn = getCamBtn();
+          if (!btn) return false;
+          // Marcar que el usuario intervino para no apagarle la cámara
+          if (!btn.__userHooked) {
+            btn.addEventListener('click', () => { userTouched = true; });
+            btn.__userHooked = true;
+          }
+          return true;
+        }
+
+        async function pollStatus() {
+          try {
+            const res = await fetch(STATUS_URL);
+            if (!res.ok) return;
+            const st = await res.json();
+            if (!st || !st.ok) return;
+
+            const nowEatWaiting = !!st.eat_waiting;
+
+            // Detectar flanco de bajada: terminó la ventana (brecha + PIR)
+            if (prevEatWaiting === true && nowEatWaiting === false) {
+              // Encender auto si no está encendida
+              if (!isCamOn() && typeof window.showStream === 'function') {
+                window.showStream();
+                autoOpened = true;
+                userTouched = false;
+
+                if (hideTimer) clearTimeout(hideTimer);
+                hideTimer = setTimeout(() => {
+                  // Apagar solo si la encendimos nosotros y el usuario no tocó nada
+                  if (autoOpened && !userTouched && isCamOn() && typeof window.hideStream === 'function') {
+                    window.hideStream();
+                  }
+                  autoOpened = false;
+                }, AUTO_CAM_MS);
+              } else {
+                // Si ya estaba encendida por el usuario, no programamos apagado automático
+                autoOpened = false;
+              }
+            }
+
+            prevEatWaiting = nowEatWaiting;
+          } catch (_) { /* silencioso */ }
+        }
+
+        function start() {
+          // Esperar a que exista el botón de cámara (lo crea tu script)
+          if (!getCamBtn()) { setTimeout(start, 300); return; }
+          ensureUserIntentHook();
+          pollTimer = setInterval(pollStatus, POLL_MS);
+        }
+
+        document.addEventListener('DOMContentLoaded', start);
+      })();
     </script>
   </main>
 

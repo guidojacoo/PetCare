@@ -327,6 +327,40 @@
       } catch (_) { /* silencioso */ }
     }
 
+    // ======= NUEVO: traer /getPlan desde la ESP y guardarlo en localStorage (una sola vez) =======
+    let didSyncPlanFromESP = false;
+
+    async function fetchPlanFromESPOnce() {
+      if (didSyncPlanFromESP) return;
+      try {
+        const res = await fetch(url("/getPlan"));
+        if (!res.ok) return;
+        const plan = await res.json();
+
+        // Guardamos para que plandecomidas.html pueda precargar
+        localStorage.setItem("petcare_plan_json", JSON.stringify(plan));
+        if (typeof plan.secondsOpen === "number") {
+          localStorage.setItem("petcare_secondsOpen", String(plan.secondsOpen));
+        }
+
+        didSyncPlanFromESP = true;
+        try { msgEl.textContent = "OK • Plan sincronizado desde la ESP"; } catch(_) {}
+      } catch (_e) {
+        // silencioso
+      }
+    }
+
+    // Enganchamos el primer /status exitoso para llamar a /getPlan sólo una vez
+    const __originalFetchStatus = fetchStatus;
+    window.fetchStatus = async function() {
+      try {
+        await __originalFetchStatus();
+        fetchPlanFromESPOnce();
+      } catch (e) {
+        // mantener comportamiento original de errores
+      }
+    };
+
     // Primeras acciones
     syncFromDB().then(fetchStatus);
     setInterval(fetchStatus, 1000);
