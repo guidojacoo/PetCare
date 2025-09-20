@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Monitor de Sonido (ESP32)</title>
+  <style>
+    :root { --ok:#22c55e; --warn:#ef4444; --bg:#0b1120; --fg:#e5e7eb; }
+    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b1120;color:#e5e7eb;margin:0;padding:16px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+    input,button{padding:8px 10px;border-radius:10px;border:1px solid #1f2937;background:#111827;color:#e5e7eb}
+    button{cursor:pointer}
+    canvas{width:100%;max-width:900px;height:260px;background:#0f172a;border-radius:14px;display:block}
+    .badge{display:inline-block;padding:.35rem .6rem;border-radius:999px;font-weight:600}
+    .ok{background:color-mix(in oklab, var(--ok) 25%, transparent);border:1px solid var(--ok)}
+    .warn{background:color-mix(in oklab, var(--warn) 25%, transparent);border:1px solid var(--warn)}
+  </style>
+</head>
+<body>
+  <h2>Monitor de Sonido (ESP32)</h2>
+  <div class="row">
+    <button id="btnStart">Prender mic</button>
+    <button id="btnStop">Apagar mic</button>
+    <label>Umbral:
+      <input id="thr" type="range" min="10" max="95" value="55">
+      <span id="thrVal">55</span>
+    </label>
+    <span id="state" class="badge ok">Listo</span>
+    <button id="btnTest">Probar conexión</button>
+  </div>
+
+  <canvas id="plot" width="1200" height="260"></canvas>
+  <p>nivel actual: <b id="lvl">0</b></p>
+  <p id="msg"></p>
+
+  <script>
+    // 👇 IP fija de tu ESP32
+    let baseURL = "http://192.168.0.133";
+
+    const plot = document.getElementById('plot');
+    const ctx = plot.getContext('2d');
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+    const thr = document.getElementById('thr');
+    const thrVal = document.getElementById('thrVal');
+    const lvlOut = document.getElementById('lvl');
+    const state = document.getElementById('state');
+    const msg = document.getElementById('msg');
+    const btnTest = document.getElementById('btnTest');
+
+    let buffer = new Array(300).fill(0); 
+    let running = false;
+
+    thr.addEventListener('input', () => thrVal.textContent = thr.value);
+
+    btnTest.onclick = async ()=>{
+      try{
+        const r = await fetch(`${baseURL}/health`, {mode:'cors', cache:'no-store'});
+        alert('Respuesta: ' + await r.text());
+      }catch(e){ alert('No conecta: ' + e); }
+    };
+
+    btnStart.onclick = async () => {
+      try{
+        await fetch(`${baseURL}/mic/start`, {mode:'cors'});
+        running = true;
+        state.textContent = 'Muestreando';
+        state.className = 'badge ok';
+      }catch(e){ alert('No pude prender el mic');}
+    };
+
+    btnStop.onclick = async () => {
+      try{
+        await fetch(`${baseURL}/mic/stop`, {mode:'cors'});
+        running = false;
+        state.textContent = 'Detenido';
+        state.className = 'badge';
+      }catch(e){/* ignore */}
+    };
+
+    async function poll(){
+      try{
+        const r = await fetch(`${baseURL}/level`, {mode:'cors', cache:'no-store'});
+        const j = await r.json();
+        const level = Math.max(0, Math.min(100, Math.round(j.level)));
+        buffer.push(level); buffer.shift();
+        lvlOut.textContent = level;
+        const T = parseInt(thr.value, 10);
+        if(level >= T){
+          msg.innerHTML = `<span class="badge warn">⚠ Ruido alto: ${level}</span>`;
+        }else{
+          msg.innerHTML = `<span class="badge ok">Ruido normal</span>`;
+        }
+      }catch(e){
+        state.textContent = 'Sin conexión';
+        state.className = 'badge warn';
+      }
+    }
+
+    function draw(){
+      const w = plot.width, h = plot.height;
+      ctx.clearRect(0,0,w,h);
+      ctx.globalAlpha = .15;
+      ctx.beginPath();
+      for(let y=0;y<=100;y+=10){
+        const yy = h - (y/100)*h;
+        ctx.moveTo(0,yy); ctx.lineTo(w,yy);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      buffer.forEach((v,i)=>{
+        const x = (i/(buffer.length-1))*w;
+        const y = h - (v/100)*h;
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      requestAnimationFrame(draw);
+    }
+    draw();
+
+    setInterval(poll, 200);
+  </script>
+</body>
+</html>
