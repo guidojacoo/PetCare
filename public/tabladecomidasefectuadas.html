@@ -11,7 +11,7 @@
       --good:#22c55e; --pending:#fbbf24; --bad:#fb2424;
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;background:var(--bg);color:var(--text)}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;background:var(--bg);color:#e5e8f0}
     .phone{max-width:980px;margin:auto;min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#0f172a 0%,#0b1120 100%)}
     .topbar{padding:16px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;text-align:center}
     .topbar h1{margin:0;font-size:18px;letter-spacing:.3px}
@@ -86,8 +86,27 @@
           <div class="info" style="margin-top:6px">
             <div class="badge"><span class="k"></span> <span id="now">—</span></div>
             <div class="badge"><span class="k">Última comida:</span> <span id="last">—</span></div>
+            <!-- NUEVO: badge para alertas del día -->
+            <div class="badge"><span class="k">Alertas hoy:</span> <span id="micAlerts">—</span></div>
           </div>
+
           <p id="msg" style="margin-top:12px">—</p>
+
+          <!-- MIC: controles -->
+          <div class="row" style="grid-template-columns: 1fr 1fr 1fr; margin-top:10px">
+            <button id="micStart" class="btn secondary">Monitorear mic</button>
+            <button id="micStop" class="btn ghost">Detener mic</button>
+            <div></div>
+            <div>
+              <label for="micMinutes">Minutos</label>
+              <input id="micMinutes" type="number" min="1" value="15" />
+            </div>
+            <div>
+              <label for="micThr">Umbral (0-100)</label>
+              <input id="micThr" type="number" min="10" max="100" value="80" />
+            </div>
+          </div>
+          <p class="subtle" id="micInfo">Mic: —</p>
         </div>
       </div>
 
@@ -122,8 +141,6 @@
         <p class="subtle" style="margin-top:10px">
           <span class="status good"><span class="dot"></span> Comida entregada</span>
           &nbsp;·&nbsp;
-          
-         
           <span class="status bad"><span class="dot"></span> Comida no entregada</span>
         </p>
       </div>
@@ -132,238 +149,374 @@
 
   <!-- === Script === -->
   <script>
-    // ======= CONFIGURA ACÁ TU BACKEND =======
-    const BACKEND_URL = "http://localhost:3000"; // <-- CAMBIAR SI ES NECESARIO
-    // ========================================
+  // ======= CONFIGURA ACÁ TU BACKEND =======
+  const BACKEND_URL = "http://localhost:3000"; // <-- CAMBIAR SI ES NECESARIO
+  // ========================================
 
-    const ipInput   = document.getElementById("ip");
-    const portInput = document.getElementById("port");
-    const nowEl  = document.getElementById("now");
-    const lastEl = document.getElementById("last");
-    const msgEl  = document.getElementById("msg");
-    const tbody  = document.querySelector("#table tbody");
-    const goPlanBtn = document.getElementById("goPlan");
+  const ipInput   = document.getElementById("ip");
+  const portInput = document.getElementById("port");
+  const nowEl  = document.getElementById("now");
+  const lastEl = document.getElementById("last");
+  const msgEl  = document.getElementById("msg");
+  const tbody  = document.querySelector("#table tbody");
+  const goPlanBtn = document.getElementById("goPlan");
 
-    // Cargar conexión guardada
-    ipInput.value   = localStorage.getItem("petcare_ip")   || "";
-    portInput.value = localStorage.getItem("petcare_port") || "8080";
+  // MIC UI
+  const micInfo   = document.getElementById("micInfo");
+  const micStartB = document.getElementById("micStart");
+  const micStopB  = document.getElementById("micStop");
+  const micMinI   = document.getElementById("micMinutes");
+  const micThrI   = document.getElementById("micThr");
 
-    document.getElementById("connForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-      localStorage.setItem("petcare_ip", ipInput.value.trim());
-      localStorage.setItem("petcare_port", portInput.value.trim());
-      msgEl.textContent = "Conexión guardada.";
-    });
+  // Asegurar badge "Alertas hoy:"
+  let micAlertsEl = document.getElementById("micAlerts");
+  if (!micAlertsEl) {
+    const estadoCard = micInfo?.closest(".card") || document.body;
+    const wrap = document.createElement("div");
+    wrap.className = "badge";
+    wrap.innerHTML = `<span class="k">Alertas hoy:</span> <b id="micAlerts">0</b>`;
+    estadoCard.insertBefore(wrap, micInfo || estadoCard.firstChild);
+    micAlertsEl = wrap.querySelector("#micAlerts");
+  }
 
-    goPlanBtn.addEventListener("click", () => {
-      window.location.href = "plandecomidas.html";
-    });
+  // ======= Utilidades de fecha =======
+  function todayKey(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
 
-    document.getElementById("testBtn").addEventListener("click", fetchStatus);
+  // ======= Estado por día (total y lastReported) =======
+  function _readStateMap(){
+    try { return JSON.parse(localStorage.getItem('petcare_mic_day_state') || '{}'); }
+    catch { return {}; }
+  }
+  function _writeStateMap(map){
+    try { localStorage.setItem('petcare_mic_day_state', JSON.stringify(map)); }
+    catch {}
+  }
+  // Migración desde el formato viejo (solo número por día)
+  function _migrateOldIfNeeded(map){
+    try {
+      const old = JSON.parse(localStorage.getItem('petcare_mic_alerts_by_date') || '{}');
+      const k = todayKey();
+      if (old && typeof old === 'object' && map[k] == null && typeof old[k] === 'number') {
+        map[k] = { t: Math.max(0, old[k]|0), r: null };
+        _writeStateMap(map);
+      }
+    } catch { /* noop */ }
+  }
+  function getDayState(){
+    const k = todayKey();
+    const map = _readStateMap();
+    if (!map._migrated) { _migrateOldIfNeeded(map); map._migrated = true; _writeStateMap(map); }
+    if (!map[k]) { map[k] = { t: 0, r: null }; _writeStateMap(map); }
+    return map[k];
+  }
+  function setDayState(state){
+    const k = todayKey();
+    const map = _readStateMap();
+    map[k] = { t: Math.max(0, state.t|0), r: (state.r==null? null : Math.max(0, state.r|0)) };
+    _writeStateMap(map);
+  }
+  function setTotalToday(v){
+    const st = getDayState();
+    st.t = Math.max(0, v|0);
+    setDayState(st);
+  }
+  function getTotalToday(){
+    return getDayState().t|0;
+  }
 
-    function url(path) {
-      const ip = (localStorage.getItem("petcare_ip") || ipInput.value || "").trim();
-      const port = (localStorage.getItem("petcare_port") || portInput.value || "8080").trim();
-      if (!ip) throw new Error("Falta IP");
-      return `http://${ip}:${port}${path}`;
+  // Mantener UI alineada si cambia el día
+  let _currentDayKey = todayKey();
+  function maybeRolloverDay(){
+    const k = todayKey();
+    if (k !== _currentDayKey){
+      _currentDayKey = k;
+      // Reiniciar/leer estado del nuevo día
+      const st = getDayState();
+      micAlertsEl.textContent = String(st.t|0);
     }
+  }
+  setInterval(maybeRolloverDay, 30000);
 
-    async function fetchStatus() {
-      try {
-        msgEl.textContent = "Actualizando...";
-        const res = await fetch(url("/status"));
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
-        render(data);
-        await repintarDesdeDB();
-        msgEl.textContent = data.eat_waiting ? "Esperando detección de 'comido'…" : "OK";
-      } catch (e) {
-        msgEl.textContent = "Error: " + e.message;
-      }
+  // Conexión guardada
+  ipInput.value   = localStorage.getItem("petcare_ip")   || "";
+  portInput.value = localStorage.getItem("petcare_port") || "8080";
+
+  document.getElementById("connForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    localStorage.setItem("petcare_ip", ipInput.value.trim());
+    localStorage.setItem("petcare_port", portInput.value.trim());
+    msgEl.textContent = "Conexión guardada.";
+  });
+
+  goPlanBtn.addEventListener("click", () => {
+    window.location.href = "plandecomidas.html";
+  });
+
+  document.getElementById("testBtn").addEventListener("click", fetchStatus);
+
+  function url(path) {
+    const ip = (localStorage.getItem("petcare_ip") || ipInput.value || "").trim();
+    const port = (localStorage.getItem("petcare_port") || portInput.value || "8080").trim();
+    if (!ip) throw new Error("Falta IP");
+    return `http://${ip}:${port}${path}`;
+  }
+
+  // ===== MIC: acciones =====
+  micStartB.addEventListener("click", async ()=>{
+    try{
+      const m = Math.max(1, parseInt(micMinI.value||"15",10));
+      const t = Math.max(10, Math.min(100, parseInt(micThrI.value||"80",10)));
+      await fetch(url(`/mic/start?minutes=${m}&thr=${t}`));
+      msgEl.textContent = `Mic encendido por ${m} min (umbral ${t}).`;
+    }catch(e){ msgEl.textContent = "No pude iniciar el mic: "+e.message; }
+  });
+  micStopB.addEventListener("click", async ()=>{
+    try{
+      await fetch(url(`/mic/stop`));
+      msgEl.textContent = "Mic detenido.";
+    }catch(e){ msgEl.textContent = "No pude detener el mic: "+e.message; }
+  });
+
+  // ===== Core =====
+  async function fetchStatus() {
+    try {
+      msgEl.textContent = "Actualizando...";
+      const res = await fetch(url("/status"));
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      render(data);
+      await repintarDesdeDB();
+      msgEl.textContent = data.eat_waiting ? "Esperando detección de 'comido'…" : "OK";
+    } catch (e) {
+      msgEl.textContent = "Error: " + e.message;
+      // En error mostramos el total persistido del día
+      micAlertsEl.textContent = String(getTotalToday());
     }
+  }
 
-    function render(data) {
-      if (!data.ok) {
-        nowEl.textContent = "Sin hora disponible.";
-        lastEl.textContent = "";
-        tbody.innerHTML = "";
-        return;
-      }
-
-      const pumpTxt = (data.pumpOn ? "Bomba: ON" : "Bomba: OFF");
-      nowEl.textContent = `Ahora: ${data.now.dayName} ${data.now.hhmm} | Duración por comida: ${data.secondsOpen}s | ${pumpTxt}`;
-
-      if (data.lastFeed && data.lastFeed.wday >= 0) {
-        lastEl.textContent = `Última comida: ${data.lastFeed.dayName} ${data.lastFeed.hhmm} (índice ${data.lastFeed.index})`;
-      } else {
-        lastEl.textContent = "Aún no se registraron comidas hoy.";
-      }
-
+  function render(data) {
+    if (!data.ok) {
+      nowEl.textContent = "Sin hora disponible.";
+      lastEl.textContent = "";
       tbody.innerHTML = "";
-      const plan = (data.today && data.today.plan) ? data.today.plan : [];
-      plan.forEach((p, idx) => {
-        const tr = document.createElement("tr");
-
-        const tdIdx   = document.createElement("td");
-        const tdTime  = document.createElement("td");
-        const tdFed   = document.createElement("td");
-        const tdEaten = document.createElement("td");
-        const tdWater = document.createElement("td");
-
-        tdIdx.textContent = idx + 1;
-        tdTime.textContent = p.time;
-        tdFed.textContent   = p.fed   ? "✅" : "❌";
-        tdEaten.textContent = p.eaten ? "✅" : "❌";
-
-        // REGLA: comida ⇒ agua
-        tdWater.textContent = (p.water || p.fed) ? "✅" : "❌";
-
-        tr.appendChild(tdIdx);
-        tr.appendChild(tdTime);
-        tr.appendChild(tdFed);
-        tr.appendChild(tdEaten);
-        tr.appendChild(tdWater);
-        tbody.appendChild(tr);
-      });
+      return;
     }
 
-    // ======= Sincronizar con el ÚLTIMO plan de la DB =======
-    async function syncFromDB(){
-      try{
-        const res = await fetch(`${BACKEND_URL}/db/planes`);
-        if (!res.ok) return;
-        const list = await res.json();
-        if (!Array.isArray(list) || list.length === 0) return;
+    const pumpTxt = (data.pumpOn ? "Bomba: ON" : "Bomba: OFF");
+    nowEl.textContent = `Ahora: ${data.now.dayName} ${data.now.hhmm} | Duración por comida: ${data.secondsOpen}s | ${pumpTxt}`;
 
-        const latest = list[0];
-        if (Number.isFinite(latest.grams_per_meal)) {
-          localStorage.setItem('petcare_grams_per_meal', String(latest.grams_per_meal));
-        }
-        if (Number.isFinite(latest.hopper_g)) {
-          localStorage.setItem('petcare_hopper', String(latest.hopper_g));
-        }
-      }catch(_){}
+    if (data.lastFeed && data.lastFeed.wday >= 0) {
+      lastEl.textContent = `Última comida: ${data.lastFeed.dayName} ${data.lastFeed.hhmm} (índice ${data.lastFeed.index})`;
+    } else {
+      lastEl.textContent = "Aún no se registraron comidas hoy.";
     }
 
-    // ===== Cálculo de raciones restantes (hook) =====
-    (function(){
-      const originalRender = window.render;
+    // ===== Tabla de hoy
+    tbody.innerHTML = "";
+    const plan = (data.today && data.today.plan) ? data.today.plan : [];
+    plan.forEach((p, idx) => {
+      const tr = document.createElement("tr");
+      const tdIdx   = document.createElement("td");
+      const tdTime  = document.createElement("td");
+      const tdFed   = document.createElement("td");
+      const tdEaten = document.createElement("td");
+      const tdWater = document.createElement("td");
 
-      function numbers(){
-        const hopper = parseFloat(localStorage.getItem('petcare_hopper') || '0');
-        const gramsPerMeal = parseFloat(localStorage.getItem('petcare_grams_per_meal') || '0');
-        return { hopper, gramsPerMeal };
-      }
-      function calcRemaining(hopper, gramsPerMeal, fedCount){
-        if (!Number.isFinite(hopper) || hopper < 0 || !Number.isFinite(gramsPerMeal) || gramsPerMeal <= 0){
-          return { gramsLeft: 0, mealsExact: 0, mealsFull: 0 };
+      tdIdx.textContent = idx + 1;
+      tdTime.textContent = p.time;
+      tdFed.textContent   = p.fed   ? "✅" : "❌";
+      tdEaten.textContent = p.eaten ? "✅" : "❌";
+      tdWater.textContent = (p.water || p.fed) ? "✅" : "❌";
+
+      tr.appendChild(tdIdx);
+      tr.appendChild(tdTime);
+      tr.appendChild(tdFed);
+      tr.appendChild(tdEaten);
+      tr.appendChild(tdWater);
+      tbody.appendChild(tr);
+    });
+
+    // ===== MIC en Estado (acumulador robusto)
+    if (data.mic){
+      const r = Number(data.mic.alertsToday) || 0; // lo que reporta la ESP en esta lectura
+      const st = getDayState();
+      // Primera lectura del día sin lastReported
+      if (st.r == null) {
+        // Si ya teníamos total acumulado (p.ej. de reconexiones previas), lo conservamos;
+        // si era 0 y la ESP trae r>0 (primer fetch del día), arrancamos con r.
+        if ((st.t|0) === 0 && r > 0) st.t = r;
+        st.r = r;
+      } else {
+        if (r >= st.r) {
+          st.t += (r - st.r);   // delta positivo → sumar al total
+          st.r  = r;
+        } else {
+          // La ESP se reinició o reseteó contador: no bajamos total; solo actualizamos baseline
+          st.r = r;
         }
-        const gramsLeft = Math.max(0, hopper - fedCount * gramsPerMeal);
-        const mealsExact = gramsLeft / gramsPerMeal;
-        const mealsFull = Math.floor(mealsExact);
-        return { gramsLeft, mealsExact, mealsFull };
       }
-      function updateUI(gramsLeft, mealsExact, mealsFull){
-        const panel = document.getElementById('stockPanel');
-        const warn  = document.getElementById('rechargeBanner'); // puede no existir
-        const gEl   = document.getElementById('gramsLeft');
-        const eEl   = document.getElementById('mealsExact');
-        const fEl   = document.getElementById('mealsFull');
+      setDayState(st);
 
-        gEl.textContent = Math.round(gramsLeft);
-        eEl.textContent = mealsExact.toFixed(2);
-        fEl.textContent = String(mealsFull);
+      const m = data.mic;
+      const high = (m.level >= m.thr) || (m.peak >= m.thr);
+      const estado = m.enabled ? (m.suspended ? "ON (pausado por comida)" : "ON") : "OFF";
 
-        panel.style.display = (mealsExact > 0 || gramsLeft > 0) ? 'block' : 'none';
-        if (warn) warn.style.display = (mealsFull <= 2) ? 'block' : 'none';
+      micInfo.textContent = `Mic: ${estado} • nivel=${m.level} pico=${m.peak} thr=${m.thr} • alertas hoy=${st.t}`;
+      micAlertsEl.textContent = String(st.t);
+
+      if (high) {
+        msgEl.textContent = "⚠ Ladrido alto detectado (≥ umbral)";
       }
+    } else {
+      micInfo.textContent = "Mic: —";
+      micAlertsEl.textContent = String(getTotalToday());
+    }
+  }
 
-      window.render = function(data){
-        originalRender.call(this, data);
-        try {
-          const plan = (data && data.today && Array.isArray(data.today.plan)) ? data.today.plan : [];
-          const fedCount = plan.reduce((acc,p)=> acc + (p && p.fed ? 1 : 0), 0);
-          const { hopper, gramsPerMeal } = numbers();
-          const { gramsLeft, mealsExact, mealsFull } = calcRemaining(hopper, gramsPerMeal, fedCount);
-          updateUI(gramsLeft, mealsExact, mealsFull);
-        } catch (e) { /* silencioso */ }
-      };
-    })();
+  // ======= Sincronizar con el ÚLTIMO plan de la DB =======
+  async function syncFromDB(){
+    try{
+      const res = await fetch(`${BACKEND_URL}/db/planes`);
+      if (!res.ok) return;
+      const list = await res.json();
+      if (!Array.isArray(list) || list.length === 0) return;
 
-    // ===== Repintar ticks desde DB =====
-    async function repintarDesdeDB(){
+      const latest = list[0];
+      if (Number.isFinite(latest.grams_per_meal)) {
+        localStorage.setItem('petcare_grams_per_meal', String(latest.grams_per_meal));
+      }
+      if (Number.isFinite(latest.hopper_g)) {
+        localStorage.setItem('petcare_hopper', String(latest.hopper_g));
+      }
+    }catch(_){}
+  }
+
+  // ===== Cálculo de raciones restantes (hook) =====
+  (function(){
+    const originalRender = window.render;
+
+    function numbers(){
+      const hopper = parseFloat(localStorage.getItem('petcare_hopper') || '0');
+      const gramsPerMeal = parseFloat(localStorage.getItem('petcare_grams_per_meal') || '0');
+      return { hopper, gramsPerMeal };
+    }
+    function calcRemaining(hopper, gramsPerMeal, fedCount){
+      if (!Number.isFinite(hopper) || hopper < 0 || !Number.isFinite(gramsPerMeal) || gramsPerMeal <= 0){
+        return { gramsLeft: 0, mealsExact: 0, mealsFull: 0 };
+      }
+      const gramsLeft = Math.max(0, hopper - fedCount * gramsPerMeal);
+      const mealsExact = gramsLeft / gramsPerMeal;
+      const mealsFull = Math.floor(mealsExact);
+      return { gramsLeft, mealsExact, mealsFull };
+    }
+    function updateUI(gramsLeft, mealsExact, mealsFull){
+      const panel = document.getElementById('stockPanel');
+      const warn  = document.getElementById('rechargeBanner'); // puede no existir
+      const gEl   = document.getElementById('gramsLeft');
+      const eEl   = document.getElementById('mealsExact');
+      const fEl   = document.getElementById('mealsFull');
+
+      gEl.textContent = Math.round(gramsLeft);
+      eEl.textContent = mealsExact.toFixed(2);
+      fEl.textContent = String(mealsFull);
+
+      panel.style.display = (mealsExact > 0 || gramsLeft > 0) ? 'block' : 'none';
+      if (warn) warn.style.display = (mealsFull <= 2) ? 'block' : 'none';
+    }
+
+    window.render = function(data){
+      originalRender.call(this, data);
       try {
-        const mascotaId = Number(localStorage.getItem("petcare_mascota_id") || "1");
-
-        const q = (params) =>
-          fetch(`${BACKEND_URL}/mascotas/${mascotaId}/ticks${params}`)
-            .then(r => r.ok ? r.json() : { ok:false, ticks:[] })
-            .catch(() => ({ ok:false, ticks:[] }));
-
-        const [comida, eaten, agua] = await Promise.all([
-          q(`?accion=comida&tipo=servo`),
-          q(`?accion=comida&tipo=sensor`),
-          q(`?accion=agua&tipo=servo`)
-        ]);
-
-        const norm = (arr) => (arr || []).map(x => {
-          if (typeof x === "string") return x.trim();
-          if (x && typeof x.hora === "string") return x.hora.trim();
-          return "";
-        }).filter(Boolean);
-
-        const setC = new Set(norm(comida.ok ? comida.ticks : []));
-        const setE = new Set(norm(eaten.ok  ? eaten.ticks  : []));
-        const setA = new Set(norm(agua.ok   ? agua.ticks   : []));
-
-        document.querySelectorAll("#table tbody tr").forEach(tr => {
-          const hora = tr.children[1]?.textContent?.trim();
-          if (!hora) return;
-
-          if (setC.has(hora)) tr.children[2].textContent = "✅";
-          if (setE.has(hora)) tr.children[3].textContent = "✅";
-          if (setA.has(hora) || setC.has(hora)) tr.children[4].textContent = "✅";
-        });
-      } catch (_) { /* silencioso */ }
-    }
-
-    // ======= NUEVO: traer /getPlan desde la ESP y guardarlo en localStorage (una sola vez) =======
-    let didSyncPlanFromESP = false;
-
-    async function fetchPlanFromESPOnce() {
-      if (didSyncPlanFromESP) return;
-      try {
-        const res = await fetch(url("/getPlan"));
-        if (!res.ok) return;
-        const plan = await res.json();
-
-        // Guardamos para que plandecomidas.html pueda precargar
-        localStorage.setItem("petcare_plan_json", JSON.stringify(plan));
-        if (typeof plan.secondsOpen === "number") {
-          localStorage.setItem("petcare_secondsOpen", String(plan.secondsOpen));
-        }
-
-        didSyncPlanFromESP = true;
-        try { msgEl.textContent = "OK • Plan sincronizado desde la ESP"; } catch(_) {}
-      } catch (_e) {
-        // silencioso
-      }
-    }
-
-    // Enganchamos el primer /status exitoso para llamar a /getPlan sólo una vez
-    const __originalFetchStatus = fetchStatus;
-    window.fetchStatus = async function() {
-      try {
-        await __originalFetchStatus();
-        fetchPlanFromESPOnce();
-      } catch (e) {
-        // mantener comportamiento original de errores
-      }
+        const plan = (data && data.today && Array.isArray(data.today.plan)) ? data.today.plan : [];
+        const fedCount = plan.reduce((acc,p)=> acc + (p && p.fed ? 1 : 0), 0);
+        const { hopper, gramsPerMeal } = numbers();
+        const { gramsLeft, mealsExact, mealsFull } = calcRemaining(hopper, gramsPerMeal, fedCount);
+        updateUI(gramsLeft, mealsExact, mealsFull);
+      } catch (e) { /* silencioso */ }
     };
+  })();
 
-    // Primeras acciones
-    syncFromDB().then(fetchStatus);
-    setInterval(fetchStatus, 1000);
-  </script>
+  // ===== Repintar ticks desde DB =====
+  async function repintarDesdeDB(){
+    try {
+      const mascotaId = Number(localStorage.getItem("petcare_mascota_id") || "1");
+
+      const q = (params) =>
+        fetch(`${BACKEND_URL}/mascotas/${mascotaId}/ticks${params}`)
+          .then(r => r.ok ? r.json() : { ok:false, ticks:[] })
+          .catch(() => ({ ok:false, ticks:[] }));
+
+      const [comida, eaten, agua] = await Promise.all([
+        q(`?accion=comida&tipo=servo`),
+        q(`?accion=comida&tipo=sensor`),
+        q(`?accion=agua&tipo=servo`)
+      ]);
+
+      const norm = (arr) => (arr || []).map(x => {
+        if (typeof x === "string") return x.trim();
+        if (x && typeof x.hora === "string") return x.hora.trim();
+        return "";
+      }).filter(Boolean);
+
+      const setC = new Set(norm(comida.ok ? comida.ticks : []));
+      const setE = new Set(norm(eaten.ok  ? eaten.ticks  : []));
+      const setA = new Set(norm(agua.ok   ? agua.ticks   : []));
+      document.querySelectorAll("#table tbody tr").forEach(tr => {
+        const hora = tr.children[1]?.textContent?.trim();
+        if (!hora) return;
+
+        if (setC.has(hora)) tr.children[2].textContent = "✅";
+        if (setE.has(hora)) tr.children[3].textContent = "✅";
+        if (setA.has(hora) || setC.has(hora)) tr.children[4].textContent = "✅";
+      });
+    } catch (_) { /* silencioso */ }
+  }
+
+  // ======= NUEVO: traer /getPlan desde la ESP y guardarlo en localStorage (una sola vez) =======
+  let didSyncPlanFromESP = false;
+
+  async function fetchPlanFromESPOnce() {
+    if (didSyncPlanFromESP) return;
+    try {
+      const res = await fetch(url("/getPlan"));
+      if (!res.ok) return;
+      const plan = await res.json();
+
+      localStorage.setItem("petcare_plan_json", JSON.stringify(plan));
+      if (typeof plan.secondsOpen === "number") {
+        localStorage.setItem("petcare_secondsOpen", String(plan.secondsOpen));
+      }
+
+      didSyncPlanFromESP = true;
+      try { msgEl.textContent = "OK • Plan sincronizado desde la ESP"; } catch(_) {}
+    } catch (_e) {
+      // silencioso
+    }
+  }
+
+  // Enganchamos el primer /status exitoso para llamar a /getPlan sólo una vez
+  const __originalFetchStatus = fetchStatus;
+  window.fetchStatus = async function() {
+    try {
+      await __originalFetchStatus();
+      fetchPlanFromESPOnce();
+    } catch (e) {
+      // mantener comportamiento original de errores
+    }
+  };
+
+  // ===== Inicio: mostrar lo guardado y empezar a actualizar =====
+  micAlertsEl.textContent = String(getTotalToday()); // se ve algo aunque la ESP todavía no responda
+  syncFromDB().then(fetchStatus);
+  setInterval(fetchStatus, 1000);
+</script>
+
+
 </body>
 </html>
