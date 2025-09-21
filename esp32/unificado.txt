@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>
 #include <time.h>
 #include <Preferences.h>
+#include <math.h>   // <<< para fabsf, sqrtf, lroundf
 
 // ===========================
 // WiFi
@@ -168,7 +169,193 @@ String getDayName(int wday) {
 }
 
 // ===========================
-// /status
+// === MIC: configuración y estado
+// ===========================
+#define MIC_PIN 34                  // ADC1_CH6 (solo entrada)
+const int MIC_WINDOW_SAMPLES = 192; // ventana RMS
+const int MIC_SAMPLE_US      = 200; // ~5 kHz
+volatile bool  micEnabled          = false;   // ON/OFF pedido
+volatile bool  micSuspendedByPlan  = false;   // pausado por ventanas de comida
+volatile float micLevel01          = 0.0f;    // 0..1
+volatile float micPeak01           = 0.0f;    // 0..1
+int            micThreshold        = 80;      // 0..100
+int            micAlertsToday      = 0;       // contador de alertas del día
+unsigned long  micStopAtMs         = 0;       // 0 = sin fin programado
+TaskHandle_t   micTaskHandle       = nullptr;
+
+// Ventanas de “apagado por plan” para no coincidir con comida
+const unsigned long MIC_BLACKOUT_BEFORE_MS = 2UL * 60UL * 1000UL; // 2 min antes
+const unsigned long MIC_BLACKOUT_AFTER_MS  = 3UL * 60UL * 1000UL; // 3 min después
+
+bool micInAlert = false; // latch para no contar muchas veces
+
+// === MIC NVS: persistencia de alertas por día ===
+int micAlerts[7] = {0};          // contador semanal (0=Dom..6=Sáb)
+unsigned long micPersistMs = 0;  // throttle de escritura NVS
+
+int hhmmToMin(const String& s){
+  if (s.length()!=5) return -1;
+  int hh = s.substring(0,2).toInt();
+  int mm = s.substring(3,5).toInt();
+  return (hh>=0 && hh<24 && mm>=0 && mm<60) ? (hh*60+mm) : -1;
+}
+
+bool isNowWithinBlackout(){
+  struct tm ti;
+  if (!getLocalTime(&ti)) return false;
+  int wday = ti.tm_wday;
+  int nowMin = ti.tm_hour*60 + ti.tm_min;
+  unsigned long preS  = MIC_BLACKOUT_BEFORE_MS/1000UL;
+  unsigned long postS = MIC_BLACKOUT_AFTER_MS/1000UL;
+
+  for (int i=0;i<dayCount[wday];++i){
+    int m = hhmmToMin(dayTimes[wday][i]);
+    if (m<0) continue;
+    int from = m - (int)(preS/60UL);
+    int to   = m + (int)(postS/60UL);
+    if (nowMin >= from && nowMin <= to) return true;
+  }
+  return false;
+}
+
+void setupMicADC(){
+  analogReadResolution(12);
+  analogSetAttenuation(ADC_11db);
+  analogSetPinAttenuation(MIC_PIN, ADC_11db);
+}
+
+// === MIC NVS: helpers ===
+void saveMicAlerts(int wday){
+  if (wday < 0 || wday > 6) return;
+  if (prefs.begin("petcare", false)) {
+    String k = "micA_" + String(wday);
+    prefs.putInt(k.c_str(), micAlerts[wday]);
+    prefs.end();
+  }
+}
+int loadMicAlert(int wday){
+  if (wday < 0 || wday > 6) return 0;
+  int v = 0;
+  if (prefs.begin("petcare", true)) {
+    String k = "micA_" + String(wday);
+    v = prefs.getInt(k.c_str(), 0);
+    prefs.end();
+  }
+  return v;
+}
+void loadAllMicAlerts(){
+  for (int d=0; d<7; ++d) micAlerts[d] = loadMicAlert(d);
+}
+void saveAllMicAlerts(){
+  for (int d=0; d<7; ++d) saveMicAlerts(d);
+}
+
+// === MIC: tarea de muestreo (core 0)
+void micTask(void*){
+  for(;;){
+    if (!micEnabled){ vTaskDelay(pdMS_TO_TICKS(50)); continue; }
+
+    // apagado por tiempo programado
+    if (micStopAtMs!=0 && millis() > micStopAtMs){
+      micEnabled = false;
+      micStopAtMs = 0;
+      vTaskDelay(pdMS_TO_TICKS(50));
+      continue;
+    }
+
+    // Pausa automática alrededor de comidas
+    micSuspendedByPlan = isNowWithinBlackout();
+    if (micSuspendedByPlan){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
+
+    // Muestreo RMS + pico
+    float mean=0.0f, m2=0.0f, peak=0.0f;
+    for (int i=0;i<MIC_WINDOW_SAMPLES;i++){
+      int raw = analogRead(MIC_PIN);         // 0..4095
+      float x = (float)raw;
+      float d = x - mean; mean += d/(i+1);   m2 += d*(x-mean);
+      float a = fabsf(x - mean); if(a>peak) peak=a;
+      delayMicroseconds(MIC_SAMPLE_US);
+    }
+    float variance = (MIC_WINDOW_SAMPLES>1) ? (m2/(MIC_WINDOW_SAMPLES-1)) : 0.0f;
+    float rms = sqrtf(variance);
+
+    float lvl01 = rms  / 1200.0f; if (lvl01>1) lvl01=1;
+    float pk01  = peak / 2048.0f; if (pk01 >1) pk01 =1;
+
+    micLevel01 = lvl01;
+    micPeak01  = pk01;
+
+    // detección y conteo de alerta
+    int lvl100 = (int)lroundf(lvl01*100.0f);
+    int pk100  = (int)lroundf(pk01 *100.0f);
+    bool high = (lvl100 >= micThreshold) || (pk100 >= micThreshold);
+
+    if (high && !micInAlert){
+      micAlertsToday++;
+      micInAlert=true;
+
+      // === MIC NVS: sincronizar array semanal y guardar cada ~60s
+      struct tm ti;
+      if (getLocalTime(&ti)) {
+        micAlerts[ti.tm_wday] = micAlertsToday;
+        unsigned long now = millis();
+        if (now - micPersistMs > 60000UL) { // una vez por minuto máx
+          saveMicAlerts(ti.tm_wday);
+          micPersistMs = now;
+        }
+      }
+    }
+    if (!high && micInAlert){ micInAlert=false; }
+
+    vTaskDelay(1); // ceder CPU al servidor
+  }
+}
+
+// === MIC: endpoints
+void handleMicStart(){
+  int minutes = 15;
+
+  if (server.hasArg("minutes")) {
+    long mv = server.arg("minutes").toInt(); // toInt() -> long
+    if (mv < 1)   mv = 1;      // mínimo 1 minuto
+    if (mv > 720) mv = 720;    // opcional: máx 12 horas
+    minutes = (int)mv;
+  }
+
+  if (server.hasArg("thr")) {
+    int t = server.arg("thr").toInt();
+    if (t < 10)  t = 10;
+    if (t > 100) t = 100;
+    micThreshold = t;
+  }
+
+  micEnabled = true;
+  micStopAtMs = millis() + (unsigned long)minutes * 60UL * 1000UL;
+
+  enableCORS();
+  server.send(200,"application/json","{\"ok\":true}");
+}
+
+void handleMicStop(){
+  micEnabled = false; micStopAtMs = 0;
+  enableCORS(); server.send(200,"application/json","{\"ok\":true}");
+}
+void handleMicStatus(){
+  int lvl = (int)lroundf(micLevel01*100.0f);
+  int pk  = (int)lroundf(micPeak01 *100.0f);
+  String j = "{";
+  j += "\"enabled\":"   + String(micEnabled ? "true":"false") + ",";
+  j += "\"suspended\":" + String(micSuspendedByPlan ? "true":"false") + ",";
+  j += "\"level\":"     + String(lvl) + ",";
+  j += "\"peak\":"      + String(pk) + ",";
+  j += "\"thr\":"       + String(micThreshold) + ",";
+  j += "\"alertsToday\":"+ String(micAlertsToday);
+  j += "}";
+  enableCORS(); server.send(200,"application/json", j);
+}
+
+// ===========================
+// /status   (INCLUYE MIC)
 // ===========================
 void handleStatus() {
   enableCORS();
@@ -187,6 +374,21 @@ void handleStatus() {
   json += "\"secondsOpen\":" + String(secondsOpen,2) + ",";
   json += "\"eat_waiting\":" + String(waitingEat ? "true":"false") + ",";
   json += "\"pumpOn\":" + String(pumpOn ? "true":"false") + ",";
+
+  // --- MIC en /status
+  json += "\"mic\":{";
+  json += "\"enabled\":"   + String(micEnabled ? "true":"false") + ",";
+  json += "\"suspended\":" + String(micSuspendedByPlan ? "true":"false") + ",";
+  json += "\"level\":"     + String((int)lroundf(micLevel01*100.0f)) + ",";
+  json += "\"peak\":"      + String((int)lroundf(micPeak01 *100.0f)) + ",";
+  json += "\"thr\":"       + String(micThreshold) + ",";
+  json += "\"alertsToday\":"+ String(micAlertsToday);
+  json += "},";
+
+  // --- Historial semanal de alertas (0..6 Dom..Sáb)
+  json += "\"micAlertsWeek\":[";
+  for (int d=0; d<7; ++d) { if (d) json += ","; json += String(micAlerts[d]); }
+  json += "],";
 
   json += "\"lastFeed\":{";
   json += "\"wday\":" + String(lastFeedWday) + ",";
@@ -430,7 +632,16 @@ void setup() {
   // Cargar flags previos (si existían)
   loadAllFlags();
 
-  // Rutas HTTP
+  // --- MIC ADC + rutas MIC
+  setupMicADC();
+  server.on("/mic/start",  HTTP_GET,      handleMicStart);
+  server.on("/mic/stop",   HTTP_GET,      handleMicStop);
+  server.on("/mic/status", HTTP_GET,      handleMicStatus);
+  server.on("/mic/start",  HTTP_OPTIONS,  handleOptions);
+  server.on("/mic/stop",   HTTP_OPTIONS,  handleOptions);
+  server.on("/mic/status", HTTP_OPTIONS,  handleOptions);
+
+  // Rutas HTTP existentes
   server.on("/setPlan",   HTTP_POST,    handleSetPlan);
   server.on("/setPlan",   HTTP_OPTIONS, handleOptions);
   server.on("/status",    HTTP_GET,     handleStatus);
@@ -439,13 +650,23 @@ void setup() {
   server.on("/clearPlan", HTTP_OPTIONS, handleOptions);
   server.on("/servo",     HTTP_GET,     handleServoManual);
   server.on("/servo",     HTTP_OPTIONS, handleOptions);
-
-  // Endpoint para obtener el último plan guardado
   server.on("/getPlan",   HTTP_GET,     handleGetPlan);
   server.on("/getPlan",   HTTP_OPTIONS, handleOptions);
 
   server.begin();
   resetAllFed();
+
+  // === MIC NVS: cargar contadores y alinear el día actual
+  loadAllMicAlerts();
+  struct tm _ti;
+  if (getLocalTime(&_ti)) {
+    micAlertsToday = micAlerts[_ti.tm_wday];
+  } else {
+    micAlertsToday = 0;
+  }
+
+  // Tarea MIC: core 0, prioridad baja
+  xTaskCreatePinnedToCore(micTask, "micTask", 4096, nullptr, 1, &micTaskHandle, 0);
 }
 
 // ===========================
@@ -533,6 +754,22 @@ void loop() {
         }
         waitingEat = false; // cerrar ventana al primer movimiento
       }
+    }
+  }
+
+  // === MIC: reset diario y persistencia por día ===
+  static int _micDay = -1;
+  struct tm ti2;
+  if (getLocalTime(&ti2)) {
+    if (_micDay != ti2.tm_wday) {
+      // guardar el día anterior
+      if (_micDay >= 0 && _micDay <= 6) saveMicAlerts(_micDay);
+      // nuevo día: arrancar en cero y persistir
+      _micDay = ti2.tm_wday;
+      micAlerts[_micDay] = 0;
+      micAlertsToday = 0;
+      micInAlert = false;
+      saveMicAlerts(_micDay);
     }
   }
 }
