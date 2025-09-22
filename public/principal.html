@@ -15,7 +15,18 @@
     }
     #cam-toggle.off { background:#388e3c; } /* verde */
     #cam-toggle.on  { background:#d32f2f; } /* rojo */
-    #cam-toggle img { width:30px; height:30px; }
+    #cam-toggle img { width:30px; height:30px; } /* <- lo dejo como lo tenías */
+
+    /* ✅ NUEVO: asegurar que el ícono se ajuste perfecto al círculo */
+    #cam-toggle { position: relative; overflow: hidden; }
+    #cam-toggle img {
+      width:56%;
+      height:56%;
+      display:block;
+      object-fit:contain;
+      border-radius:50%;
+      pointer-events:none; /* que no tape el click */
+    }
   </style>
 </head>
 <body>
@@ -47,14 +58,35 @@
 
       const img = document.getElementById("camara-stream");
 
-      // Crear botón circular cámara
-      const camBtn = document.createElement("button");
-      camBtn.id = "cam-toggle";
-      camBtn.className = "fab off";
+      // Crear botón circular cámara (existe, lo respetamos)
+      // Crear botón circular cámara (ya lo tenías)
+const camBtn = document.createElement("button");
+camBtn.id = "cam-toggle";
+camBtn.className = "fab off";
+camBtn.setAttribute("aria-label","Encender/Apagar cámara");
 
-      document.addEventListener("DOMContentLoaded", () => {
-        document.querySelector(".bottom-actions").appendChild(camBtn);
-      });
+// ⬇️ Agrego la imagen DENTRO del botón (ruta relativa desde public/principal.html)
+const camIcon = document.createElement("img");
+camIcon.alt = "Prendido/Apagado";
+camIcon.loading = "lazy";
+camIcon.decoding = "async";
+
+// intentar ruta relativa; si falla, probar absoluta
+function setCamIconSrc() {
+  const ver = Date.now(); // bust cache
+  camIcon.src = `imagenes/prendido.png?v=${ver}`;
+  camIcon.onerror = () => { camIcon.src = `/imagenes/prendido.png?v=${ver}`; };
+}
+setCamIconSrc();
+
+camBtn.appendChild(camIcon);
+
+// Cuando el DOM está listo, agregar el botón a la barra inferior
+document.addEventListener("DOMContentLoaded", () => {
+  const cont = document.querySelector(".bottom-actions");
+  if (cont && !document.getElementById("cam-toggle")) cont.appendChild(camBtn);
+});
+
 
       function showStream() {
         img.style.display = "inline-block";
@@ -102,7 +134,7 @@
       <button class="fab" id="plan" aria-label="Plan de comidas">
         <img src="/Fotos/Notas.png" alt="Imagen de unas notas" height="40" width="40">
       </button>
-      <!-- El botón de cámara se agrega por JS -->
+      <!-- El botón de cámara se agrega por JS (con la imagen) -->
     </div>
 
     <div id="mic-toast">microfono activo</div>
@@ -152,34 +184,27 @@
       });
     </script>
 
-    <!-- === NUEVO: Auto-mostrar cámara 10 min tras finalizar la ventana del sensor (eat_waiting: true -> false) === -->
+    <!-- === Auto-mostrar cámara 10 min tras finalizar la ventana del sensor === -->
     <script>
       (function(){
-        // Cámara visible por 10 minutos DESPUÉS de terminar la brecha + ventana del PIR
-        const AUTO_CAM_MS = 600000; // 10 * 60 * 1000
-        // Polling del estado de la ESP32
+        const AUTO_CAM_MS = 600000; // 10 min
         const POLL_MS = 1500;
-        // Endpoint de estado del ESP32 de control
         const STATUS_URL = `http://${CTRL_IP}:8080/status`;
 
-        let prevEatWaiting = null; // estado anterior (null al inicio)
-        let autoOpened = false;    // si la encendimos automáticamente
-        let userTouched = false;   // si el usuario tocó el botón durante el auto
+        let prevEatWaiting = null;
+        let autoOpened = false;
+        let userTouched = false;
         let hideTimer = null;
         let pollTimer = null;
 
-        function getCamBtn() {
-          return document.getElementById('cam-toggle');
-        }
+        function getCamBtn() { return document.getElementById('cam-toggle'); }
         function isCamOn() {
           const btn = getCamBtn();
           return btn && btn.classList.contains('on');
         }
-
         function ensureUserIntentHook() {
           const btn = getCamBtn();
           if (!btn) return false;
-          // Marcar que el usuario intervino para no apagarle la cámara
           if (!btn.__userHooked) {
             btn.addEventListener('click', () => { userTouched = true; });
             btn.__userHooked = true;
@@ -196,9 +221,7 @@
 
             const nowEatWaiting = !!st.eat_waiting;
 
-            // Detectar flanco de bajada: terminó la ventana (brecha + PIR)
             if (prevEatWaiting === true && nowEatWaiting === false) {
-              // Encender auto si no está encendida
               if (!isCamOn() && typeof window.showStream === 'function') {
                 window.showStream();
                 autoOpened = true;
@@ -206,29 +229,24 @@
 
                 if (hideTimer) clearTimeout(hideTimer);
                 hideTimer = setTimeout(() => {
-                  // Apagar solo si la encendimos nosotros y el usuario no tocó nada
                   if (autoOpened && !userTouched && isCamOn() && typeof window.hideStream === 'function') {
                     window.hideStream();
                   }
                   autoOpened = false;
                 }, AUTO_CAM_MS);
               } else {
-                // Si ya estaba encendida por el usuario, no programamos apagado automático
                 autoOpened = false;
               }
             }
-
             prevEatWaiting = nowEatWaiting;
           } catch (_) { /* silencioso */ }
         }
 
         function start() {
-          // Esperar a que exista el botón de cámara (lo crea tu script)
           if (!getCamBtn()) { setTimeout(start, 300); return; }
           ensureUserIntentHook();
           pollTimer = setInterval(pollStatus, POLL_MS);
         }
-
         document.addEventListener('DOMContentLoaded', start);
       })();
     </script>
