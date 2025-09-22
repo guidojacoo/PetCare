@@ -48,13 +48,26 @@ body {
 .btn:hover { filter: brightness(1.05); }
 .btn:active { transform: scale(.97); }
 
-.dot {
+.dot{
   width: 44px;
   height: 44px;
   border-radius: 50%;
   background: #1eb6ff;
   border: 3px solid #0b1520;
+
+  /* 👇 centra la letra */
+  display: grid;
+  place-items: center;
+
+  /* estilo de la inicial */
+  font-weight: 800;
+  font-size: 20px;
+  color: #042031;
+  text-transform: uppercase;
+  line-height: 1;
+  user-select: none;
 }
+
 
 .camera {
   flex: 1;

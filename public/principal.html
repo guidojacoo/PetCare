@@ -36,7 +36,7 @@
       <a href="perfil.html" class="btn btn-gear" aria-label="Configuración">
         <img src="/Fotos/configuracion.png" alt="Configuración" height="40" width="40">
       </a>
-      <div class="dot"></div>
+      <div class="dot"  aria-label="Inicial del usuario"></div>
     </header>
 
     <!-- Cámara oculta por defecto -->
@@ -250,6 +250,36 @@ document.addEventListener("DOMContentLoaded", () => {
         document.addEventListener('DOMContentLoaded', start);
       })();
     </script>
+
+    <script>
+  // Pone la inicial mayúscula del usuario dentro del círculo .dot
+  (function () {
+    function pickInitial(user) {
+      if (!user || typeof user !== "object") return "";
+      // campos posibles en tu app
+      const name =
+        user.nombre || user.name || user.username ||
+        (user.email ? user.email.split("@")[0] : "");
+
+      if (!name || typeof name !== "string") return "";
+      const first = name.trim().charAt(0);
+      return first ? first.toLocaleUpperCase("es-AR") : "";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const dot = document.querySelector(".dot");
+      if (!dot) return;
+
+      let u = null;
+      try { u = JSON.parse(localStorage.getItem("usuario")); } catch (e) {}
+
+      const initial = pickInitial(u) || "U"; // fallback
+      dot.textContent = initial;
+      dot.setAttribute("title", `Usuario: ${initial}`);
+    });
+  })();
+</script>
+
   </main>
 
 </body>
