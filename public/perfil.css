@@ -1,33 +1,59 @@
-/* ========= PALETA UNIFICADA ========= */
+/* ========= TEMAS (claro por defecto) ========= */
 :root{
+  /* Tema claro (tu paleta actual) */
   --bg:#95b8f6;         /* fondo global */
-  --surface:#e6f0ff;    /* paneles/rectángulos */
-  --surface-2:#d7e7ff;  /* variantes suaves */
+  --surface:#e6f0ff;    /* paneles / rectángulos */
+  --surface-2:#d7e7ff;  /* variantes suaves / interiores */
   --text:#0f172a;       /* texto principal */
   --muted:#35537a;      /* texto secundario */
   --ring:#aac8ff;       /* bordes suaves */
 
-  --accent:#eeb31e;     /* botones principales */
+  --accent:#eeb31e;     /* botón primario */
   --accent-press:#ffc21a;
-  --danger:#ff4d4f;     /* borrar */
+  --danger:#ff4d4f;     /* borrar / peligro */
+}
+
+/* Tema oscuro (azules) — se activa con <html data-theme="dark"> o <body ...> */
+:root[data-theme="dark"]{
+  --bg:#0b1221;
+  --surface:#0f1c2f;
+  --surface-2:#0b1627;
+  --text:#ecf2ff;
+  --muted:#a5b9d5;
+  --ring:#19304f;
+
+  --accent:#eeb31e;
+  --accent-press:#ffc21a;
+  --danger:#ff4d4f;
 }
 
 /* ===== base ===== */
 *{ box-sizing:border-box }
+html,body{ height:100% }
 body{
-  margin:0; background:var(--bg); color:var(--text);
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
   font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  transition: background .2s ease, color .2s ease;
 }
 .phone{
-  max-width:420px; margin:0 auto; min-height:100dvh;
-  display:flex; flex-direction:column; gap:12px;
+  max-width:420px;
+  margin:0 auto;
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
   padding:16px;
 }
 
 /* ===== topbar: centrada, bold, dentro de un rectángulo ===== */
 .topbar{
   position:relative;
-  display:flex; align-items:center; justify-content:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   padding:14px 18px;
   background:var(--surface);
   border:1px solid var(--ring);
@@ -39,19 +65,23 @@ body{
   font-size:18px;
   letter-spacing:.2px;
 }
-/* botón volver a la izquierda, sin romper el centrado */
 .topbar .back{
   position:absolute; left:12px; top:50%; transform:translateY(-50%);
   width:34px; height:34px; border-radius:10px;
   display:grid; place-items:center;
   text-decoration:none; color:var(--text);
-  background:#fff;
+  background:var(--surface-2);
   border:1px solid var(--ring);
   box-shadow:0 2px 6px rgba(0,0,0,.06);
 }
 
 /* ===== contenido en “tarjetas” claras ===== */
-.content{ padding:0; display:flex; flex-direction:column; gap:12px }
+.content{
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
 
 .card{
   background:var(--surface);
@@ -66,44 +96,78 @@ body{
 .avatar{
   width:48px; height:48px; border-radius:50%;
   display:grid; place-items:center; font-size:24px;
-  background:#fff; border:1px solid var(--ring);
+  background:var(--surface-2);
+  border:1px solid var(--ring);
   box-shadow:0 2px 5px rgba(0,0,0,.06);
 }
 .title{ margin:0; font-size:18px; font-weight:800; color:var(--text) }
 .muted{ margin:2px 0 0; color:var(--muted) }
 
 /* lista de mascotas */
-.list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px }
+.list{
+  list-style:none;
+  margin:0; padding:0;
+  display:flex; flex-direction:column; gap:10px;
+}
 .item{
   display:flex; justify-content:space-between; align-items:center; gap:10px;
-  padding:10px; border:1px solid var(--ring); border-radius:12px;
-  background:#fff;
+  padding:10px;
+  border:1px solid var(--ring);
+  border-radius:12px;
+  background:var(--surface-2);
 }
 .item .name{ font-weight:700; color:var(--text) }
-.item .meta{ color:#426594; font-size:13px }
+.item .meta{ color:var(--muted); font-size:13px }
 .item .actions{ display:flex; gap:8px }
 
 /* formulario de edición */
-.label{ display:block; margin:10px 0 6px; font-size:14px; color:var(--text) }
+.label{
+  display:block;
+  margin:10px 0 6px;
+  font-size:14px;
+  color:var(--text);
+}
 .input, select{
-  width:100%; padding:12px; border-radius:10px;
+  width:100%;
+  padding:12px;
+  border-radius:10px;
   border:1px solid var(--ring);
-  background:#fff; color:var(--text); outline:none;
+  background:var(--surface-2);
+  color:var(--text);
+  outline:none;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
 }
 .input:focus, select:focus{
-  border-color:#89b6ff; box-shadow:0 0 0 3px rgba(58,160,255,.18);
+  border-color:#89b6ff;
+  box-shadow:0 0 0 3px rgba(58,160,255,.18);
 }
 
 /* botones */
 .btn{
-  border:0; border-radius:10px; padding:10px 12px; font-weight:700; cursor:pointer;
+  border:0;
+  border-radius:10px;
+  padding:10px 12px;
+  font-weight:700;
+  cursor:pointer;
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  box-shadow:0 3px 8px rgba(0,0,0,.08); transition:transform .05s ease, filter .15s ease;
+  box-shadow:0 3px 8px rgba(0,0,0,.08);
+  transition:transform .05s ease, filter .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
 }
 .btn:active{ transform:translateY(1px) }
-.btn-ghost{ background:transparent; color:var(--text); border:1px solid var(--ring) }
-.btn-orange{ background:var(--accent); color:#1b1302 }
-.btn-danger{ background:var(--danger); color:#fff }
+.btn-ghost{
+  background:transparent;
+  color:var(--text);
+  border:1px solid var(--ring);
+}
+.btn-orange{
+  background:var(--accent);
+  color:#1b1302;
+}
+.btn-orange:hover{ filter:brightness(1.03) }
+.btn-danger{
+  background:var(--danger);
+  color:#fff;
+}
 .full{ width:100% }
 
 /* helpers */
@@ -113,3 +177,109 @@ body{
 .msg{ margin-top:8px; font-size:14px }
 .msg.ok{ color:#13d38e }
 .msg.err{ color:#ff6b6b }
+
+/* ====== Paletas (usa tus variables existentes si ya las tenés) ====== */
+:root {
+  --bg:#95b8f6; --surface:#e6f0ff; --surface-2:#ffffff;
+  --text:#0f172a; --muted:#35537a; --ring:#aac8ff;
+  --accent:#eeb31e; --cyan:#3aa0ff;
+}
+:root[data-theme="dark"]{
+  --bg:#0f172a; --surface:#0f162b; --surface-2:#0b1120;
+  --text:#e8eef9; --muted:#cbd5e1; --ring:#1f2a44;
+  --accent:#eeb31e; --cyan:#05c2cc;
+}
+
+/* ====== Toggle Día/Noche ====== */
+.theme-switch{ display:inline-block }
+.theme-switch input{
+  position:absolute; left:-9999px; /* oculto pero accesible */
+}
+
+/* Tamaño editable del toggle */
+:root{ --tg-w:88px; --tg-h:44px; }
+
+.theme-toggle{
+  width:var(--tg-w); height:var(--tg-h);
+  display:inline-block; position:relative; overflow:hidden;
+  border-radius:999px; cursor:pointer;
+  border:1.5px solid rgba(0,0,0,.08);
+  box-shadow:inset 0 -8px 14px rgba(0,0,0,.08), 0 3px 10px rgba(0,0,0,.18);
+}
+
+/* Cielo (cambia de gradiente) */
+.theme-toggle .sky{
+  position:absolute; inset:0; border-radius:inherit;
+  background:linear-gradient(180deg,#7ad9ff 0%,#bcecff 100%);
+  transition:background .45s ease;
+}
+
+/* Sol */
+.theme-toggle .sun{
+  position:absolute; left:8px; top:8px;
+  width:28px; height:28px; border-radius:50%;
+  background:#ffd24a;
+  box-shadow:0 0 0 6px #ffd24a33, 0 0 18px #ffd24a80;
+  transform:translateX(0);
+  transition:transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s;
+}
+
+/* Luna */
+.theme-toggle .moon{
+  position:absolute; right:8px; top:8px;
+  width:26px; height:26px; border-radius:50%;
+  background:#fff;
+  box-shadow:inset -6px -4px 0 #d9d9d9;
+  transform:translateX(16px); opacity:0;
+  transition:transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s;
+}
+
+/* Nubes (se esconden de noche) */
+.theme-toggle .cloud{
+  position:absolute; bottom:8px; left:14px; height:12px; width:32px;
+  background:#ffffff; border-radius:999px; opacity:.9;
+  box-shadow:12px -6px 0 2px #fff, 26px -2px 0 0 #fff;
+  transition:opacity .35s ease, transform .5s ease;
+}
+.theme-toggle .cloud.c1{ transform:translateX(0) }
+.theme-toggle .cloud.c2{ left:32px; transform:translateX(4px) scale(.9) }
+
+/* Estrellas (aparecen de noche con box-shadow multiple) */
+.theme-toggle .stars{
+  position:absolute; inset:0; opacity:0; transition:opacity .35s ease;
+}
+.theme-toggle .stars::before{
+  content:""; position:absolute; top:10px; left:18px; width:2px; height:2px; background:#fff;
+  box-shadow:
+    18px 6px 0 0 #fff, 32px -2px 0 0 #fff, 46px 8px 0 0 #fff,
+    58px -4px 0 0 #fff, 64px 10px 0 0 #fff, 72px 2px 0 0 #fff;
+  border-radius:50%;
+}
+
+/* Estado NOCHE cuando el checkbox está marcado */
+.theme-switch input:checked + .theme-toggle .sky{
+  background:linear-gradient(180deg,#131b3a 0%, #273a74 100%);
+}
+.theme-switch input:checked + .theme-toggle .sun{
+  transform:translateX(38px); opacity:0;
+}
+.theme-switch input:checked + .theme-toggle .moon{
+  transform:translateX(0); opacity:1;
+}
+.theme-switch input:checked + .theme-toggle .cloud{
+  opacity:0; transform:translateX(-6px);
+}
+.theme-switch input:checked + .theme-toggle .stars{
+  opacity:1;
+}
+
+/* Accesibilidad: focus ring */
+.theme-switch input:focus-visible + .theme-toggle{
+  outline:3px solid var(--cyan); outline-offset:3px;
+}
+
+.theme-switch{
+  margin-right: 10px;
+  margin-top: 10px;
+  margin-left: 10px;
+}

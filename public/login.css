@@ -1,7 +1,8 @@
 /* ========= PALETA ========= */
-:root {
+:root{
   --bg:#95b8f6;          /* fondo general */
   --surface:#e6f0ff;     /* paneles, tarjetas */
+  --surface-2:#ffffff;   /* superficies internas (inputs, badges) */
   --text:#0f172a;        /* texto principal */
   --muted:#35537a;       /* texto secundario */
   --accent:#ffd54d;      /* botón principal (amarillo) */
@@ -10,20 +11,34 @@
   --ring:#aac8ff;        /* bordes suaves */
 }
 
+/* ===== MODO OSCURO (html[data-theme="dark"]) ===== */
+:root[data-theme="dark"]{
+  --bg:#0f172a;
+  --surface:#0f162b;
+  --surface-2:#0b1120;
+  --text:#e6eefc;
+  --muted:#9fb4d8;
+  --accent:#ffd54d;
+  --accent-press:#ffc21a;
+  --secondary:#3aa0ff;
+  --ring:#1f2a44;
+}
+
 /* ===== LAYOUT GENERAL ===== */
 *{ box-sizing:border-box }
 html,body{ height:100% }
 
-body {
+body{
   margin:0;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;
   background:var(--bg);
   color:var(--text);
   display:flex;
   justify-content:center;
+  transition: background .2s ease, color .2s ease;
 }
 
-.phone {
+.phone{
   width:100%;
   max-width:420px;
   min-height:100vh;
@@ -34,15 +49,16 @@ body {
 }
 
 /* ===== TOPBAR ===== */
-.topbar {
+.topbar{
   text-align:center;
   padding:14px;
   border-radius:12px;
   background:var(--surface);
   border:1px solid var(--ring);
   box-shadow:0 6px 12px rgba(0,0,0,.08);
+  transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
-.logo-text {
+.logo-text{
   margin:0;
   font-size:20px;
   font-weight:800;
@@ -50,7 +66,7 @@ body {
 }
 
 /* ===== CONTENIDO ===== */
-.content {
+.content{
   flex:1;
   display:flex;
   flex-direction:column;
@@ -60,49 +76,37 @@ body {
   padding:20px 18px;
   border:1px solid var(--ring);
   box-shadow:0 8px 18px rgba(0,0,0,.06);
+  transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
-.title {
-  margin:0;
-  font-size:22px;
-  font-weight:700;
-}
-.muted {
-  font-size:13px;
-  color:var(--muted);
-}
-.link {
-  color:var(--secondary);
-  font-weight:600;
-  text-decoration:none;
-}
-.link:hover {
-  text-decoration:underline;
-}
+.title{ margin:0; font-size:22px; font-weight:700 }
+.muted{ font-size:13px; color:var(--muted) }
+.link{ color:var(--secondary); font-weight:600; text-decoration:none }
+.link:hover{ text-decoration:underline }
 
 /* ===== FORMULARIO ===== */
-.label {
+.label{
   font-size:12px;
   margin-top:6px;
   display:block;
 }
-.input {
+.input{
   width:100%;
   padding:12px;
   border-radius:10px;
   border:2px solid var(--ring);
-  background:#fff;
+  background:var(--surface-2);
   color:var(--text);
   font-size:14px;
   outline:none;
-  transition:border .2s ease;
+  transition:border .2s ease, box-shadow .2s ease, background .2s ease, color .2s ease;
 }
-.input:focus {
+.input:focus{
   border-color:var(--secondary);
   box-shadow:0 0 0 2px rgba(58,160,255,.25);
 }
 
 /* ===== BOTONES ===== */
-.btn {
+.btn{
   display:block;
   text-align:center;
   margin-top:12px;
@@ -112,30 +116,27 @@ body {
   text-decoration:none;
   cursor:pointer;
   border:none;
-  transition:transform .08s ease, box-shadow .2s ease, background .2s ease;
+  transition:transform .08s ease, box-shadow .2s ease, background .2s ease, color .2s ease;
 }
-.btn-accent {
+.btn-accent{
   background:var(--accent);
   color:#1b1302;
 }
-.btn-accent:hover {
-  background:var(--accent-press);
-}
-.full { width:100% }
+.btn-accent:hover{ background:var(--accent-press) }
+.full{ width:100% }
 
 /* ===== BANNER DE MENSAJES ===== */
-.banner {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #22c55e;
-  color: #fff;
-  font-weight: 700;
-  padding: 16px 24px;
-  border-radius: 10px;
-  text-align: center;
-  z-index: 9999;
-  min-width: 240px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+.banner{
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  background:#22c55e;
+  color:#fff;
+  font-weight:700;
+  padding:16px 24px;
+  border-radius:10px;
+  text-align:center;
+  z-index:9999;
+  min-width:240px;
+  box-shadow:0 6px 18px rgba(0,0,0,.3);
 }

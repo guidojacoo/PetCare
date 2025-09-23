@@ -2,6 +2,7 @@
    Cambiá acá y se actualiza todo:
    --bg .......... fondo global
    --surface ..... panel/pasos
+   --surface-2 ... superficies internas (inputs, chips)
    --text ........ texto principal
    --muted ....... texto secundario
    --accent ...... botón principal (amarillo)
@@ -12,12 +13,26 @@
 :root{
   --bg:#95b8f6;
   --surface:#e6f0ff;
+  --surface-2:#ffffff;
   --text:#0f172a;
   --muted:#35537a;
   --accent:#ffd54d;
   --accent-press:#ffc21a;
   --secondary:#3aa0ff;
   --ring:#aac8ff;
+}
+
+/* ===== MODO OSCURO (activado con <html data-theme="dark">) ===== */
+:root[data-theme="dark"]{
+  --bg:#0f172a;
+  --surface:#0f162b;
+  --surface-2:#0b1120;
+  --text:#e6eefc;
+  --muted:#9fb4d8;
+  --accent:#ffd54d;      /* mantenemos el amarillo */
+  --accent-press:#ffc21a;
+  --secondary:#3aa0ff;
+  --ring:#1f2a44;
 }
 
 /* ===== LAYOUT BASE ===== */
@@ -47,6 +62,9 @@ body{
   text-align:center;
   box-shadow:0 4px 10px rgba(0,0,0,.06);
 }
+:root[data-theme="dark"] .topbar{
+  box-shadow:0 6px 14px rgba(0,0,0,.35);
+}
 .title{ margin:0; font-size:20px; font-weight:800 }
 
 /* ===== CONTENIDO ===== */
@@ -66,6 +84,9 @@ body{
   padding:16px;
   box-shadow:0 8px 18px rgba(0,0,0,.06);
 }
+:root[data-theme="dark"] .step{
+  box-shadow:0 10px 22px rgba(0,0,0,.35);
+}
 .step.active{ display:block }
 .step h2{ margin:0 0 10px 0; font-size:18px; font-weight:800 }
 .step label{ display:block; margin:6px 0 6px; color:var(--muted); font-size:14px }
@@ -77,11 +98,11 @@ input{
   padding:12px;
   border-radius:10px;
   border:2px solid var(--ring);
-  background:#fff;
+  background:var(--surface-2);
   color:var(--text);
   font-size:14px;
   outline:none;
-  transition:border .2s ease, box-shadow .2s ease;
+  transition:border .2s ease, box-shadow .2s ease, background .15s ease;
 }
 input:focus{
   border-color:var(--secondary);
@@ -115,7 +136,7 @@ input:focus{
 .chip{
   padding:10px 14px;
   border-radius:999px;
-  background:#fff;
+  background:var(--surface-2);
   border:2px solid var(--ring);
   cursor:pointer;
   color:var(--text);
@@ -127,7 +148,7 @@ input:focus{
 .chip.active{
   border-color:var(--secondary);
   box-shadow:0 0 0 2px rgba(58,160,255,.25);
-  background: linear-gradient(180deg, #ffffff, #f6fbff);
+  background:color-mix(in srgb, var(--surface-2) 90%, transparent);
 }
 
 /* ===== TIPOGRAFÍA ===== */

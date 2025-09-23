@@ -2,6 +2,7 @@
    Cambiá acá y se actualiza todo:
    --bg ........... fondo global
    --surface ...... paneles/tarjetas
+   --surface-2 .... superficies internas (inputs)
    --text ......... texto principal
    --muted ........ texto secundario
    --accent ....... botón principal (amarillo)
@@ -12,12 +13,26 @@
 :root{
   --bg:#95b8f6;
   --surface:#e6f0ff;
+  --surface-2:#ffffff;
   --text:#0f172a;
   --muted:#35537a;
   --accent:#ffd54d;
   --accent-press:#ffc21a;
   --secondary:#3aa0ff;
   --ring:#aac8ff;
+}
+
+/* ===== MODO OSCURO (se activa con <html data-theme="dark">) ===== */
+:root[data-theme="dark"]{
+  --bg:#0f172a;
+  --surface:#0f162b;
+  --surface-2:#0b1120;
+  --text:#e6eefc;
+  --muted:#9fb4d8;
+  --accent:#ffd54d;
+  --accent-press:#ffc21a;
+  --secondary:#3aa0ff;
+  --ring:#1f2a44;
 }
 
 /* ===== LAYOUT ===== */
@@ -52,6 +67,9 @@ body{
   border:1px solid var(--ring);
   box-shadow:0 6px 12px rgba(0,0,0,.08);
 }
+:root[data-theme="dark"] .topbar{
+  box-shadow:0 8px 18px rgba(0,0,0,.35);
+}
 .logo-text{ margin:0; font-size:20px; font-weight:800 }
 
 /* ===== CONTENIDO ===== */
@@ -66,6 +84,9 @@ body{
   border:1px solid var(--ring);
   box-shadow:0 8px 18px rgba(0,0,0,.06);
 }
+:root[data-theme="dark"] .content{
+  box-shadow:0 10px 22px rgba(0,0,0,.35);
+}
 .title{ margin:0; font-size:22px; font-weight:700 }
 .muted{ font-size:13px; color:var(--muted) }
 .link{ color:var(--secondary); font-weight:600; text-decoration:none }
@@ -78,11 +99,11 @@ body{
   padding:12px;
   border-radius:10px;
   border:2px solid var(--ring);
-  background:#fff;
+  background:var(--surface-2);
   color:var(--text);
   font-size:14px;
   outline:none;
-  transition:border .2s ease, box-shadow .2s ease;
+  transition:border .2s ease, box-shadow .2s ease, background .15s ease;
 }
 .input:focus{
   border-color:var(--secondary);
@@ -102,6 +123,9 @@ body{
   border:none;
   transition:transform .08s ease, box-shadow .2s ease, background .15s ease;
   box-shadow:0 6px 12px rgba(0,0,0,.08);
+}
+:root[data-theme="dark"] .btn{
+  box-shadow:0 8px 16px rgba(0,0,0,.35);
 }
 .btn:hover{ transform:translateY(-1px); box-shadow:0 10px 18px rgba(0,0,0,.10) }
 .btn:active{ transform:none; box-shadow:0 6px 12px rgba(0,0,0,.10) }

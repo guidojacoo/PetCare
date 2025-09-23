@@ -7,7 +7,21 @@
   <link rel="stylesheet" href="perfil.css" />
 </head>
 <body>
-  <main class="phone">
+  
+
+     <div class="theme-switch">
+  <input id="theme-switch" type="checkbox" aria-label="Cambiar tema"/>
+  <label class="theme-toggle" for="theme-switch">
+    <span class="sky"></span>
+    <span class="sun"></span>
+    <span class="moon"></span> 
+    <span class="cloud c1"></span>
+    <span class="cloud c2"></span>
+    <span class="stars"></span>
+  </label>
+</div>
+<main class="phone">
+
     <header class="topbar">
       <a class="back" href="principal.html" aria-label="Volver">‹</a>
       <span>Perfil</span>
@@ -87,5 +101,7 @@
   </main>
 
   <script src="perfil.js"></script>
+  <script src="theme-toggle.js" defer></script>
+
 </body>
 </html>

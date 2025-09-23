@@ -1,19 +1,40 @@
-/* ========= PALETA UNIFICADA ========= */
+/* ========= PALETA UNIFICADA (CLARO por defecto) ========= */
 :root{
   --bg:#95b8f6;        /* fondo global */
   --surface:#e6f0ff;   /* paneles */
+  --surface-2:#ffffff; /* superficies internas (cámara, avatar) */
   --text:#0f172a;      /* texto principal */
   --muted:#35537a;     /* texto secundario */
+  --ring:#aac8ff;      /* bordes suaves */
+
   --accent:#eeb31e;    /* botones principales (amarillo) */
   --accent-press:#ffc21a;
-  --secondary:#3aa0ff; /* detalles/links */
-  --ring:#aac8ff;      /* bordes suaves */
 
   --danger:#ff6b6b;
   --danger-press:#ff4d4f;
 
   --ok:#1db954;        /* verde ON (cámara) */
   --bad:#d32f2f;       /* rojo OFF (cámara) */
+}
+
+/* ========= MODO OSCURO (se activa con <html data-theme="dark">) ========= */
+:root[data-theme="dark"]{
+  --bg:#0f172a;
+  --surface:#0f162b;
+  --surface-2:#0b1120;
+  --text:#e6eefc;
+  --muted:#9fb4d8;
+  --ring:#1f2a44;
+
+  /* mantenemos los acentos */
+  --accent:#eeb31e;
+  --accent-press:#ffc21a;
+
+  --danger:#ff6b6b;
+  --danger-press:#ff4d4f;
+
+  --ok:#22c55e;
+  --bad:#ef4444;
 }
 
 /* ===== BASE ===== */
@@ -73,11 +94,11 @@ body{
 .btn img{ width:60%; height:60%; object-fit:contain; display:block }
 .btn-gear{ background:var(--accent); border-color:var(--ring) }
 
-/* Avatar con inicial (letra un poquito más arriba) */
+/* Avatar con inicial */
 .dot{
   width:44px; height:44px;
   border-radius:50%;
-  background:#ffffff;
+  background:var(--surface-2);
   border:2px solid var(--ring);
   display:flex; align-items:flex-start; justify-content:center;
   padding-top:7px;
@@ -89,32 +110,28 @@ body{
 /* ===== CÁMARA ===== */
 .camera{
   flex:1;
-  background:#ffffff;
+  background:var(--surface-2);
   border:1px solid var(--ring);
   border-radius:12px;
-  position:relative;     /* ⬅ necesario para posicionar el stream */
+  position:relative;     /* necesario para posicionar el stream */
   overflow:hidden;
   box-shadow:0 8px 18px rgba(0,0,0,.06);
   margin-bottom:6px;
   padding:0;             /* sin padding interno */
-  display:block;         /* evita que el flex centre al hijo */
+  display:block;
 }
-
 
 /* El stream ocupa todo el panel cuando está visible */
 #camara-stream{
-  position:absolute;     /* ⬅ se pega a los bordes del contenedor */
-  inset:0;               /* top/right/bottom/left: 0 */
-  width:100%;
-  height:100%;
-  max-width:none;        /* no se limita por el tamaño natural */
+  position:absolute; inset:0;
+  width:100%; height:100%; max-width:none;
   display:block;
-  border-radius:12px;    /* mismo radio que el contenedor */
-  object-fit:cover;      /* cambia a 'contain' si querés ver todo sin recorte */
+  border-radius:12px;
+  object-fit:cover; /* usar 'contain' si no querés recorte */
   image-rendering:auto;
 }
 
-/* ===== MENSAJE MIC – DEBAJO DE LA CÁMARA, SIN SUPERPONER ===== */
+/* ===== MENSAJE MIC – DEBAJO DE LA CÁMARA ===== */
 #mic-toast{
   min-height:22px;           /* reserva espacio aunque esté oculto */
   margin-top:6px;
@@ -159,7 +176,7 @@ body{
 /* Ajuste para la pata (ícono más grande redondo) */
 .bottom-actions .fab:nth-child(2) img{ width:80%; height:80%; border-radius:50% }
 
-/* Botón de cámara: estados ON/OFF con colores consistentes */
+/* Botón de cámara: estados ON/OFF */
 #cam-toggle{ position:relative; overflow:hidden }
 #cam-toggle img{
   width:56%; height:56%;

@@ -5,14 +5,14 @@
   <title>Plan de Comidas - PetCare</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-  /* ========= PALETA UNIFICADA ========= */
+  /* ========= PALETA (CLARO por defecto) ========= */
   :root{
     --bg:#95b8f6;          /* fondo global */
     --text:#0f172a;        /* texto principal */
     --muted:#35537a;       /* texto secundario */
 
     --panel:#e6f0ff;       /* rectángulo principal */
-    --panel-2:#d7e7ff;     /* campos/variantes suaves */
+    --panel-2:#ffffff;     /* superficies internas / campos */
     --ring:#aac8ff;        /* bordes suaves */
 
     --accent:#eeb31e;      /* botón primario (amarillo) */
@@ -20,8 +20,26 @@
     --secondary:#cfe2ff;   /* botón secundario */
     --secondary-text:#0f172a;
 
-    --good:#22c55e;
+    --good:#1db954;
     --pending:#fbbf24;
+    --bad:#ef4444;
+  }
+
+  /* ========= MODO OSCURO ========= */
+  :root[data-theme="dark"]{
+    --bg:#0f172a;
+    --text:#e6eefc;
+    --muted:#9fb4d8;
+
+    --panel:#0f162b;
+    --panel-2:#0b1120;
+    --ring:#1f2a44;
+
+    --secondary:#12213d;
+    --secondary-text:#e6eefc;
+
+    --good:#22c55e;
+    --pending:#eeb31e;
     --bad:#ef4444;
   }
 
@@ -59,13 +77,14 @@
   }
   .topbar h1{ margin:0; font-size:18px; font-weight:800; letter-spacing:.2px; }
 
-  /* Tu enlace .back queda fuera del .topbar en el HTML.
-     Lo posicionamos encima sin tocar el marcado. */
+  /* botón volver (fuera del topbar en el HTML) */
   .back{
     position:absolute; left:26px; top:26px;
     width:34px; height:34px; border-radius:10px;
     display:grid; place-items:center;
-    background:#fff; border:1px solid var(--ring);
+    background:var(--panel-2);
+    color:var(--text);
+    border:1px solid var(--ring);
     box-shadow:0 2px 6px rgba(0,0,0,.06);
   }
   .back img{ display:block; }
@@ -82,7 +101,7 @@
 
   /* ===== Integramos las “cards” al mismo rectángulo ===== */
   .card{
-    background:transparent;             /* sin cards separadas */
+    background:transparent;
     border:none;
     border-radius:0;
     padding:0;
@@ -105,10 +124,10 @@
     padding:12px;
     border-radius:10px;
     border:2px solid var(--ring);
-    background:#fff;
+    background:var(--panel-2);
     color:var(--text);
     outline:none;
-    transition:border .2s, box-shadow .2s;
+    transition:border .2s, box-shadow .2s, background .2s;
   }
   input:focus, select:focus{
     border-color:var(--secondary);
@@ -125,6 +144,7 @@
     padding:12px 14px; border:none; border-radius:10px; cursor:pointer;
     font-weight:800; transition:transform .05s ease, filter .15s ease, background .15s ease;
     box-shadow:0 4px 10px rgba(0,0,0,.08);
+    color:var(--text);
   }
   .btn:active{ transform:translateY(1px) }
   .btn.primary  { background:var(--accent); color:#1b1302; }
@@ -168,13 +188,22 @@
   tbody tr:hover{ background:var(--panel-2); }
   .action{ display:inline-flex; gap:6px; }
   .sm{ padding:6px 10px; font-size:12px; border-radius:8px; }
-  .danger{ border:1px solid rgba(239,68,68,.35); background:#ffd7d7; color:#7a0f0f; }
-  .ok{ border:1px solid rgba(34,197,94,.35); background:#c9f7d0; color:#0f3a14; }
+
+  .danger{
+    border:1px solid rgba(239,68,68,.35);
+    background:rgba(239,68,68,.12);
+    color:var(--bad);
+  }
+  .ok{
+    border:1px solid rgba(34,197,94,.35);
+    background:rgba(34,197,94,.12);
+    color:var(--good);
+  }
 
   .navdays{ display:flex; gap:8px; align-items:center; }
   .daylabel{ font-weight:700; }
 
-  /* ===== MODAL IA (se mantiene lógica de .open) ===== */
+  /* ===== MODAL IA ===== */
   .modal{
     position:fixed; inset:0;
     display:none; align-items:center; justify-content:center;
@@ -187,10 +216,11 @@
     border:1px solid var(--ring);
     border-radius:14px; padding:16px; position:relative;
     box-shadow:0 16px 40px rgba(0,0,0,.25);
+    color:var(--text);
   }
   .close-x{
     position:absolute; top:10px; right:12px;
-    background:transparent; border:none; color:#426594;
+    background:transparent; border:none; color:var(--muted);
     font-size:20px; cursor:pointer;
   }
   .list{
@@ -199,113 +229,138 @@
   }
   .item{
     display:flex; justify-content:space-between; gap:10px;
-    padding:10px; border:1px solid var(--ring); border-radius:10px; background:#fff; color:var(--text);
+    padding:10px; border:1px solid var(--ring); border-radius:10px; background:var(--panel-2); color:var(--text);
   }
   .pill{
     padding:3px 8px; border:1px solid var(--ring); border-radius:999px; font-size:12px; color:var(--text);
     background:var(--panel-2);
   }
-  /* Botón “Volver” debajo del título */
-.back-inline{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  margin-top:10px;
-  padding:8px 12px;
-  border-radius:10px;
-  background:#fff;
-  color:var(--text);
-  border:1px solid var(--ring);
-  font-weight:800;
-  text-decoration:none;
-  box-shadow:0 2px 6px rgba(0,0,0,.06);
-  transition:filter .15s ease, transform .05s ease, background .15s ease;
-}
-.back-inline .arr{ font-size:18px; line-height:1 }
-.back-inline:hover{ filter:brightness(0.98) }
-.back-inline:active{ transform:translateY(1px) }
 
-/* ==== Select fachero (reemplaza el nativo al abrir) ==== */
+  /* Botón “Volver” debajo del título (si lo usás inline) */
+  .back-inline{
+    display:inline-flex; align-items:center; gap:8px;
+    margin-top:10px; padding:8px 12px;
+    border-radius:10px; background:var(--panel-2); color:var(--text);
+    border:1px solid var(--ring); font-weight:800; text-decoration:none;
+    box-shadow:0 2px 6px rgba(0,0,0,.06);
+    transition:filter .15s ease, transform .05s ease, background .15s ease;
+  }
+  .back-inline .arr{ font-size:18px; line-height:1 }
+  .back-inline:hover{ filter:brightness(.98) }
+  .back-inline:active{ transform:translateY(1px) }
 
-/* Oculta visualmente el select original pero sigue funcionando y enviando valor */
-.sr-only{
-  position:absolute!important; width:1px!important; height:1px!important;
-  padding:0!important; margin:-1px!important; overflow:hidden!important;
-  clip:rect(0 0 0 0)!important; clip-path:inset(50%)!important; white-space:nowrap!important;
-  border:0!important;
-}
+  /* ==== Select fachero (custom) ==== */
 
-.nice-select{ position:relative; width:100%; }
-.nice-select__button{
-  width:100%;
-  text-align:left;
-  padding:12px 42px 12px 12px;
-  border-radius:10px;
-  border:2px solid var(--ring);
-  background:#fff;
-  color:var(--text);
-  font-weight:700;
-  cursor:pointer;
-  box-shadow:0 4px 10px rgba(0,0,0,.08);
-  transition:border .15s ease, box-shadow .15s ease, background .15s ease;
-}
-.nice-select__button:hover{ background:#fff; }
-.nice-select__button:focus{ outline:none; border-color:var(--secondary); box-shadow:0 0 0 2px rgba(58,160,255,.25); }
+  /* Oculta visualmente el select original pero sigue funcionando */
+  .sr-only{
+    position:absolute!important; width:1px!important; height:1px!important;
+    padding:0!important; margin:-1px!important; overflow:hidden!important;
+    clip:rect(0 0 0 0)!important; clip-path:inset(50%)!important; white-space:nowrap!important;
+    border:0!important;
+  }
 
-/* Flechita */
-.nice-select__button::after{
-  content:"";
-  position:absolute; right:12px; top:50%;
-  width:10px; height:10px;
-  border-right:2px solid var(--text);
-  border-bottom:2px solid var(--text);
-  transform:translateY(-60%) rotate(45deg);
-  opacity:.65; transition:transform .2s ease;
-}
-.nice-select.open .nice-select__button::after{
-  transform:translateY(-20%) rotate(-135deg);
-}
+  .nice-select{ position:relative; width:100%; }
+  .nice-select__button{
+    width:100%; text-align:left;
+    padding:12px 42px 12px 12px;
+    border-radius:10px; border:2px solid var(--ring);
+    background:var(--panel-2); color:var(--text);
+    font-weight:700; cursor:pointer;
+    box-shadow:0 4px 10px rgba(0,0,0,.08);
+    transition:border .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .nice-select__button:focus{ outline:none; border-color:var(--secondary); box-shadow:0 0 0 2px rgba(58,160,255,.25); }
 
-/* Menú flotante */
-.nice-select__menu{
-  position:absolute; left:0; right:0; top:calc(100% + 6px);
-  background:#fff;
-  border:1px solid var(--ring);
-  border-radius:12px;
-  box-shadow:0 16px 28px rgba(0,0,0,.16);
-  padding:6px;
-  display:none;
-  z-index:40;
-}
-.nice-select.open .nice-select__menu{ display:block; }
+  /* Flechita */
+  .nice-select__button::after{
+    content:"";
+    position:absolute; right:12px; top:50%;
+    width:10px; height:10px;
+    border-right:2px solid var(--text);
+    border-bottom:2px solid var(--text);
+    transform:translateY(-60%) rotate(45deg);
+    opacity:.65; transition:transform .2s ease;
+  }
+  .nice-select.open .nice-select__button::after{
+    transform:translateY(-20%) rotate(-135deg);
+  }
 
-/* Opción */
-.nice-select__option{
-  padding:10px 12px;
-  border-radius:8px;
-  cursor:pointer;
-  color:var(--text);
-  transition:background .12s ease;
+  /* Menú flotante */
+  .nice-select__menu{
+    position:absolute; left:0; right:0; top:calc(100% + 6px);
+    background:var(--panel-2);
+    border:1px solid var(--ring);
+    border-radius:12px;
+    box-shadow:0 16px 28px rgba(0,0,0,.16);
+    padding:6px;
+    display:none;
+    z-index:40;
+    list-style:none; margin:6px 0 0 0;
+  }
+  .nice-select.open .nice-select__menu{ display:block; }
+
+  /* Opción */
+  .nice-select__option{
+    padding:10px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    color:var(--text);
+    transition:background .12s ease;
+    list-style:none;
+  }
+  .nice-select__option:hover{ background:var(--panel-2); box-shadow:inset 0 0 0 1px var(--ring); }
+  .nice-select__option[aria-selected="true"]{
+    background:var(--panel-2);
+    box-shadow:inset 0 0 0 1px var(--ring);
+  }
+
+
+  /* ================== FIXES MODO OSCURO ================== */
+
+/* inputs nativos (time/number) y placeholders */
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select {
+  color-scheme: dark;           /* controles del SO oscuros */
 }
-.nice-select__option:hover{ background:var(--panel-2); }
-.nice-select__option[aria-selected="true"]{
-  background:var(--panel-2);
-  box-shadow:inset 0 0 0 1px var(--ring);
-}
-/* quitar puntos del menú del select custom */
-.nice-select__menu{
-  list-style: none;      /* sin bullets */
-  margin: 6px 0 0 0;     /* resetea margen del ul */
-  padding: 6px;          /* mantiene el padding que ya tenías */
-  padding-left: 6px;     /* evita indentación extra en algunos navegadores */
+:root[data-theme="dark"] input::placeholder {
+  color: #9fb4d8; opacity: .75;
 }
 
-.nice-select__option{
-  list-style: none;      /* por si acaso en los <li> */
+/* botón “neutro” (el de Agregar) y sombras en dark */
+.btn{ 
+  background: var(--panel-2);   /* neutro claro/oscuro según tema */
+  color: var(--text);
+}
+.btn.ghost{ background: transparent; }
+:root[data-theme="dark"] .btn{ box-shadow: 0 6px 14px rgba(0,0,0,.35); }
+:root[data-theme="dark"] .btn.ghost{ border-color: var(--ring); }
+
+/* botón secundario en dark (por si lo usás) */
+:root[data-theme="dark"] .btn.secondary{
+  background:#12213d; color: var(--text); border-color: var(--ring);
 }
 
+/* select custom (botón y menú) */
+:root[data-theme="dark"] .nice-select__button{
+  background: var(--panel-2); border-color: var(--ring);
+}
+:root[data-theme="dark"] .nice-select__menu{
+  background: var(--panel-2); border-color: var(--ring);
+  box-shadow: 0 16px 28px rgba(0,0,0,.35);
+}
+:root[data-theme="dark"] .nice-select__option:hover{
+  background:#121a2f;           /* highlight oscuro */
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+/* tablas y contenedores: sombras algo más marcadas en dark */
+:root[data-theme="dark"] .topbar,
+:root[data-theme="dark"] .content{
+  box-shadow: 0 10px 26px rgba(0,0,0,.45);
+}
 
 </style>
+
 
 </head>
 <body>
@@ -881,6 +936,7 @@
   });
 })();
 </script>
+<script src="theme-toggle.js" defer></script>
 
 </body>
 </html>

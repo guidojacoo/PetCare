@@ -1,22 +1,37 @@
 /* ========= PALETA UNIFICADA (CAMBIÁ ACÁ Y SE PROPAGA) =========
    --bg ............... color de fondo global del sitio (index: #95b8f6)
    --surface .......... paneles/tarjetas (rectángulo, cajas)
+   --surface-2 ........ superficies internas (si necesitás fondo neutro)
    --text ............. color principal de texto
    --muted ............ texto secundario/descriptivo
-   --accent ........... color de énfasis (BOTONES principales, estados activos) → amarillo
+   --accent ........... color de énfasis (BOTONES principales) → amarillo
    --accent-press ..... hover/active del acento
-   --secondary ........ color de botones secundarios y detalles que combinan
-   --ring ............. borde/sombra sutil en elementos destacados (circunferencia del logo)
+   --secondary ........ color de botones secundarios / links
+   --ring ............. borde/sombra sutil (circunferencia del logo, inputs)
 */
 :root{
   --bg:#95b8f6;
-  --surface:#e6f0ff;          /* panel claro que combina con el fondo */
-  --text:#0f172a;             /* texto principal (azul grisáceo oscuro) */
-  --muted:#35537a;            /* texto secundario */
-  --accent:#ffd54d;           /* amarillo de énfasis (botones principales) */
-  --accent-press:#ffc21a;     /* hover/active */
-  --secondary:#3aa0ff;        /* azul que combina (links/botón secundario) */
-  --ring:#aac8ff;             /* borde/sombra sutil */
+  --surface:#e6f0ff;
+  --surface-2:#ffffff;
+  --text:#0f172a;
+  --muted:#35537a;
+  --accent:#ffd54d;
+  --accent-press:#ffc21a;
+  --secondary:#3aa0ff;
+  --ring:#aac8ff;
+}
+
+/* ===== MODO OSCURO (se activa con <html data-theme="dark">) ===== */
+:root[data-theme="dark"]{
+  --bg:#0f172a;
+  --surface:#0f162b;
+  --surface-2:#0b1120;
+  --text:#e6eefc;
+  --muted:#9fb4d8;
+  --accent:#ffd54d;
+  --accent-press:#ffc21a;
+  --secondary:#3aa0ff;
+  --ring:#1f2a44;
 }
 
 /* ====== RESETEO Y LAYOUT GENERAL (mobile-first) ====== */
@@ -59,7 +74,10 @@ body{
   align-items:center;
   justify-content:center;
   border:1px solid var(--ring);
-  box-shadow: 0 10px 20px rgba(15,23,42,0.08), inset 0 0 0 1px rgba(255,255,255,0.4);
+  box-shadow: 0 10px 20px rgba(15,23,42,0.08), inset 0 0 0 1px rgba(255,255,255,0.40);
+}
+:root[data-theme="dark"] .stage{
+  box-shadow: 0 14px 26px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,0.03);
 }
 
 /* blobs suaves (animación chill) */
@@ -71,6 +89,7 @@ body{
   will-change: transform;
 }
 
+/* Colores de blobs para claro */
 .b1{
   width:220px; height:220px; border-radius:50%;
   background: radial-gradient(closest-side, #bfe0ff, transparent 70%);
@@ -90,6 +109,18 @@ body{
   animation: float3 16s ease-in-out infinite;
 }
 
+/* Colores de blobs adaptados a oscuro (más sutiles) */
+:root[data-theme="dark"] .b1{
+  background: radial-gradient(closest-side, #1b2a44, transparent 70%);
+}
+:root[data-theme="dark"] .b2{
+  background: radial-gradient(closest-side, #123a5c, transparent 70%);
+}
+:root[data-theme="dark"] .b3{
+  background: radial-gradient(closest-side, #594300, transparent 70%);
+  opacity:.28;
+}
+
 @keyframes float1{
   0%,100%{ transform: translate(0,0) scale(1) }
   50%    { transform: translate(20px,10px) scale(1.08) }
@@ -104,29 +135,30 @@ body{
 }
 
 /* circunferencia del logo centrada */
-.logo-ring {
+.logo-ring{
   position:relative;
   width:180px;
   height:180px;
   border-radius:50%;
-  overflow:hidden;  /* asegura que nada salga del círculo */
+  overflow:hidden;
   display:flex;
   align-items:center;
   justify-content:center;
-  background: white; /* opcional: fondo blanco suave detrás */
+  background: var(--surface-2);
   border:2px solid var(--ring);
   box-shadow: 0 8px 18px rgba(15,23,42,.15);
 }
+:root[data-theme="dark"] .logo-ring{
+  box-shadow: 0 10px 24px rgba(0,0,0,.55);
+}
 
-
-.logo-img {
+.logo-img{
   display:block;
   width:100%;
   height:100%;
-  object-fit:cover;   /* recorta y llena el círculo */
-  border-radius:50%;  /* lo recorta como círculo */
+  object-fit:cover;
+  border-radius:50%;
 }
-
 
 /* ====== BOTONES ====== */
 .actions{ display:flex; flex-direction:column; gap:12px }
@@ -146,6 +178,9 @@ body{
   box-shadow: 0 6px 14px rgba(0,0,0,.08);
   transition: transform .08s ease, box-shadow .2s ease, background .15s ease;
 }
+:root[data-theme="dark"] .btn{
+  box-shadow: 0 8px 16px rgba(0,0,0,.45);
+}
 
 .btn:hover{ transform: translateY(-1px); box-shadow:0 10px 18px rgba(0,0,0,.10) }
 .btn:active{ transform: translateY(0); box-shadow:0 6px 12px rgba(0,0,0,.10) }
@@ -164,4 +199,116 @@ body{
 @media (min-width:460px){
   .logo-ring{ width:200px; height:200px }
   .stage{ min-height:300px }
+}
+
+
+/* ====== Toggle Día/Noche ====== */
+.theme-switch{ display:inline-block }
+.theme-switch input{
+  position:absolute; left:-9999px; /* oculto pero accesible */
+}
+
+/* Tamaño editable del toggle */
+:root{ --tg-w:88px; --tg-h:44px; }
+
+.theme-toggle{
+  width:var(--tg-w); height:var(--tg-h);
+  display:inline-block; position:relative; overflow:hidden;
+  border-radius:999px; cursor:pointer;
+  border:1.5px solid rgba(0,0,0,.08);
+  box-shadow:inset 0 -8px 14px rgba(0,0,0,.08), 0 3px 10px rgba(0,0,0,.18);
+}
+
+/* Cielo (cambia de gradiente) */
+.theme-toggle .sky{
+  position:absolute; inset:0; border-radius:inherit;
+  background:linear-gradient(180deg,#7ad9ff 0%,#bcecff 100%);
+  transition:background .45s ease;
+}
+
+/* Sol */
+.theme-toggle .sun{
+  position:absolute; left:8px; top:8px;
+  width:28px; height:28px; border-radius:50%;
+  background:#ffd24a;
+  box-shadow:0 0 0 6px #ffd24a33, 0 0 18px #ffd24a80;
+  transform:translateX(0);
+  transition:transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s;
+}
+
+/* Luna */
+.theme-toggle .moon{
+  position:absolute; right:8px; top:8px;
+  width:26px; height:26px; border-radius:50%;
+  background:#fff;
+  box-shadow:inset -6px -4px 0 #d9d9d9;
+  transform:translateX(16px); opacity:0;
+  transition:transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s;
+}
+
+/* Nubes (se esconden de noche) */
+.theme-toggle .cloud{
+  position:absolute; bottom:8px; left:14px; height:12px; width:32px;
+  background:#ffffff; border-radius:999px; opacity:.9;
+  box-shadow:12px -6px 0 2px #fff, 26px -2px 0 0 #fff;
+  transition:opacity .35s ease, transform .5s ease;
+}
+.theme-toggle .cloud.c1{ transform:translateX(0) }
+.theme-toggle .cloud.c2{ left:32px; transform:translateX(4px) scale(.9) }
+
+/* Estrellas (aparecen de noche con box-shadow multiple) */
+.theme-toggle .stars{
+  position:absolute; inset:0; opacity:0; transition:opacity .35s ease;
+}
+.theme-toggle .stars::before{
+  content:""; position:absolute; top:10px; left:18px; width:2px; height:2px; background:#fff;
+  box-shadow:
+    18px 6px 0 0 #fff, 32px -2px 0 0 #fff, 46px 8px 0 0 #fff,
+    58px -4px 0 0 #fff, 64px 10px 0 0 #fff, 72px 2px 0 0 #fff;
+  border-radius:50%;
+}
+
+/* Estado NOCHE cuando el checkbox está marcado */
+.theme-switch input:checked + .theme-toggle .sky{
+  background:linear-gradient(180deg,#131b3a 0%, #273a74 100%);
+}
+.theme-switch input:checked + .theme-toggle .sun{
+  transform:translateX(38px); opacity:0;
+}
+.theme-switch input:checked + .theme-toggle .moon{
+  transform:translateX(0); opacity:1;
+}
+.theme-switch input:checked + .theme-toggle .cloud{
+  opacity:0; transform:translateX(-6px);
+}
+.theme-switch input:checked + .theme-toggle .stars{
+  opacity:1;
+}
+
+/* Accesibilidad: focus ring */
+.theme-switch input:focus-visible + .theme-toggle{
+  outline:3px solid var(--cyan); outline-offset:3px;
+}
+
+.theme-switch{
+  margin-right: 10px;
+  margin-top: 10px;
+  margin-left: 10px;
+}
+
+/* === Fijar el switch arriba a la izquierda del viewport === */
+.theme-switch{
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  margin: 0;            /* anula márgenes anteriores */
+}
+
+/* Respeta el notch/safe area en móviles */
+@supports (padding: env(safe-area-inset-top)) {
+  .theme-switch{
+    top: calc(8px + env(safe-area-inset-top));
+    left: calc(8px + env(safe-area-inset-left));
+  }
 }
