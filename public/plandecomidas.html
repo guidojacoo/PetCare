@@ -5,311 +5,319 @@
   <title>Plan de Comidas - PetCare</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+  /* ========= PALETA UNIFICADA ========= */
   :root{
-    --orange:  #ff7a00;
-    --cyan:    #05c2cc;
-    --bg:      #0f172a;  /* mismo fondo que principal.html */
-    --text:    #ffffff;
+    --bg:#95b8f6;          /* fondo global */
+    --text:#0f172a;        /* texto principal */
+    --muted:#35537a;       /* texto secundario */
 
-    --panel:   #0f162b;
-    --panel-2: #0b1120;
-    --border:  #1f2a44;
+    --panel:#e6f0ff;       /* rectángulo principal */
+    --panel-2:#d7e7ff;     /* campos/variantes suaves */
+    --ring:#aac8ff;        /* bordes suaves */
 
-    --good:    #22c55e;
-    --pending: #fbbf24;
-    --bad:     #ef4444;
+    --accent:#eeb31e;      /* botón primario (amarillo) */
+    --accent-press:#ffc21a;
+    --secondary:#cfe2ff;   /* botón secundario */
+    --secondary-text:#0f172a;
+
+    --good:#22c55e;
+    --pending:#fbbf24;
+    --bad:#ef4444;
   }
 
-  *{ box-sizing: border-box; }
-
+  /* ===== Reset ===== */
+  *{ box-sizing:border-box; }
   body{
-    margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    margin:0;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
+    background:var(--bg);
+    color:var(--text);
   }
 
   .phone{
-    max-width: 520px;
-    margin: auto;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    /* antes: gradiente; ahora igual que principal */
-    background: var(--bg);
-    /* si querés volver al gradiente con el mismo tono base:
-       background: linear-gradient(180deg, #0d1e2c 0%, #0b1120 100%); */
+    position:relative;
+    max-width:520px;
+    margin:auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:16px;
+    background:var(--bg);
   }
 
+  /* ===== TOPBAR + CONTENT = UN SOLO RECTÁNGULO ===== */
   .topbar{
-    padding: 16px;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    text-align: center;
+    position:relative;
+    padding:16px 20px;
+    background:var(--panel);
+    border:1px solid var(--ring);
+    border-bottom:none;                 /* unión con .content */
+    border-radius:14px 14px 0 0;
+    text-align:center;
+    box-shadow:0 8px 18px rgba(0,0,0,.10);
+    z-index:1;
   }
+  .topbar h1{ margin:0; font-size:18px; font-weight:800; letter-spacing:.2px; }
 
-  .topbar h1{
-    margin: 0;
-    font-size: 18px;
-    letter-spacing: .3px;
+  /* Tu enlace .back queda fuera del .topbar en el HTML.
+     Lo posicionamos encima sin tocar el marcado. */
+  .back{
+    position:absolute; left:26px; top:26px;
+    width:34px; height:34px; border-radius:10px;
+    display:grid; place-items:center;
+    background:#fff; border:1px solid var(--ring);
+    box-shadow:0 2px 6px rgba(0,0,0,.06);
   }
+  .back img{ display:block; }
 
   .content{
-    padding: 20px;
-    display: grid;
-    gap: 20px;
+    background:var(--panel);
+    border:1px solid var(--ring);
+    border-top:none;                    /* unión con .topbar */
+    border-radius:0 0 14px 14px;
+    padding:20px;
+    display:grid; gap:20px;
+    box-shadow:0 8px 18px rgba(0,0,0,.10);
   }
 
+  /* ===== Integramos las “cards” al mismo rectángulo ===== */
   .card{
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    background:transparent;             /* sin cards separadas */
+    border:none;
+    border-radius:0;
+    padding:0;
+    box-shadow:none;
   }
 
-  .card h2{
-    margin: 0 0 10px;
-    font-size: 16px;
-    font-weight: 600;
-  }
+  .card h2{ margin:0 0 10px; font-size:16px; font-weight:800; }
+  .subtle{ color:var(--muted); font-size:13px; margin:4px 0 12px; }
 
-  .subtle{
-    color: #cbd5e1;
-    font-size: 13px;
-    margin: 4px 0 12px;
-  }
-
+  /* ===== Formularios ===== */
   label{
-    font-size: 13px;
-    color: #e2e8f0;
-    display: block;
-    margin: 10px 0 6px;
+    font-size:13px; color:var(--text);
+    display:block; margin:10px 0 6px;
   }
-
   input[type="text"],
   input[type="number"],
   select,
   input[type="time"]{
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--panel-2);
-    color: #fff;
-    outline: none;
+    width:100%;
+    padding:12px;
+    border-radius:10px;
+    border:2px solid var(--ring);
+    background:#fff;
+    color:var(--text);
+    outline:none;
+    transition:border .2s, box-shadow .2s;
+  }
+  input:focus, select:focus{
+    border-color:var(--secondary);
+    box-shadow:0 0 0 2px rgba(58,160,255,.25);
   }
 
-  input:focus,
-  select:focus{
-    border-color: var(--cyan);
-    box-shadow: 0 0 0 3px rgba(5,194,204,.15);
-  }
+  .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .row3{ display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 
-  .row{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .row3{
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 10px;
-    align-items: center;
-  }
-
+  /* ===== Botones ===== */
   .btn{
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 14px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: transform .04s ease, filter .2s ease;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:12px 14px; border:none; border-radius:10px; cursor:pointer;
+    font-weight:800; transition:transform .05s ease, filter .15s ease, background .15s ease;
+    box-shadow:0 4px 10px rgba(0,0,0,.08);
   }
+  .btn:active{ transform:translateY(1px) }
+  .btn.primary  { background:var(--accent); color:#1b1302; }
+  .btn.primary:hover{ background:var(--accent-press); }
+  .btn.secondary{ background:var(--secondary); color:var(--secondary-text); border:1px solid var(--ring); }
+  .btn.ghost    { background:transparent; color:var(--text); border:1px solid var(--ring); }
+  .btn-block{ width:100%; }
 
-  .btn:active{ transform: translateY(1px); }
-
-  .btn.primary   { background: var(--orange); color: #000; }
-  .btn.secondary { background: #12213d; color: #e2e8f0; border: 1px solid var(--border); }
-  .btn.ghost     { background: transparent; color: #e2e8f0; border: 1px solid var(--border); }
-
-  .btn-block{ width: 100%; }
-
-  .divider{
-    height: 1px;
-    background: var(--border);
-    margin: 12px 0;
-    opacity: .7;
-  }
+  .divider{ height:1px; background:var(--ring); margin:12px 0; opacity:.9; }
 
   #response{
-    margin: 0;
-    padding: 12px 14px;
-    background: #0b1120;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: #e2e8f0;
-    font-size: 14px;
+    margin:0; padding:12px 14px;
+    background:var(--panel-2);
+    border:1px solid var(--ring);
+    border-radius:10px; color:var(--text); font-size:14px;
   }
 
-  .hint{ font-size: 12px; color: #94a3b8; }
-
+  .hint{ font-size:12px; color:var(--muted); }
   .tag{
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #0b1120;
-    border: 1px solid var(--border);
-    color: #e2e8f0;
-    padding: 6px 10px;
-    border-radius: 999px;
-    font-size: 12px;
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--panel-2); border:1px solid var(--ring);
+    color:var(--text); padding:6px 10px; border-radius:999px; font-size:12px;
   }
 
+  /* ===== Tabla ===== */
   .table-wrap{
-    overflow: auto;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: var(--panel);
+    overflow:auto; border-radius:12px;
+    border:1px solid var(--ring); background:var(--panel);
   }
-
-  table{
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    min-width: 360px;
-  }
-
+  table{ width:100%; border-collapse:separate; border-spacing:0; min-width:360px; }
   thead th{
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #0f162b;
-    border-bottom: 1px solid var(--border);
-    padding: 10px;
-    text-align: left;
-    font-weight: 600;
-    font-size: 13px;
-    color: #e2e8f0;
+    position:sticky; top:0; z-index:1;
+    background:var(--panel);
+    border-bottom:1px solid var(--ring);
+    padding:10px; text-align:left; font-weight:700; font-size:13px; color:var(--text);
   }
-
   tbody td{
-    padding: 10px;
-    border-bottom: 1px solid #152340;
-    font-size: 14px;
-    color: #e2e8f0;
+    padding:10px; border-bottom:1px solid var(--ring);
+    font-size:14px; color:var(--text);
   }
+  tbody tr:hover{ background:var(--panel-2); }
+  .action{ display:inline-flex; gap:6px; }
+  .sm{ padding:6px 10px; font-size:12px; border-radius:8px; }
+  .danger{ border:1px solid rgba(239,68,68,.35); background:#ffd7d7; color:#7a0f0f; }
+  .ok{ border:1px solid rgba(34,197,94,.35); background:#c9f7d0; color:#0f3a14; }
 
-  tbody tr:hover{ background: #0e1a33; }
+  .navdays{ display:flex; gap:8px; align-items:center; }
+  .daylabel{ font-weight:700; }
 
-  .action{ display: inline-flex; gap: 6px; }
-
-  .sm{
-    padding: 6px 10px;
-    font-size: 12px;
-    border-radius: 8px;
-  }
-
-  .danger{
-    border: 1px solid rgba(239,68,68,.4);
-    background: #1b0f12;
-    color: #fecaca;
-  }
-
-  .ok{
-    border: 1px solid rgba(34,197,94,.35);
-    background: #0f1b14;
-    color: #bbf7d0;
-  }
-
-  .navdays{ display: flex; gap: 8px; align-items: center; }
-
-  .daylabel{ font-weight: 700; }
-
-  /* modal ia */
+  /* ===== MODAL IA (se mantiene lógica de .open) ===== */
   .modal{
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,.55);
-    z-index: 50;
+    position:fixed; inset:0;
+    display:none; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.45); z-index:50;
   }
-
-  .modal.open{ display: flex; }
-
+  .modal.open{ display:flex; }
   .modal-card{
-    width: 100%;
-    max-width: 520px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    position: relative;
+    width:100%; max-width:520px;
+    background:var(--panel);
+    border:1px solid var(--ring);
+    border-radius:14px; padding:16px; position:relative;
+    box-shadow:0 16px 40px rgba(0,0,0,.25);
   }
-
   .close-x{
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-size: 20px;
-    cursor: pointer;
+    position:absolute; top:10px; right:12px;
+    background:transparent; border:none; color:#426594;
+    font-size:20px; cursor:pointer;
   }
-
   .list{
-    display: grid;
-    gap: 8px;
-    max-height: 220px;
-    overflow: auto;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px;
-    background: var(--panel-2);
+    display:grid; gap:8px; max-height:220px; overflow:auto;
+    border:1px solid var(--ring); border-radius:10px; padding:8px; background:var(--panel-2);
   }
-
   .item{
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 10px;
-    border: 1px solid #1f2a44;
-    border-radius: 10px;
+    display:flex; justify-content:space-between; gap:10px;
+    padding:10px; border:1px solid var(--ring); border-radius:10px; background:#fff; color:var(--text);
   }
-
   .pill{
-    padding: 3px 8px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    font-size: 15px;
-    color: #cbd5e1;
+    padding:3px 8px; border:1px solid var(--ring); border-radius:999px; font-size:12px; color:var(--text);
+    background:var(--panel-2);
   }
+  /* Botón “Volver” debajo del título */
+.back-inline{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+  padding:8px 12px;
+  border-radius:10px;
+  background:#fff;
+  color:var(--text);
+  border:1px solid var(--ring);
+  font-weight:800;
+  text-decoration:none;
+  box-shadow:0 2px 6px rgba(0,0,0,.06);
+  transition:filter .15s ease, transform .05s ease, background .15s ease;
+}
+.back-inline .arr{ font-size:18px; line-height:1 }
+.back-inline:hover{ filter:brightness(0.98) }
+.back-inline:active{ transform:translateY(1px) }
 
-  .row2{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
+/* ==== Select fachero (reemplaza el nativo al abrir) ==== */
+
+/* Oculta visualmente el select original pero sigue funcionando y enviando valor */
+.sr-only{
+  position:absolute!important; width:1px!important; height:1px!important;
+  padding:0!important; margin:-1px!important; overflow:hidden!important;
+  clip:rect(0 0 0 0)!important; clip-path:inset(50%)!important; white-space:nowrap!important;
+  border:0!important;
+}
+
+.nice-select{ position:relative; width:100%; }
+.nice-select__button{
+  width:100%;
+  text-align:left;
+  padding:12px 42px 12px 12px;
+  border-radius:10px;
+  border:2px solid var(--ring);
+  background:#fff;
+  color:var(--text);
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 4px 10px rgba(0,0,0,.08);
+  transition:border .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.nice-select__button:hover{ background:#fff; }
+.nice-select__button:focus{ outline:none; border-color:var(--secondary); box-shadow:0 0 0 2px rgba(58,160,255,.25); }
+
+/* Flechita */
+.nice-select__button::after{
+  content:"";
+  position:absolute; right:12px; top:50%;
+  width:10px; height:10px;
+  border-right:2px solid var(--text);
+  border-bottom:2px solid var(--text);
+  transform:translateY(-60%) rotate(45deg);
+  opacity:.65; transition:transform .2s ease;
+}
+.nice-select.open .nice-select__button::after{
+  transform:translateY(-20%) rotate(-135deg);
+}
+
+/* Menú flotante */
+.nice-select__menu{
+  position:absolute; left:0; right:0; top:calc(100% + 6px);
+  background:#fff;
+  border:1px solid var(--ring);
+  border-radius:12px;
+  box-shadow:0 16px 28px rgba(0,0,0,.16);
+  padding:6px;
+  display:none;
+  z-index:40;
+}
+.nice-select.open .nice-select__menu{ display:block; }
+
+/* Opción */
+.nice-select__option{
+  padding:10px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  color:var(--text);
+  transition:background .12s ease;
+}
+.nice-select__option:hover{ background:var(--panel-2); }
+.nice-select__option[aria-selected="true"]{
+  background:var(--panel-2);
+  box-shadow:inset 0 0 0 1px var(--ring);
+}
+/* quitar puntos del menú del select custom */
+.nice-select__menu{
+  list-style: none;      /* sin bullets */
+  margin: 6px 0 0 0;     /* resetea margen del ul */
+  padding: 6px;          /* mantiene el padding que ya tenías */
+  padding-left: 6px;     /* evita indentación extra en algunos navegadores */
+}
+
+.nice-select__option{
+  list-style: none;      /* por si acaso en los <li> */
+}
+
+
 </style>
 
 </head>
 <body>
   <div class="phone">
     <div class="topbar"><h1>Plan de Comidas • PetCare</h1></div>
-    <a class="back" href="principal.html" aria-label="Volver"> <img src="imagenes/flecha.png" alt="flecha" height="20px" width="20px"></a>
-
+      
     <div class="content">
+
+      <a href="principal.html" class="back-inline" aria-label="Volver al principal">
+    <span class="arr">←</span> Volver
+  </a>
+
       <!-- CONEXION -->
       <form id="connForm" class="card" autocomplete="off">
         <h2>Conexion</h2>
@@ -784,5 +792,95 @@
       }
     })
   </script>
+  <script>
+/* Convierte #mode a un select custom manteniendo eventos y envío del form */
+(function(){
+  function enhanceSelect(native){
+    if(!native || native.__nice) return;
+    native.classList.add('sr-only');
+    native.__nice = true;
+
+    // contenedor
+    const wrap = document.createElement('div');
+    wrap.className = 'nice-select';
+
+    // botón visible
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'nice-select__button';
+    btn.setAttribute('aria-haspopup','listbox');
+    btn.setAttribute('aria-expanded','false');
+    btn.textContent = native.options[native.selectedIndex]?.text || 'Seleccionar';
+
+    // menú
+    const menu = document.createElement('ul');
+    menu.className = 'nice-select__menu';
+    menu.setAttribute('role','listbox');
+
+    // opciones
+    [...native.options].forEach(opt=>{
+      const li = document.createElement('li');
+      li.className = 'nice-select__option';
+      li.setAttribute('role','option');
+      li.dataset.value = opt.value;
+      li.textContent = opt.textContent;
+      if(opt.selected) li.setAttribute('aria-selected','true');
+      li.addEventListener('click', ()=>{
+        // actualizar nativo
+        native.value = opt.value;
+        native.dispatchEvent(new Event('change', {bubbles:true}));
+        // UI
+        btn.textContent = opt.textContent;
+        menu.querySelectorAll('[aria-selected="true"]').forEach(n=>n.removeAttribute('aria-selected'));
+        li.setAttribute('aria-selected','true');
+        wrap.classList.remove('open');
+        btn.setAttribute('aria-expanded','false');
+      });
+      menu.appendChild(li);
+    });
+
+    // abrir/cerrar
+    btn.addEventListener('click', ()=>{
+      const open = wrap.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', (e)=>{
+      if(!wrap.contains(e.target)){
+        wrap.classList.remove('open');
+        btn.setAttribute('aria-expanded','false');
+      }
+    });
+
+    // teclado básico
+    btn.addEventListener('keydown', (e)=>{
+      const opts = [...menu.querySelectorAll('.nice-select__option')];
+      const iSel = opts.findIndex(o=>o.getAttribute('aria-selected')==='true');
+      if(e.key==='Escape'){ wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false'); }
+      if(e.key==='ArrowDown' || e.key==='ArrowUp'){
+        e.preventDefault();
+        let i = iSel;
+        if(e.key==='ArrowDown') i = Math.min(opts.length-1, iSel+1);
+        if(e.key==='ArrowUp')   i = Math.max(0, iSel-1);
+        opts[i]?.click();
+        wrap.classList.add('open'); btn.setAttribute('aria-expanded','true');
+      }
+      if(e.key==='Enter' && wrap.classList.contains('open')){
+        wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false');
+      }
+    });
+
+    // insertar antes del select nativo
+    native.parentNode.insertBefore(wrap, native);
+    wrap.appendChild(btn);
+    wrap.appendChild(menu);
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const sel = document.getElementById('mode');
+    if(sel) enhanceSelect(sel);
+  });
+})();
+</script>
+
 </body>
 </html>
