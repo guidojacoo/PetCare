@@ -1,10 +1,167 @@
-body { margin:0; font-family:sans-serif; background:#0b1e31; color:white; display:flex; justify-content:center; }
-.phone { width:100%; max-width:400px; min-height:100vh; padding:20px; display:flex; flex-direction:column; gap:20px; background:#081a2b; }
-.hero { text-align:center; }
-.logo { margin:0; font-size:20px; font-weight:700; }
-.tagline { margin:0; color:#a9bfd3; font-size:13px; }
-.video-placeholder { flex:1; display:flex; justify-content:center; align-items:center; border:1px dashed #4a6783; border-radius:8px; }
-.actions { display:flex; flex-direction:column; gap:12px; }
-.btn { border:none; border-radius:8px; padding:12px; font-weight:700; cursor:pointer; text-align:center; text-decoration:none; }
-.btn-orange { background:#f7a51a; color:#1b1302; }
-.btn-cyan { background:#02c6cc; color:#07262c; }
+/* ========= PALETA UNIFICADA (CAMBIÁ ACÁ Y SE PROPAGA) =========
+   --bg ............... color de fondo global del sitio (index: #95b8f6)
+   --surface .......... paneles/tarjetas (rectángulo, cajas)
+   --text ............. color principal de texto
+   --muted ............ texto secundario/descriptivo
+   --accent ........... color de énfasis (BOTONES principales, estados activos) → amarillo
+   --accent-press ..... hover/active del acento
+   --secondary ........ color de botones secundarios y detalles que combinan
+   --ring ............. borde/sombra sutil en elementos destacados (circunferencia del logo)
+*/
+:root{
+  --bg:#95b8f6;
+  --surface:#e6f0ff;          /* panel claro que combina con el fondo */
+  --text:#0f172a;             /* texto principal (azul grisáceo oscuro) */
+  --muted:#35537a;            /* texto secundario */
+  --accent:#ffd54d;           /* amarillo de énfasis (botones principales) */
+  --accent-press:#ffc21a;     /* hover/active */
+  --secondary:#3aa0ff;        /* azul que combina (links/botón secundario) */
+  --ring:#aac8ff;             /* borde/sombra sutil */
+}
+
+/* ====== RESETEO Y LAYOUT GENERAL (mobile-first) ====== */
+*{ box-sizing:border-box }
+html,body{ height:100% }
+
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display:flex;
+  justify-content:center;
+}
+
+.phone{
+  width:100%;
+  max-width:420px;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+  padding:20px 18px 28px;
+}
+
+/* ====== CABECERA ====== */
+.hero{ text-align:center; margin-top:6px }
+.logo-text{ margin:0; font-size:22px; font-weight:800; letter-spacing:0.2px }
+.tagline{ margin:6px 0 0; color:var(--muted); font-size:13px }
+
+/* ====== ESCENARIO (rectángulo con animación chill y logo centrado) ====== */
+.stage{
+  position:relative;
+  flex:1;
+  min-height:260px;
+  border-radius:16px;
+  background: var(--surface);
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid var(--ring);
+  box-shadow: 0 10px 20px rgba(15,23,42,0.08), inset 0 0 0 1px rgba(255,255,255,0.4);
+}
+
+/* blobs suaves (animación chill) */
+.blob{
+  position:absolute;
+  filter: blur(30px);
+  opacity:.35;
+  mix-blend-mode:multiply;
+  will-change: transform;
+}
+
+.b1{
+  width:220px; height:220px; border-radius:50%;
+  background: radial-gradient(closest-side, #bfe0ff, transparent 70%);
+  left:-40px; top:-30px;
+  animation: float1 12s ease-in-out infinite;
+}
+.b2{
+  width:260px; height:260px; border-radius:50%;
+  background: radial-gradient(closest-side, #c9f7ff, transparent 70%);
+  right:-50px; bottom:-40px;
+  animation: float2 14s ease-in-out infinite;
+}
+.b3{
+  width:180px; height:180px; border-radius:50%;
+  background: radial-gradient(closest-side, #fff1b8, transparent 70%);
+  left:40%; top:55%;
+  animation: float3 16s ease-in-out infinite;
+}
+
+@keyframes float1{
+  0%,100%{ transform: translate(0,0) scale(1) }
+  50%    { transform: translate(20px,10px) scale(1.08) }
+}
+@keyframes float2{
+  0%,100%{ transform: translate(0,0) scale(1) }
+  50%    { transform: translate(-18px,-12px) scale(1.05) }
+}
+@keyframes float3{
+  0%,100%{ transform: translate(0,0) scale(1) }
+  50%    { transform: translate(-12px,16px) scale(1.07) }
+}
+
+/* circunferencia del logo centrada */
+.logo-ring {
+  position:relative;
+  width:180px;
+  height:180px;
+  border-radius:50%;
+  overflow:hidden;  /* asegura que nada salga del círculo */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: white; /* opcional: fondo blanco suave detrás */
+  border:2px solid var(--ring);
+  box-shadow: 0 8px 18px rgba(15,23,42,.15);
+}
+
+
+.logo-img {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;   /* recorta y llena el círculo */
+  border-radius:50%;  /* lo recorta como círculo */
+}
+
+
+/* ====== BOTONES ====== */
+.actions{ display:flex; flex-direction:column; gap:12px }
+
+.btn{
+  --btn-bg: var(--accent);
+  --btn-fg: #1b1302;
+  display:inline-block;
+  text-decoration:none;
+  text-align:center;
+  font-weight:800;
+  border-radius:12px;
+  padding:14px 16px;
+  border:1px solid rgba(0,0,0,.06);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  box-shadow: 0 6px 14px rgba(0,0,0,.08);
+  transition: transform .08s ease, box-shadow .2s ease, background .15s ease;
+}
+
+.btn:hover{ transform: translateY(-1px); box-shadow:0 10px 18px rgba(0,0,0,.10) }
+.btn:active{ transform: translateY(0); box-shadow:0 6px 12px rgba(0,0,0,.10) }
+
+/* principal (amarillo) */
+.btn-accent{ --btn-bg: var(--accent); --btn-fg:#1b1302 }
+.btn-accent:hover{ background: var(--accent-press) }
+
+/* secundario (azul que combina) */
+.btn-secondary{ --btn-bg: var(--secondary); --btn-fg:#071e2c }
+
+/* ancho completo en móvil */
+.full{ width:100% }
+
+/* ====== MEJORAS PEQUEÑAS EN PANTALLAS MÁS GRANDES ====== */
+@media (min-width:460px){
+  .logo-ring{ width:200px; height:200px }
+  .stage{ min-height:300px }
+}

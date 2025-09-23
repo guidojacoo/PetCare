@@ -5,125 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pantalla principal</title>
   <link rel="stylesheet" href="principal.css">
-  <style>
-    .fab {
-      width:60px; height:60px;
-      border-radius:50%;
-      border:none;
-      display:flex; align-items:center; justify-content:center;
-      cursor:pointer;
-    }
-    #cam-toggle.off { background:#388e3c; } /* verde */
-    #cam-toggle.on  { background:#d32f2f; } /* rojo */
-    #cam-toggle img { width:30px; height:30px; } /* <- lo dejo como lo tenías */
-
-    /* ✅ NUEVO: asegurar que el ícono se ajuste perfecto al círculo */
-    #cam-toggle { position: relative; overflow: hidden; }
-    #cam-toggle img {
-      width:56%;
-      height:56%;
-      display:block;
-      object-fit:contain;
-      border-radius:50%;
-      pointer-events:none; /* que no tape el click */
-    }
-  </style>
 </head>
 <body>
-
   <main class="phone">
     <header class="top">
       <a href="perfil.html" class="btn btn-gear" aria-label="Configuración">
         <img src="/Fotos/configuracion.png" alt="Configuración" height="40" width="40">
       </a>
-      <div class="dot"  aria-label="Inicial del usuario"></div>
+      <div class="dot" aria-label="Inicial del usuario"></div>
     </header>
 
-    <!-- Cámara oculta por defecto -->
-    <section class="camera" style="text-align:center">
-      <img id="camara-stream"
-           alt="Cámara en vivo"
-           style="width:200px; height:200px; border-radius:8px; display:none;">
+    <!-- Cámara -->
+    <section class="camera">
+      <img id="camara-stream" alt="Cámara en vivo" style="display:none;">
     </section>
-    
-    <script>
-      // ======================
-      // CONFIGURACIÓN DE IPs
-      // ======================
-      const CTRL_IP   = "192.168.0.133";   // ESP32 de control (servo, planes, etc.)
-      const CAM_IP    = "192.168.0.244";   // ESP32-CAM (stream)
 
-      const STREAM_URL = `http://${CAM_IP}:81/stream`;
-      const SERVO_URL  = `http://${CTRL_IP}:8080/servo`;
+    <!-- Mensaje debajo del rectángulo -->
+    <div id="mic-toast"></div>
 
-      const img = document.getElementById("camara-stream");
-
-      // Crear botón circular cámara (existe, lo respetamos)
-      // Crear botón circular cámara (ya lo tenías)
-const camBtn = document.createElement("button");
-camBtn.id = "cam-toggle";
-camBtn.className = "fab off";
-camBtn.setAttribute("aria-label","Encender/Apagar cámara");
-
-// ⬇️ Agrego la imagen DENTRO del botón (ruta relativa desde public/principal.html)
-const camIcon = document.createElement("img");
-camIcon.alt = "Prendido/Apagado";
-camIcon.loading = "lazy";
-camIcon.decoding = "async";
-
-// intentar ruta relativa; si falla, probar absoluta
-function setCamIconSrc() {
-  const ver = Date.now(); // bust cache
-  camIcon.src = `imagenes/prendido.png?v=${ver}`;
-  camIcon.onerror = () => { camIcon.src = `/imagenes/prendido.png?v=${ver}`; };
-}
-setCamIconSrc();
-
-camBtn.appendChild(camIcon);
-
-// Cuando el DOM está listo, agregar el botón a la barra inferior
-document.addEventListener("DOMContentLoaded", () => {
-  const cont = document.querySelector(".bottom-actions");
-  if (cont && !document.getElementById("cam-toggle")) cont.appendChild(camBtn);
-});
-
-
-      function showStream() {
-        img.style.display = "inline-block";
-        img.src = STREAM_URL;
-        camBtn.classList.remove("off");
-        camBtn.classList.add("on");
-      }
-      function hideStream() {
-        img.style.display = "none";
-        img.removeAttribute("src");
-        camBtn.classList.remove("on");
-        camBtn.classList.add("off");
-      }
-
-      // Toggle único
-      camBtn.addEventListener("click", () => {
-        if (camBtn.classList.contains("off")) {
-          showStream();
-        } else {
-          hideStream();
-        }
-      });
-
-      // Mover servo y mostrar cámara unos segundos
-      function moverServo() {
-        showStream();
-        setTimeout(hideStream, 30000); // Ocultar tras 30s
-        fetch(SERVO_URL).catch(err => console.error("Error servo:", err));
-      }
-
-      // Exponer moverServo para el botón de la pata
-      window.moverServo = moverServo;
-      // Exponer helpers por si otro script los necesita
-      window.showStream = showStream;
-      window.hideStream = hideStream;
-    </script>
-
+    <!-- Acciones -->
     <div class="bottom-actions">
       <button class="fab" id="mic" aria-label="Micrófono silenciado" data-state="off">
         <img class="mic-img" src="/Fotos/micDesactivado.png" alt="Imagen de un microfono">
@@ -134,18 +34,74 @@ document.addEventListener("DOMContentLoaded", () => {
       <button class="fab" id="plan" aria-label="Plan de comidas">
         <img src="/Fotos/Notas.png" alt="Imagen de unas notas" height="40" width="40">
       </button>
-      <!-- El botón de cámara se agrega por JS (con la imagen) -->
+      <!-- El botón de cámara se agrega por JS -->
     </div>
 
-    <div id="mic-toast">microfono activo</div>
+    <script>
+      // ====================== IPs ======================
+      const CTRL_IP = "192.168.0.133";
+      const CAM_IP  = "192.168.0.244";
+
+      const STREAM_URL = `http://${CAM_IP}:81/stream`;
+      const SERVO_URL  = `http://${CTRL_IP}:8080/servo`;
+
+      const img = document.getElementById("camara-stream");
+
+      // Botón cámara (inyectado)
+      const camBtn = document.createElement("button");
+      camBtn.id = "cam-toggle";
+      camBtn.className = "fab off";
+      camBtn.setAttribute("aria-label","Encender/Apagar cámara");
+
+      const camIcon = document.createElement("img");
+      camIcon.alt = "Prendido/Apagado";
+      camIcon.loading = "lazy";
+      camIcon.decoding = "async";
+      function setCamIconSrc() {
+        const ver = Date.now();
+        camIcon.src = `imagenes/prendido.png?v=${ver}`;
+        camIcon.onerror = () => { camIcon.src = `/imagenes/prendido.png?v=${ver}`; };
+      }
+      setCamIconSrc();
+      camBtn.appendChild(camIcon);
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const cont = document.querySelector(".bottom-actions");
+        if (cont && !document.getElementById("cam-toggle")) cont.appendChild(camBtn);
+      });
+
+      function showStream() {
+        img.style.display = "block";
+        img.src = STREAM_URL;
+        camBtn.classList.remove("off");
+        camBtn.classList.add("on");
+      }
+      function hideStream() {
+        img.style.display = "none";
+        img.removeAttribute("src");
+        camBtn.classList.remove("on");
+        camBtn.classList.add("off");
+      }
+      camBtn.addEventListener("click", () => {
+        camBtn.classList.contains("off") ? showStream() : hideStream();
+      });
+
+      function moverServo() {
+        showStream();
+        setTimeout(hideStream, 30000);
+        fetch(SERVO_URL).catch(err => console.error("Error servo:", err));
+      }
+      window.moverServo = moverServo;
+      window.showStream = showStream;
+      window.hideStream = hideStream;
+    </script>
 
     <script>
+      // Navegación y sesión
       document.getElementById("plan").addEventListener("click", (e) => {
         e.preventDefault();
         window.location.href = "plandecomidas.html";
       });
-
-      // Redirección si no hay usuario
       (function () {
         try {
           const u = JSON.parse(localStorage.getItem("usuario"));
@@ -155,36 +111,37 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       })();
 
-      // Toggle mic (UI local)
-      let micBtn = document.getElementById("mic");
-      let micImg = micBtn.querySelector(".mic-img");
-      let toast = document.getElementById("mic-toast");
+      // Toast debajo de la cámara
+      const micBtn  = document.getElementById("mic");
+      const micImg  = micBtn.querySelector(".mic-img");
+      const toast   = document.getElementById("mic-toast");
       let hideTimer = null;
 
-      function showToast(msg) {
-        toast.textContent = msg;
+      function showToast(text, isOn=true) {
+        toast.textContent = text;
+        toast.classList.toggle("off", !isOn); // rojo si está OFF
         toast.classList.remove("show");
-        void toast.offsetWidth;
+        void toast.offsetWidth;               // reflow para reiniciar animación
         toast.classList.add("show");
         if (hideTimer) clearTimeout(hideTimer);
-        hideTimer = setTimeout(() => { toast.classList.remove("show"); }, 2000);
+        hideTimer = setTimeout(() => toast.classList.remove("show"), 2000);
       }
 
       micBtn.addEventListener("click", () => {
-        let state = micBtn.getAttribute("data-state");
+        const state = micBtn.getAttribute("data-state");
         if (state === "off") {
           micBtn.setAttribute("data-state", "on");
           micImg.src = "/Fotos/micActivado.png";
-          showToast("Tu perro te está escuchando");
+          showToast("Tu perro te está escuchando", true);
         } else {
           micBtn.setAttribute("data-state", "off");
           micImg.src = "/Fotos/micDesactivado.png";
-          showToast("Tu perro no te está escuchando");
+          showToast("Tu perro no te está escuchando", false);
         }
       });
     </script>
 
-    <!-- === Auto-mostrar cámara 10 min tras finalizar la ventana del sensor === -->
+    <!-- Auto-mostrar cámara 10 min tras finalizar la ventana del sensor -->
     <script>
       (function(){
         const AUTO_CAM_MS = 600000; // 10 min
@@ -195,20 +152,12 @@ document.addEventListener("DOMContentLoaded", () => {
         let autoOpened = false;
         let userTouched = false;
         let hideTimer = null;
-        let pollTimer = null;
 
         function getCamBtn() { return document.getElementById('cam-toggle'); }
-        function isCamOn() {
-          const btn = getCamBtn();
-          return btn && btn.classList.contains('on');
-        }
+        function isCamOn()   { const b=getCamBtn(); return b && b.classList.contains('on'); }
         function ensureUserIntentHook() {
-          const btn = getCamBtn();
-          if (!btn) return false;
-          if (!btn.__userHooked) {
-            btn.addEventListener('click', () => { userTouched = true; });
-            btn.__userHooked = true;
-          }
+          const btn = getCamBtn(); if (!btn) return false;
+          if (!btn.__userHooked) { btn.addEventListener('click', () => { userTouched = true; }); btn.__userHooked = true; }
           return true;
         }
 
@@ -239,48 +188,40 @@ document.addEventListener("DOMContentLoaded", () => {
               }
             }
             prevEatWaiting = nowEatWaiting;
-          } catch (_) { /* silencioso */ }
+          } catch (_) {}
         }
 
         function start() {
           if (!getCamBtn()) { setTimeout(start, 300); return; }
           ensureUserIntentHook();
-          pollTimer = setInterval(pollStatus, POLL_MS);
+          setInterval(pollStatus, POLL_MS);
         }
         document.addEventListener('DOMContentLoaded', start);
       })();
     </script>
 
     <script>
-  // Pone la inicial mayúscula del usuario dentro del círculo .dot
-  (function () {
-    function pickInitial(user) {
-      if (!user || typeof user !== "object") return "";
-      // campos posibles en tu app
-      const name =
-        user.nombre || user.name || user.username ||
-        (user.email ? user.email.split("@")[0] : "");
-
-      if (!name || typeof name !== "string") return "";
-      const first = name.trim().charAt(0);
-      return first ? first.toLocaleUpperCase("es-AR") : "";
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const dot = document.querySelector(".dot");
-      if (!dot) return;
-
-      let u = null;
-      try { u = JSON.parse(localStorage.getItem("usuario")); } catch (e) {}
-
-      const initial = pickInitial(u) || "U"; // fallback
-      dot.textContent = initial;
-      dot.setAttribute("title", `Usuario: ${initial}`);
-    });
-  })();
-</script>
-
+      // Inicial del usuario en .dot
+      (function () {
+        function pickInitial(user) {
+          if (!user || typeof user !== "object") return "";
+          const name = user.nombre || user.name || user.username ||
+                       (user.email ? user.email.split("@")[0] : "");
+          if (!name || typeof name !== "string") return "";
+          const first = name.trim().charAt(0);
+          return first ? first.toLocaleUpperCase("es-AR") : "";
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+          const dot = document.querySelector(".dot");
+          if (!dot) return;
+          let u = null;
+          try { u = JSON.parse(localStorage.getItem("usuario")); } catch (e) {}
+          const initial = pickInitial(u) || "U";
+          dot.textContent = initial;
+          dot.setAttribute("title", `Usuario: ${initial}`);
+        });
+      })();
+    </script>
   </main>
-
 </body>
 </html>

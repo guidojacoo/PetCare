@@ -1,190 +1,182 @@
-body {
-  margin: 0;
-  padding: 0;
-  font-family: sans-serif;
-  background: #0d1e2c;
-  display: grid;
-  place-items: center;
-  min-height: 100vh;
-  color: #fff;
+/* ========= PALETA UNIFICADA ========= */
+:root{
+  --bg:#95b8f6;        /* fondo global */
+  --surface:#e6f0ff;   /* paneles */
+  --text:#0f172a;      /* texto principal */
+  --muted:#35537a;     /* texto secundario */
+  --accent:#eeb31e;    /* botones principales (amarillo) */
+  --accent-press:#ffc21a;
+  --secondary:#3aa0ff; /* detalles/links */
+  --ring:#aac8ff;      /* bordes suaves */
+
+  --danger:#ff6b6b;
+  --danger-press:#ff4d4f;
+
+  --ok:#1db954;        /* verde ON (cámara) */
+  --bad:#d32f2f;       /* rojo OFF (cámara) */
 }
 
-.phone {
-  position: relative;
-  width: min(260px, 94vw);
-  aspect-ratio: 248 / 512;
-  background: #0d1e2c;
-  border: 2px solid #0b1520;
-  border-radius: 6px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+/* ===== BASE ===== */
+*{ box-sizing:border-box }
+html,body{ height:100% }
 
-.top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.btn {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  border: 3px solid #0b1520;
-  background: #FCB527;
-  color: #111;
-  font-size: 26px;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, .25);
-  cursor: pointer;
-  transition: transform .08s ease, filter .12s ease;
-  text-decoration: none;
-}
-
-.btn:hover { filter: brightness(1.05); }
-.btn:active { transform: scale(.97); }
-
-.dot{
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #1eb6ff;
-  border: 3px solid #0b1520;
-
-  /* 👇 centra la letra */
-  display: grid;
-  place-items: center;
-
-  /* estilo de la inicial */
-  font-weight: 800;
-  font-size: 20px;
-  color: #042031;
-  text-transform: uppercase;
-  line-height: 1;
-  user-select: none;
-}
-
-
-.camera {
-  flex: 1;
-  background: #d9d9d9;
-  border: 2px solid rgba(255, 255, 255, .7);
-  border-radius: 4px;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-#camara-stream {
-  width: 100% !important;
-  height: 100% !important;
-  display: block;
-  border-radius: 4px;
-  object-fit: cover;
-  image-rendering: auto; 
-}
-
-
-.camera-overlay {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  font-weight: 700;
-  color: #ffffff;
-  opacity: .85;
-  pointer-events: none;
-}
-
-.aux {
-  display: flex;
-  justify-content: center;
-}
-
-.aux-btn {
-  margin-top: 6px;
-  padding: 10px 18px;
-  font-size: 14px;
-  border: none;
-  border-radius: 8px;
-  background: #1eb6ff;
-  color: #042031;
-  cursor: pointer;
-}
-
-.bottom-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-inline: 6px;
-}
-
-.fab {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  border: 3px solid #0b1520;
-  background: #FCB527;
-  color: #111;
-  font-size: 26px;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, .25);
-  cursor: pointer;
-  transition: transform .08s ease, filter .12s ease;
-}
-
-.fab:hover { filter: brightness(1.05); } 
-.fab:active { transform: scale(.97); } 
-
-.phone{max-height:94vh;overflow:hidden}
-
-.bottom-actions .fab:nth-child(1) img{
-  width:60%;
-  height:60%;
-  object-fit:contain;
-  
-  transition:transform .28s ease,opacity .25s ease
-}
-.bottom-actions .fab:nth-child(1).mic-on img{transform:scale(1.1) rotate(10deg)}
-.bottom-actions .fab:nth-child(1).fading img{opacity:.35}
-
-
-.bottom-actions .fab:nth-child(2) img {
-  width: 80%;   /* 🔽 antes era 60% */
-  height: 80%;
-  object-fit: contain;
-  border-radius: 50%;
-}
-
-
-
-#mic-toast{
-  position:absolute;
-  left:12px;right:12px;
-  top:75px;
+body{
   margin:0;
-  z-index:5;
-  pointer-events:none;
+  padding:0;
+  font-family:system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+  background:var(--bg);
+  display:grid;
+  place-items:center;
+  min-height:100vh;
+  color:var(--text);
+}
+
+/* ===== PHONE FRAME ===== */
+.phone{
+  position:relative;
+  width:min(320px, 96vw);
+  min-height:92vh;
+  max-height:94vh;
+  background:var(--surface);
+  border:1px solid var(--ring);
+  border-radius:14px;
+  box-shadow:0 12px 28px rgba(0,0,0,.12);
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  overflow:hidden;
+}
+
+/* ===== TOPBAR ===== */
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.btn{
+  width:58px; height:58px;
+  border-radius:50%;
+  border:2px solid var(--ring);
+  background:var(--accent);
+  color:#111;
+  font-size:26px;
+  display:grid; place-items:center;
+  box-shadow:0 3px 8px rgba(0,0,0,.12);
+  cursor:pointer;
+  transition:transform .08s ease, filter .12s ease, background .15s ease, border .15s ease;
+  text-decoration:none;
+}
+.btn:hover { filter:brightness(1.05) }
+.btn:active { transform:scale(.97) }
+.btn img{ width:60%; height:60%; object-fit:contain; display:block }
+.btn-gear{ background:var(--accent); border-color:var(--ring) }
+
+/* Avatar con inicial (letra un poquito más arriba) */
+.dot{
+  width:44px; height:44px;
+  border-radius:50%;
+  background:#ffffff;
+  border:2px solid var(--ring);
+  display:flex; align-items:flex-start; justify-content:center;
+  padding-top:7px;
+  font-weight:800; font-size:20px; color:var(--text);
+  text-transform:uppercase; line-height:1; user-select:none;
+  box-shadow:0 4px 10px rgba(0,0,0,.06);
+}
+
+/* ===== CÁMARA ===== */
+.camera{
+  flex:1;
+  background:#ffffff;
+  border:1px solid var(--ring);
+  border-radius:12px;
+  position:relative;     /* ⬅ necesario para posicionar el stream */
+  overflow:hidden;
+  box-shadow:0 8px 18px rgba(0,0,0,.06);
+  margin-bottom:6px;
+  padding:0;             /* sin padding interno */
+  display:block;         /* evita que el flex centre al hijo */
+}
+
+
+/* El stream ocupa todo el panel cuando está visible */
+#camara-stream{
+  position:absolute;     /* ⬅ se pega a los bordes del contenedor */
+  inset:0;               /* top/right/bottom/left: 0 */
+  width:100%;
+  height:100%;
+  max-width:none;        /* no se limita por el tamaño natural */
+  display:block;
+  border-radius:12px;    /* mismo radio que el contenedor */
+  object-fit:cover;      /* cambia a 'contain' si querés ver todo sin recorte */
+  image-rendering:auto;
+}
+
+/* ===== MENSAJE MIC – DEBAJO DE LA CÁMARA, SIN SUPERPONER ===== */
+#mic-toast{
+  min-height:22px;           /* reserva espacio aunque esté oculto */
+  margin-top:6px;
+  margin-inline:6px;
   text-align:center;
-  font-weight:bold;
-  opacity:0;
-  transition:opacity .4s ease;
+  font-weight:700;
   font-size:14px;
-  color:#26ff1e
+  color:#26a90f;             /* verde por defecto (ON) */
+  opacity:0;                 /* oculto visualmente pero conserva el espacio */
+  transition:opacity .25s ease, color .15s ease;
+  pointer-events:none;
 }
-#mic-toast.show{opacity:1}
+#mic-toast.show{ opacity:1 }
+#mic-toast.off{ color:var(--bad) }    /* rojo cuando está OFF */
 
+/* ===== BARRA INFERIOR ===== */
+.bottom-actions{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding-inline:4px;
+  gap:10px;
+  margin-top:12px;           /* separa los botones del mensaje */
+}
+
+.fab{
+  width:70px; height:70px;
+  border-radius:50%;
+  border:2px solid var(--ring);
+  background:var(--accent);
+  color:#111;
+  font-size:26px;
+  display:grid; place-items:center;
+  box-shadow:0 3px 8px rgba(0,0,0,.12);
+  cursor:pointer;
+  transition:transform .08s ease, filter .12s ease, background .15s ease;
+}
+.fab:hover{ filter:brightness(1.05) }
+.fab:active{ transform:scale(.97) }
+.fab img{ width:60%; height:60%; object-fit:contain; display:block }
+
+/* Ajuste para la pata (ícono más grande redondo) */
+.bottom-actions .fab:nth-child(2) img{ width:80%; height:80%; border-radius:50% }
+
+/* Botón de cámara: estados ON/OFF con colores consistentes */
+#cam-toggle{ position:relative; overflow:hidden }
+#cam-toggle img{
+  width:56%; height:56%;
+  display:block; object-fit:contain; border-radius:50%;
+  pointer-events:none;
+}
+#cam-toggle.off{ background:var(--ok) }   /* verde encender */
+#cam-toggle.on{  background:var(--bad) }  /* rojo apagar   */
+
+/* Mic animaciones suaves */
+.bottom-actions .fab:nth-child(1) img{
+  transition:transform .28s ease, opacity .25s ease;
+}
+.bottom-actions .fab:nth-child(1).mic-on img{ transform:scale(1.1) rotate(10deg) }
+.bottom-actions .fab:nth-child(1).fading img{ opacity:.35 }
+
+/* ===== RESPONSIVE ALTO PEQUEÑO ===== */
 @media (max-height:560px){
-  .btn,.fab{transform:scale(.92)}
+  .btn,.fab{ transform:scale(.92) }
 }
-
-

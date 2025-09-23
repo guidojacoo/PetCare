@@ -1,34 +1,39 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PetCare • Crear cuenta</title>
-  <link rel="stylesheet" href="registro.css">
+  <link rel="stylesheet" href="registro.css" />
   <script src="inicio.js"></script>
 </head>
 <body>
   <main class="phone">
-    <header class="topbar">Logo • petcare</header>
+    <header class="topbar">
+      <h1 class="logo-text">PetCare</h1>
+    </header>
 
     <section class="content">
-      <h2 class="title">Crear cuenta en Petcare</h2>
-      <p class="muted">¿Ya tenes cuenta? <a class="link" href="login.html">Iniciar sesión</a></p>
+      <h2 class="title">Crear cuenta en PetCare</h2>
+      <p class="muted">
+        ¿Ya tenés cuenta?
+        <a class="link" href="login.html">Iniciar sesión</a>
+      </p>
 
       <label class="label" for="nombre">Nombre*</label>
-    <input id="nombre" class="input" type="text" placeholder="Campo de texto">
+      <input id="nombre" class="input" type="text" placeholder="Tu nombre" />
 
-    <label class="label" for="email">Mail*</label>
-    <input id="email" class="input" type="email" placeholder="Campo de texto">
+      <label class="label" for="email">Mail*</label>
+      <input id="email" class="input" type="email" placeholder="ejemplo@mail.com" />
 
-    <label class="label" for="contrasena">Contraseña*</label>
-    <input id="contrasena" class="input" type="password" placeholder="Campo de texto">
+      <label class="label" for="contrasena">Contraseña*</label>
+      <input id="contrasena" class="input" type="password" placeholder="********" />
 
-<label class="label" for="confirmar">Confirmar contraseña*</label>
-<input id="confirmar" class="input" type="password" placeholder="Campo de texto">
+      <label class="label" for="confirmar">Confirmar contraseña*</label>
+      <input id="confirmar" class="input" type="password" placeholder="********" />
 
-
-      <a class="btn btn-orange full" href="mascota.html">Registrarse</a>
+      <!-- si preferís navegación directa, mantené el <a>; si vas a validar, usá <button> -->
+      <a class="btn btn-accent full" href="mascota.html" id="btn-registro">Registrarse</a>
     </section>
   </main>
 </body>

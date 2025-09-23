@@ -1,23 +1,33 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PetCare • Inicio</title>
-  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="index.css" />
 </head>
 <body>
   <main class="phone">
     <header class="hero">
-      <h1 class="logo">Logo+Petcare</h1>
+      <h1 class="logo-text">PetCare</h1>
       <p class="tagline">Una forma inteligente de cuidar a tu mascota</p>
     </header>
 
-    <div class="video-placeholder">VIDEO DE FONDO</div>
+    <!-- Rectángulo con animación chill y el logo centrado dentro de una circunferencia -->
+    <section class="stage">
+      <div class="blob b1"></div>
+      <div class="blob b2"></div>
+      <div class="blob b3"></div>
+
+      <div class="logo-ring">
+        <!-- Usa la ruta real del archivo del logo -->
+        <img src="imagenes/descarga.png" alt="Logo PetCare" class="logo-img" />
+      </div>
+    </section>
 
     <div class="actions">
-      <a class="btn btn-orange full" href="login.html">Iniciar sesión</a>
-      <a class="btn btn-cyan full" href="registro.html">Crear cuenta</a>
+      <a class="btn btn-accent full" href="login.html">Iniciar sesión</a>
+      <a class="btn btn-secondary full" href="registro.html">Crear cuenta</a>
     </div>
   </main>
 </body>
