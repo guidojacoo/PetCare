@@ -177,7 +177,100 @@
   .stock-right{ color:var(--muted); font-size:13px; opacity:.95; text-align:right; }
   @media (max-width:600px){ .stock-right{ flex-basis:100%; text-align:left; margin-top:6px } }
 
+  /* ===== Fondo que nace en el header y llega hasta abajo ===== */
+:root{
+  /* mismo “gutter” a izquierda/derecha que querés para header + contenido */
+  --wrap-x: 20px;                  /* ajustalo a gusto */
+  --band-bg:    #e6f0ff;           /* color del rectángulo */
+  --band-border:#aac8ff;           /* borde del rectángulo */
+  --band-radius:0px;              /* radio de borde */
+  --band-shadow:0 18px 36px rgba(16,42,83,.16);
+}
+
+/* unificamos el padding lateral del header y del contenido */
+.topbar{ padding-left:var(--wrap-x); padding-right:var(--wrap-x); }
+.content{ padding-left:var(--wrap-x); padding-right:var(--wrap-x); }
+
+.phone{ position:relative; z-index:0; }
+
+/* El “rectángulo” va detrás de TODO el contenido, del tope al pie */
+.phone::before{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;                        /* llega hasta abajo */
+  left:var(--wrap-x);
+  right:var(--wrap-x);             /* mismo ancho que el header */
+  background:var(--band-bg);
+  border:1px solid var(--band-border);
+  border-radius:var(--band-radius);
+  box-shadow:var(--band-shadow);
+  z-index:0;
+  pointer-events:none;             /* no bloquea clics */
+}
+
+/* el contenido va por encima del rectángulo */
+.phone > *{ position:relative; z-index:1; }
+
+/* opcional: si querés que se “fusione” visualmente, hacé transparente el header */
+.topbar{
+  background:transparent;          /* quita el fondo propio del header */
+  border-bottom:none;              /* quita la línea inferior del header */
+}
+
+/* ====== CONTENEDOR DE FONDO (banda celeste de arriba a abajo) ====== */
+:root{
+  /* Qué tan separado del borde del teléfono va el rectángulo */
+  --band-inset: 10px;      /* ↓ número más chico => banda más ancha */
+  /* Radio y sombra del rectángulo */
   
+  --band-shadow: 0 10px 26px rgba(0,0,0,.12);
+
+  /* Separación interna entre el borde de la banda y las cards */
+  --content-inset: 12px;   /* ↑ subí si querés más “aire” alrededor de las cards */
+}
+
+/* Aseguramos posicionamiento */
+.phone{ position: relative; }
+
+/* La “banda” de fondo que cubre toda la altura */
+.phone::before{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:var(--band-inset);
+  right:var(--band-inset);
+  background:var(--panel);        /* celeste clarito de tu paleta */
+  border:1px solid var(--border); /* borde suave */
+  border-radius:var(--band-radius);
+  box-shadow:var(--band-shadow);
+  z-index:0;                       /* detrás de todo */
+}
+
+/* Todo el contenido por encima de la banda */
+.topbar,
+.content{
+  position: relative;
+  z-index: 1;
+}
+
+/* Sumamos “aire” lateral para que las cards no toquen el borde de la banda */
+.content{
+  /* mantenés tu padding existente y agregamos extra a izquierda/derecha */
+  padding-left:  calc(20px + var(--content-inset));
+  padding-right: calc(20px + var(--content-inset));
+}
+
+/* Opcional: que el header visualmente “pertenezca” a la misma banda */
+.topbar{
+  margin-left:  var(--band-inset);
+  margin-right: var(--band-inset);
+  border-radius: var(--band-radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--band-shadow);
+}
+
 </style>
 
 </head>
