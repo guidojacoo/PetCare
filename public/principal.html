@@ -25,8 +25,9 @@
 
     <!-- Acciones -->
     <div class="bottom-actions">
-      <button class="fab" id="mic" aria-label="Micrófono silenciado" data-state="off">
-        <img class="mic-img" src="/Fotos/micDesactivado.png" alt="Imagen de un microfono">
+      <!-- Botón ahora es bocina: imagen fija (imagenes/sonido.png) y tamaño como los demás -->
+      <button class="fab" id="mic" aria-label="Bocina apagada" data-state="off" type="button">
+        <img class="mic-img" src="imagenes/sonido.png" alt="Bocina" height="40" width="40">
       </button>
       <button onclick="moverServo()" class="fab">
         <img src="/Fotos/PataDePerro.png" alt="Pata" height="40" width="50">
@@ -134,34 +135,38 @@
         }
       })();
 
-      // Toast debajo de la cámara
+      // Toast debajo de la cámara (reutiliza showToast y comportamiento visual)
       const micBtn  = document.getElementById("mic");
-      const micImg  = micBtn.querySelector(".mic-img");
+      const micImg  = micBtn ? micBtn.querySelector(".mic-img") : null;
       const toast   = document.getElementById("mic-toast");
       let hideTimer = null;
 
-      function showToast(text, isOn=true) {
+      function showToast(text, isOn=true, ms=2000) {
+        if (!toast) return;
         toast.textContent = text;
-        toast.classList.toggle("off", !isOn); // rojo si está OFF
+        toast.classList.toggle("off", !isOn);
         toast.classList.remove("show");
-        void toast.offsetWidth;               // reflow para reiniciar animación
+        void toast.offsetWidth;
         toast.classList.add("show");
         if (hideTimer) clearTimeout(hideTimer);
-        hideTimer = setTimeout(() => toast.classList.remove("show"), 2000);
+        hideTimer = setTimeout(() => toast.classList.remove("show"), ms);
       }
 
-      micBtn.addEventListener("click", () => {
-        const state = micBtn.getAttribute("data-state");
-        if (state === "off") {
+      // comportamiento sencillo de bocina (UN SOLO MODO).
+      // Al tocar siempre muestra "Bocina Activada" y desaparece después.
+      if (micBtn) {
+        micBtn.addEventListener("click", () => {
+          // marcar como activado (permanece activado para futuras mejoras)
           micBtn.setAttribute("data-state", "on");
-          micImg.src = "/Fotos/micActivado.png";
-          showToast("Tu perro te está escuchando", true);
-        } else {
-          micBtn.setAttribute("data-state", "off");
-          micImg.src = "/Fotos/micDesactivado.png";
-          showToast("Tu perro no te está escuchando", false);
-        }
-      });
+          micBtn.setAttribute("aria-label", "Bocina activada");
+          micBtn.classList.add("active");
+
+          // mostrar mensaje siempre (reinicia timeout si se pulsa de nuevo)
+          showToast(" Bocina Activada", true, 2500);
+
+          // aquí podrás añadir la lógica para reproducir audio más adelante
+        });
+      }
     </script>
 
     <!-- Auto-mostrar cámara 10 min tras finalizar la ventana del sensor -->
