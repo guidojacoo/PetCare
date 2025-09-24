@@ -38,6 +38,24 @@
     </div>
 
     <script>
+      // ====================== MIGRACIÓN DE SESIÓN (usuario -> petcare_user) ======================
+      (function migrateSessionKey(){
+        try {
+          const NEW_KEY = "petcare_user";
+          const OLD_KEY = "usuario";
+          const newVal = localStorage.getItem(NEW_KEY);
+          const oldVal = localStorage.getItem(OLD_KEY);
+          if (!newVal && oldVal) {
+            // Si existe la vieja sesión, la copiamos a la nueva clave
+            localStorage.setItem(NEW_KEY, oldVal);
+            // Opcional: limpiamos la vieja para evitar ambigüedades
+            localStorage.removeItem(OLD_KEY);
+          }
+        } catch(e) {}
+      })();
+    </script>
+
+    <script>
       // ====================== IPs ======================
       const CTRL_IP = "192.168.0.133";
       const CAM_IP  = "192.168.0.244";
@@ -97,15 +115,20 @@
     </script>
 
     <script>
-      // Navegación y sesión
+      // ====================== Navegación y sesión ======================
       document.getElementById("plan").addEventListener("click", (e) => {
         e.preventDefault();
         window.location.href = "plandecomidas.html";
       });
-      (function () {
+
+      (function enforceSessionOrHome() {
         try {
-          const u = JSON.parse(localStorage.getItem("usuario"));
-          if (!u || !u.id) window.location.replace("index.html");
+          // 🔴 Unificado: usamos SIEMPRE petcare_user
+          const u = JSON.parse(localStorage.getItem("petcare_user"));
+          if (!u || !u.id) {
+            // Si no hay sesión, volvemos a la portada
+            window.location.replace("index.html");
+          }
         } catch (_) {
           window.location.replace("index.html");
         }
@@ -201,7 +224,7 @@
     </script>
 
     <script>
-      // Inicial del usuario en .dot
+      // ====================== Inicial del usuario en .dot ======================
       (function () {
         function pickInitial(user) {
           if (!user || typeof user !== "object") return "";
@@ -215,7 +238,7 @@
           const dot = document.querySelector(".dot");
           if (!dot) return;
           let u = null;
-          try { u = JSON.parse(localStorage.getItem("usuario")); } catch (e) {}
+          try { u = JSON.parse(localStorage.getItem("petcare_user")); } catch (e) {} // 🔴 clave unificada
           const initial = pickInitial(u) || "U";
           dot.textContent = initial;
           dot.setAttribute("title", `Usuario: ${initial}`);

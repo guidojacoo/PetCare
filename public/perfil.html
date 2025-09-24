@@ -7,21 +7,20 @@
   <link rel="stylesheet" href="perfil.css" />
 </head>
 <body>
-  
 
-     <div class="theme-switch">
-  <input id="theme-switch" type="checkbox" aria-label="Cambiar tema"/>
-  <label class="theme-toggle" for="theme-switch">
-    <span class="sky"></span>
-    <span class="sun"></span>
-    <span class="moon"></span> 
-    <span class="cloud c1"></span>
-    <span class="cloud c2"></span>
-    <span class="stars"></span>
-  </label>
-</div>
-<main class="phone">
+  <div class="theme-switch">
+    <input id="theme-switch" type="checkbox" aria-label="Cambiar tema"/>
+    <label class="theme-toggle" for="theme-switch">
+      <span class="sky"></span>
+      <span class="sun"></span>
+      <span class="moon"></span> 
+      <span class="cloud c1"></span>
+      <span class="cloud c2"></span>
+      <span class="stars"></span>
+    </label>
+  </div>
 
+  <main class="phone">
     <header class="topbar">
       <a class="back" href="principal.html" aria-label="Volver">‹</a>
       <span>Perfil</span>
@@ -42,44 +41,42 @@
         <ul id="lista-mascotas" class="list"></ul>
       </div>
 
-     <div class="card hidden" id="editor-mascota">
-  <div class="row between">
-    <h3 class="subtitle">Editar mascota</h3>
-    <button class="btn btn-ghost" id="btn-cerrar-editor" type="button">Cerrar</button>
-  </div>
+      <div class="card hidden" id="editor-mascota">
+        <div class="row between">
+          <h3 class="subtitle">Editar mascota</h3>
+          <button class="btn btn-ghost" id="btn-cerrar-editor" type="button">Cerrar</button>
+        </div>
 
-  <form id="form-mascota">
-    <input type="hidden" id="mascota-id">
+        <form id="form-mascota">
+          <input type="hidden" id="mascota-id">
 
-    <label class="label">Nombre</label>
-    <input class="input" id="m-nombre" type="text" placeholder="Nombre">
+          <label class="label">Nombre</label>
+          <input class="input" id="m-nombre" type="text" placeholder="Nombre">
 
-    <label class="label">Sexo</label>
-    <select class="input" id="m-sexo">
-      <option value="">(No especificar)</option>
-      <option value="Macho">Macho</option>
-      <option value="Hembra">Hembra</option>
-    </select>
+          <label class="label">Sexo</label>
+          <select class="input" id="m-sexo">
+            <option value="">(No especificar)</option>
+            <option value="Macho">Macho</option>
+            <option value="Hembra">Hembra</option>
+          </select>
 
-    <label class="label">Raza</label>
-    <input class="input" id="m-raza" type="text" placeholder="Raza">
+          <label class="label">Raza</label>
+          <input class="input" id="m-raza" type="text" placeholder="Raza">
 
-    <label class="label">Peso (kg)</label>
-    <input class="input" id="m-peso" type="number" step="0.1" min="0" placeholder="Peso">
+          <label class="label">Peso (kg)</label>
+          <input class="input" id="m-peso" type="number" step="0.1" min="0" placeholder="Peso">
 
-    <label class="label">Fecha de nacimiento</label>
-    <input class="input" id="m-fecha" type="date">
+          <label class="label">Fecha de nacimiento</label>
+          <input class="input" id="m-fecha" type="date">
 
-    <!-- MÁS AIRE CON ESTA CLASE -->
-    <div class="row form-actions">
-      <button class="btn btn-orange" id="btn-guardar-mascota" type="submit">Guardar</button>
-      <button class="btn btn-danger" id="btn-borrar-mascota" type="button">Borrar</button>
-    </div>
+          <div class="row form-actions">
+            <button class="btn btn-orange" id="btn-guardar-mascota" type="submit">Guardar</button>
+            <button class="btn btn-danger" id="btn-borrar-mascota" type="button">Borrar</button>
+          </div>
 
-    <div id="msg-mascota" class="msg"></div>
-  </form>
-</div>
-
+          <div id="msg-mascota" class="msg"></div>
+        </form>
+      </div>
 
       <div class="card">
         <div class="row between">
@@ -104,89 +101,7 @@
     </section>
   </main>
 
-  <script src="perfil.js"></script>
   <script src="theme-toggle.js" defer></script>
-
-  <script>
-/* Convierte #m-sexo en select "lindo" */
-(function(){
-  function enhanceSelect(native){
-    if(!native || native.__nice) return;
-    native.classList.add('sr-only');    // oculto visual pero accesible
-    native.__nice = true;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'nice-select';
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'nice-select__button';
-    btn.setAttribute('aria-haspopup','listbox');
-    btn.setAttribute('aria-expanded','false');
-    btn.textContent = native.options[native.selectedIndex]?.text || 'Seleccionar';
-
-    const menu = document.createElement('ul');
-    menu.className = 'nice-select__menu';
-    menu.setAttribute('role','listbox');
-
-    [...native.options].forEach(opt=>{
-      const li = document.createElement('li');
-      li.className = 'nice-select__option';
-      li.setAttribute('role','option');
-      li.dataset.value = opt.value;
-      li.textContent = opt.textContent;
-      if(opt.selected) li.setAttribute('aria-selected','true');
-      li.addEventListener('click', ()=>{
-        native.value = opt.value;
-        native.dispatchEvent(new Event('change', {bubbles:true}));
-        btn.textContent = opt.textContent;
-        menu.querySelectorAll('[aria-selected="true"]').forEach(n=>n.removeAttribute('aria-selected'));
-        li.setAttribute('aria-selected','true');
-        wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false');
-      });
-      menu.appendChild(li);
-    });
-
-    btn.addEventListener('click', ()=>{
-      const open = wrap.classList.toggle('open');
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-    document.addEventListener('click', (e)=>{
-      if(!wrap.contains(e.target)){
-        wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false');
-      }
-    });
-
-    // teclado básico
-    btn.addEventListener('keydown', (e)=>{
-      const opts = [...menu.querySelectorAll('.nice-select__option')];
-      const iSel = opts.findIndex(o=>o.getAttribute('aria-selected')==='true');
-      if(e.key==='Escape'){ wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false'); }
-      if(e.key==='ArrowDown' || e.key==='ArrowUp'){
-        e.preventDefault();
-        let i = iSel;
-        if(e.key==='ArrowDown') i = Math.min(opts.length-1, iSel+1);
-        if(e.key==='ArrowUp')   i = Math.max(0, iSel-1);
-        opts[i]?.click();
-        wrap.classList.add('open'); btn.setAttribute('aria-expanded','true');
-      }
-      if(e.key==='Enter' && wrap.classList.contains('open')){
-        wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false');
-      }
-    });
-
-    native.parentNode.insertBefore(wrap, native);
-    wrap.appendChild(btn);
-    wrap.appendChild(menu);
-  }
-
-  document.addEventListener('DOMContentLoaded', ()=>{
-    const sexo = document.getElementById('m-sexo');
-    if (sexo) enhanceSelect(sexo);
-  });
-})();
-</script>
-
-
+  <script src="perfil.js"></script>
 </body>
 </html>

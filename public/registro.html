@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PetCare • Crear cuenta</title>
   <link rel="stylesheet" href="registro.css" />
-  <script src="inicio.js"></script>
+  <script src="inicio.js" defer></script>
 </head>
 <body>
   <main class="phone">
@@ -32,11 +32,11 @@
       <label class="label" for="confirmar">Confirmar contraseña*</label>
       <input id="confirmar" class="input" type="password" placeholder="********" />
 
-      <!-- si preferís navegación directa, mantené el <a>; si vas a validar, usá <button> -->
-      <a class="btn btn-accent full" href="mascota.html" id="btn-registro">Registrarse</a>
+      <!-- Botón corregido -->
+      <button class="btn btn-accent full" id="btn-registro" type="button">Registrarse</button>
     </section>
   </main>
-  <script src="theme-toggle.js" defer></script>
 
+  <script src="theme-toggle.js" defer></script>
 </body>
 </html>

@@ -1,4 +1,16 @@
+// inicio.js
 const DBURL = "http://localhost:3000";
+
+// Helpers de sesión
+function getUser() {
+  try { return JSON.parse(localStorage.getItem("petcare_user")); } catch { return null; }
+}
+function setUser(u) {
+  localStorage.setItem("petcare_user", JSON.stringify(u));
+}
+function clearUser() {
+  localStorage.removeItem("petcare_user");
+}
 
 function validarEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -11,20 +23,20 @@ function mostrarMensajeOk(texto) {
     mensaje.id = "mensaje-exito";
     mensaje.style.marginTop = "8px";
     mensaje.style.color = "green";
-    const contenedor = document.querySelector(".content");
-    if (contenedor) contenedor.appendChild(mensaje);
+    const contenedor = document.querySelector(".content") || document.body;
+    contenedor.appendChild(mensaje);
   }
   mensaje.textContent = texto;
 }
 
 function mostrarError(input, texto) {
-  input.classList.add("input-error");
+  if (input?.classList) input.classList.add("input-error");
   let error = document.createElement("div");
   error.className = "error";
   error.style.color = "red";
   error.style.marginTop = "6px";
   error.textContent = texto;
-  input.insertAdjacentElement("afterend", error);
+  (input?.insertAdjacentElement ? input.insertAdjacentElement("afterend", error) : document.body.appendChild(error));
 }
 
 function limpiarErrores() {
@@ -34,25 +46,22 @@ function limpiarErrores() {
   if (mensaje) mensaje.textContent = "";
 }
 
+// Detectar sesión y sugerir continuar
 async function buscarLogin() {
-  let loginActual = null;
-  try { 
-    loginActual = JSON.parse(localStorage.getItem("petcare_user")); 
-  } catch {}
-
-  if (loginActual && loginActual.id) {
+  const u = getUser();
+  if (u && u.id) {
     const banner = document.createElement("div");
     banner.className = "banner";
-    banner.textContent = `Se detectó una sesión, bienvenido ${loginActual.nombre || "usuario"}`;
+    banner.textContent = `Sesión detectada, bienvenido ${u.nombre || "usuario"}`;
     document.body.appendChild(banner);
-
     setTimeout(() => {
       banner.remove();
-      location.href = "principal.html";
-    }, 2000);
+      irSegunMascotas();
+    }, 1200);
   }
 }
 
+// ------- REGISTRO -------
 async function registrarUsuario() {
   limpiarErrores();
   const nombreInput = document.getElementById("nombre");
@@ -76,29 +85,29 @@ async function registrarUsuario() {
   if (!valido) return;
 
   try {
-    const respuesta = await fetch(`${DBURL}/usuarios`, {
+    const r = await fetch(`${DBURL}/usuarios`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nombre, email, password: pass, rol: "usuario" })
     });
-    const datos = await respuesta.json();
-    if (respuesta.ok) {
-      nombreInput.value = "";
-      emailInput.value = "";
-      passInput.value = "";
-      confirmarInput.value = "";
-      mostrarMensajeOk("¡Cuenta registrada con éxito! Iniciá sesión.");
-      setTimeout(() => { location.href = "login.html"; }, 900);
-    } else {
-      mostrarError(emailInput, datos.error || "No se pudo registrar");
+    const datos = await r.json();
+
+    if (!r.ok) {
+      mostrarError(emailInput, datos?.error || "No se pudo registrar");
+      return;
     }
+
+    // Auto-login: guardo usuario y voy directo a mascota.html
+    setUser({ id: datos.id, nombre: datos.nombre, email: datos.email, rol: datos.rol });
+    mostrarMensajeOk("¡Cuenta creada! Vamos a crear tu mascota…");
+    setTimeout(() => { location.href = "mascota.html"; }, 800);
   } catch (e) {
     mostrarError(emailInput, "Error de red");
   }
 }
 
 function prepararRegistro() {
-  const boton = document.querySelector(".btn.btn-orange.full");
+  const boton = document.getElementById("btn-registro");
   if (!boton) return;
   boton.addEventListener("click", (e) => {
     e.preventDefault();
@@ -106,6 +115,7 @@ function prepararRegistro() {
   });
 }
 
+// ------- LOGIN -------
 function prepararLogin() {
   const emailInput = document.querySelectorAll(".input")[0];
   const passInput  = document.querySelectorAll(".input")[1];
@@ -135,37 +145,36 @@ function prepararLogin() {
       const d = await r.json();
 
       if (r.ok) {
-        // GUARDADO UNIFICADO
-        localStorage.setItem("petcare_user", JSON.stringify(d));
+        setUser(d);
         await irSegunMascotas();
       } else {
-        mostrarError(passInput,"El usuario o contraseña son incorrectos");
-      }      
+        mostrarError(passInput,"Usuario o contraseña incorrectos");
+      }
     } catch {
       mostrarError(passInput, "Error de red");
     }
   });
 }
 
+// ------- Ruteo post-login -------
 async function tieneMascotas(userId) {
   try {
-    const r = await fetch(`${DBURL}/mascotas`);
+    const r = await fetch(`${DBURL}/usuarios/${userId}/mascotas`);
     const data = await r.json();
-    if (!Array.isArray(data)) return false;
-    return data.some(m => m.usuario_id === userId);
+    return Array.isArray(data) && data.length > 0;
   } catch {
     return false;
   }
 }
 
 async function irSegunMascotas() {
-  let u = null;
-  try { u = JSON.parse(localStorage.getItem("petcare_user")); } catch {}
+  const u = getUser();
   if (!u || !u.id) { location.href = "login.html"; return; }
   const hay = await tieneMascotas(u.id);
   location.href = hay ? "principal.html" : "mascota.html";
 }
 
+// ------- Boot -------
 document.addEventListener("DOMContentLoaded", () => {
   const path = (location.pathname || "").toLowerCase();
   if (path.endsWith("registro.html")) prepararRegistro();

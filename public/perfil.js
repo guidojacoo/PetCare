@@ -1,22 +1,40 @@
+// perfil.js
 const DBURL = "http://localhost:3000";
 
-function getUsuario() {
-  try { return JSON.parse(localStorage.getItem("usuario")); } catch { return null; }
+// ====== Sesión unificada + migración (usuario -> petcare_user) ======
+(function migrateSessionKey(){
+  try {
+    const NEW_KEY = "petcare_user";
+    const OLD_KEY = "usuario";
+    const newVal = localStorage.getItem(NEW_KEY);
+    const oldVal = localStorage.getItem(OLD_KEY);
+    if (!newVal && oldVal) {
+      localStorage.setItem(NEW_KEY, oldVal);
+      localStorage.removeItem(OLD_KEY);
+    }
+  } catch(e) {}
+})();
+
+function getUser() {
+  try { return JSON.parse(localStorage.getItem("petcare_user")); } catch { return null; }
+}
+function setUser(u) {
+  localStorage.setItem("petcare_user", JSON.stringify(u));
 }
 
+// ====== Boot ======
 document.addEventListener("DOMContentLoaded", async () => {
-  const u = getUsuario();
+  const u = getUser();
   if (!u || !u.id) { location.href = "login.html"; return; }
 
   await cargarUsuario(u.id);
-
   await cargarMascotas(u.id);
-
   wireEditarPerfil(u.id);
-
   wireEditorMascota(u.id);
+  enhanceSelect(document.getElementById('m-sexo'));
 });
 
+// ====== Usuario ======
 async function cargarUsuario(userId) {
   try {
     const r = await fetch(`${DBURL}/usuarios/${userId}`);
@@ -61,9 +79,11 @@ function wireEditarPerfil(userId) {
         const d = await r.json();
         if (!r.ok) throw new Error(d.error || "Error");
 
+        // Refresco UI + sesión unificada
         document.getElementById("user-email").textContent = d.email || email;
-        const u = getUsuario();
-        localStorage.setItem("usuario", JSON.stringify({ ...u, email: d.email || email }));
+        const u = getUser();
+        setUser({ ...u, email: d.email || email });
+
         alert("Perfil actualizado");
         form.classList.add("hidden");
         document.getElementById("edit-pass").value = "";
@@ -75,32 +95,30 @@ function wireEditarPerfil(userId) {
   }
 }
 
+// ====== Mascotas ======
 async function cargarMascotas(userId) {
   const ul = document.getElementById("lista-mascotas");
   ul.innerHTML = "<li class='item'><span class='meta'>Cargando...</span></li>";
 
   try {
-    const r = await fetch(`${DBURL}/mascotas`);
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || "Error");
+    // Endpoint correcto por usuario (evita bajar todas)
+    const r = await fetch(`${DBURL}/usuarios/${userId}/mascotas`);
+    const mias = await r.json();
+    if (!r.ok) throw new Error(mias.error || "Error");
 
-    const mias = d.filter(m => m.usuario_id === userId);
-    if (mias.length === 0) {
+    if (!Array.isArray(mias) || mias.length === 0) {
       ul.innerHTML = `
         <li class="item">
-          <span class="meta">No tenés mascotas.</span>
-          <br>
-          <button id="btn-crear-mascota" 
+          <span class="meta">No tenés mascotas.</span><br>
+          <button id="btn-crear-mascota"
                   style="margin-top:10px; padding:10px 16px; border:none; border-radius:8px; background:#22c55e; color:#fff; font-weight:bold; cursor:pointer;">
             Crear Mascota
           </button>
         </li>
       `;
-    
-      document.getElementById("btn-crear-mascota").addEventListener("click", () => {
+      document.getElementById("btn-crear-mascota")?.addEventListener("click", () => {
         location.href = "mascota.html";
       });
-    
       return;
     }
 
@@ -145,6 +163,9 @@ function abrirEditor(m) {
   document.getElementById("m-raza").value = m.raza || "";
   document.getElementById("m-peso").value = m.peso_kg || "";
   document.getElementById("m-fecha").value = m.fecha_nacimiento ? String(m.fecha_nacimiento).slice(0,10) : "";
+
+  // Actualizar el “select lindo” si ya está activo
+  refreshNiceSelectLabel(document.getElementById('m-sexo'));
 }
 
 function wireEditorMascota(userId) {
@@ -152,7 +173,7 @@ function wireEditorMascota(userId) {
   if (!editor) return;
 
   const btnCerrar = document.getElementById("btn-cerrar-editor");
-  if (btnCerrar) btnCerrar.addEventListener("click", () => editor.classList.add("hidden"));
+  btnCerrar?.addEventListener("click", () => editor.classList.add("hidden"));
 
   const form = document.getElementById("form-mascota");
   if (form) {
@@ -205,4 +226,85 @@ function wireEditorMascota(userId) {
       }
     });
   }
+}
+
+// ====== "Select lindo" para #m-sexo ======
+function enhanceSelect(native){
+  if(!native || native.__nice) return;
+  native.classList.add('sr-only');    // oculto visual pero accesible
+  native.__nice = true;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'nice-select';
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'nice-select__button';
+  btn.setAttribute('aria-haspopup','listbox');
+  btn.setAttribute('aria-expanded','false');
+  btn.textContent = native.options[native.selectedIndex]?.text || 'Seleccionar';
+
+  const menu = document.createElement('ul');
+  menu.className = 'nice-select__menu';
+  menu.setAttribute('role','listbox');
+
+  [...native.options].forEach(opt=>{
+    const li = document.createElement('li');
+    li.className = 'nice-select__option';
+    li.setAttribute('role','option');
+    li.dataset.value = opt.value;
+    li.textContent = opt.textContent;
+    if(opt.selected) li.setAttribute('aria-selected','true');
+    li.addEventListener('click', ()=>{
+      native.value = opt.value;
+      native.dispatchEvent(new Event('change', {bubbles:true}));
+      btn.textContent = opt.textContent;
+      menu.querySelectorAll('[aria-selected="true"]').forEach(n=>n.removeAttribute('aria-selected'));
+      li.setAttribute('aria-selected','true');
+      wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false');
+    });
+    menu.appendChild(li);
+  });
+
+  btn.addEventListener('click', ()=>{
+    const open = wrap.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', (e)=>{
+    if(!wrap.contains(e.target)){
+      wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false');
+    }
+  });
+
+  // teclado básico
+  btn.addEventListener('keydown', (e)=>{
+    const opts = [...menu.querySelectorAll('.nice-select__option')];
+    const iSel = opts.findIndex(o=>o.getAttribute('aria-selected')==='true');
+    if(e.key==='Escape'){ wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false'); }
+    if(e.key==='ArrowDown' || e.key==='ArrowUp'){
+      e.preventDefault();
+      let i = iSel >= 0 ? iSel : 0;
+      if(e.key==='ArrowDown') i = Math.min(opts.length-1, i + 1);
+      if(e.key==='ArrowUp')   i = Math.max(0, i - 1);
+      opts[i]?.click();
+      wrap.classList.add('open'); btn.setAttribute('aria-expanded','true');
+    }
+    if(e.key==='Enter' && wrap.classList.contains('open')){
+      wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false');
+    }
+  });
+
+  native.parentNode.insertBefore(wrap, native);
+  wrap.appendChild(btn);
+  wrap.appendChild(menu);
+
+  // Guardamos referencias para refrescar label luego
+  native.__niceWrap = wrap;
+  native.__niceBtn  = btn;
+}
+
+function refreshNiceSelectLabel(native){
+  if (!native || !native.__niceBtn) return;
+  const txt = native.options[native.selectedIndex]?.text || 'Seleccionar';
+  native.__niceBtn.textContent = txt;
 }

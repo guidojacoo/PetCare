@@ -5,20 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PetCare • Inicio</title>
   <link rel="stylesheet" href="index.css" />
+  
 </head>
 <body>
 
-<div class="theme-switch">
-  <input id="theme-switch" type="checkbox" aria-label="Cambiar tema"/>
-  <label class="theme-toggle" for="theme-switch">
-    <span class="sky"></span>
-    <span class="sun"></span>
-    <span class="moon"></span> 
-    <span class="cloud c1"></span>
-    <span class="cloud c2"></span>
-    <span class="stars"></span>
-  </label>
-</div>
+  <div class="theme-switch">
+    <input id="theme-switch" type="checkbox" aria-label="Cambiar tema"/>
+    <label class="theme-toggle" for="theme-switch">
+      <span class="sky"></span>
+      <span class="sun"></span>
+      <span class="moon"></span>
+      <span class="cloud c1"></span>
+      <span class="cloud c2"></span>
+      <span class="stars"></span>
+    </label>
+  </div>
 
   <main class="phone">
     <header class="hero">
@@ -26,14 +27,11 @@
       <p class="tagline">Una forma inteligente de cuidar a tu mascota</p>
     </header>
 
-    <!-- Rectángulo con animación chill y el logo centrado dentro de una circunferencia -->
     <section class="stage">
       <div class="blob b1"></div>
       <div class="blob b2"></div>
       <div class="blob b3"></div>
-
       <div class="logo-ring">
-        <!-- Usa la ruta real del archivo del logo -->
         <img src="imagenes/descarga.png" alt="Logo PetCare" class="logo-img" />
       </div>
     </section>
@@ -43,7 +41,71 @@
       <a class="btn btn-secondary full" href="registro.html">Crear cuenta</a>
     </div>
   </main>
-  <script src="theme-toggle.js" defer></script>
 
+  <!-- Modal solo con Continuar / Otra cuenta -->
+  <div id="continue-overlay" class="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="continue-title">
+      <h3 id="continue-title">¿Querés seguir con esta cuenta?</h3>
+      <p id="continue-desc"></p>
+      <div class="row">
+        <button id="btn-other"  class="btn btn-danger" type="button">Usar otra cuenta</button>
+        <button id="btn-continue" class="btn btn-accent" type="button">Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="theme-toggle.js"></script>
+  <script src="inicio.js"></script>
+  <script>
+    function getUser() {
+      try { return JSON.parse(localStorage.getItem("petcare_user")); } catch { return null; }
+    }
+    function clearUser() {
+      localStorage.removeItem("petcare_user");
+    }
+
+    window.addEventListener('load', () => {
+      const u = getUser();
+      if (!u || !u.id) return;
+
+      const overlay  = document.getElementById('continue-overlay');
+      const desc     = document.getElementById('continue-desc');
+      const btnCont  = document.getElementById('btn-continue');
+      const btnOther = document.getElementById('btn-other');
+
+      const nombre = (u && (u.nombre || (u.email ? u.email.split('@')[0] : 'usuario'))) || 'usuario';
+      desc.textContent = `Sesión detectada: ${nombre}`;
+      overlay.classList.add('show');
+      overlay.setAttribute('aria-hidden','false');
+
+      btnCont.addEventListener('click', async () => {
+        if (typeof irSegunMascotas === 'function') {
+          await irSegunMascotas();
+        } else {
+          location.href = 'principal.html';
+        }
+      });
+
+      btnOther.addEventListener('click', () => {
+        clearUser();
+        location.href = 'login.html';
+      });
+
+      // cerrar si clickea fuera del modal
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('show');
+          overlay.setAttribute('aria-hidden','true');
+        }
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay.classList.contains('show')) {
+          overlay.classList.remove('show');
+          overlay.setAttribute('aria-hidden','true');
+        }
+      });
+    });
+  </script>
 </body>
 </html>

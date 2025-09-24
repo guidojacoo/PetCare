@@ -1,4 +1,4 @@
-// Forzar zona horaria Argentina
+// index.js (server)
 process.env.TZ = 'America/Argentina/Buenos_Aires';
 
 import "dotenv/config";
@@ -11,7 +11,6 @@ import * as usuarios from "./controllers/usuarios.js";
 import * as planes from "./controllers/planes.js";
 import * as eventos from "./controllers/eventos.js";
 
-
 let app = express();
 app.use(cors());
 app.use(express.json());
@@ -20,39 +19,43 @@ app.use(express.json());
 app.get("/", (req, res) => res.json({ ok: true, api: "PetCare" }));
 
 // Rutas Mascotas
-app.get("/mascotas", mascotas.Listar)
-app.get("/mascotas/:id", mascotas.Obtener)
-app.post("/mascotas", mascotas.Crear)
-app.put("/mascotas/:id", mascotas.Actualizar)
-app.delete("/mascotas/:id", mascotas.Eliminar)
-app.get("/mascotas/:id/horarios", mascotas.HorariosDeMascota)
+app.get("/mascotas", mascotas.Listar);
+app.get("/mascotas/:id", mascotas.Obtener);
+app.post("/mascotas", mascotas.Crear);
+app.put("/mascotas/:id", mascotas.Actualizar);
+app.delete("/mascotas/:id", mascotas.Eliminar);
+app.get("/mascotas/:id/horarios", mascotas.HorariosDeMascota);
+
+// NUEVA: mascotas de un usuario (para decidir flujo post-login)
+app.get("/usuarios/:id/mascotas", mascotas.ListarPorUsuario);
 
 // Rutas Planes
 app.post("/db/plan", planes.GuardarPlanDB);
-app.get("/db/plan/:id", planes.ObtenerPlanDB);             
-app.get("/db/mismascotas/:id", planes.MisMascotasDB);  
-app.get("/db/planes", planes.Listar);  
+app.get("/db/plan/:id", planes.ObtenerPlanDB);
+app.get("/db/mismascotas/:id", planes.MisMascotasDB);
+app.get("/db/planes", planes.Listar);
 
-// Rutas Planes extra (además de las tuyas)
+// Rutas Planes extra
 app.get("/db/plan/ultimo/:userId", planes.UltimoPlanDeUsuario);
 app.post("/db/plan/:id/activar", planes.Activar);
 app.post("/db/plan/:id/desactivar", planes.Desactivar);
 app.post("/db/plan/:id/sync", planes.RegistrarSync);
 
-
 // Rutas Usuarios
-app.get("/usuarios", usuarios.Listar)
-app.get("/usuarios/:id", usuarios.Obtener)
-app.post("/usuarios", usuarios.Crear)
-app.put("/usuarios/:id", usuarios.Actualizar)
-app.delete("/usuarios/:id", usuarios.Eliminar)
-app.post("/login", usuarios.Login)
+app.get("/usuarios", usuarios.Listar);
+app.get("/usuarios/:id", usuarios.Obtener);
+app.post("/usuarios", usuarios.Crear);
+app.put("/usuarios/:id", usuarios.Actualizar);
+app.delete("/usuarios/:id", usuarios.Eliminar);
+app.post("/login", usuarios.Login);
 
-app.post("/eventos", eventos.Crear);                        
-app.get("/mascotas/:id/eventos", eventos.Listar);           
-app.get("/mascotas/:id/ticks", eventos.TicksDelDia);      
+// Eventos
+app.post("/eventos", eventos.Crear);
+app.get("/mascotas/:id/eventos", eventos.Listar);
+app.get("/mascotas/:id/ticks", eventos.TicksDelDia);
 
-const M = JSON.parse(fs.readFileSync("./ml/racion_model_es.json","utf8"))
+// ML: ración
+const M = JSON.parse(fs.readFileSync("./ml/racion_model_es.json","utf8"));
 
 function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)) }
 function clasificarTamanio(p){ if(p<10) return "mini"; if(p<25) return "mediana"; return "grande" }
@@ -98,7 +101,6 @@ app.post("/api/v1/racion_ml", (req,res)=>{
     return res.status(500).json({ ok:false, error:"server", detail:String(e?.message||e) })
   }
 })
-
 
 // Iniciar servidor
 let puerto = 3000;
