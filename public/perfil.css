@@ -401,3 +401,79 @@ input[type="number"]{
 }
 :root[data-theme="dark"] #m-fecha::-webkit-calendar-picker-indicator{ opacity:0; -webkit-appearance:none; }
 :root[data-theme="dark"] #m-fecha{ color-scheme:dark; }
+
+/* Separar botones del último input y acomodarlos en fila */
+#form-editar #edit-pass2 { margin-bottom: 8px; } /* un poco de aire bajo el input */
+
+#perfil-actions.form-actions{
+  margin-top: 14px;              /* separación del input */
+  display: flex;
+  justify-content: center;       /* centrados horizontalmente */
+  gap: 12px;                     /* espacio entre botones */
+}
+
+#perfil-actions .btn {
+  min-width: 140px;              /* ancho mínimo para que se vean parejos */
+  text-align: center;
+}
+
+/* En pantallas chicas, que ocupen todo el ancho y queden apilados */
+@media (max-width: 380px){
+  #perfil-actions.form-actions{
+    flex-direction: column-reverse;
+    align-items: center;
+  }
+  #perfil-actions .btn{ width: 100%; }
+}
+
+
+/* === Ajuste del botón ojo === */
+.password-wrap { position: relative; }
+.password-wrap .input { padding-right: 44px; } /* espacio para el ojo */
+
+.toggle-pass{
+  position:absolute;
+  right:8px; top:50%;
+  transform:translateY(-50%);
+  width:34px; height:34px;
+  border-radius:50%;
+  border:none;
+  background:transparent;
+  display:grid; place-items:center;
+  cursor:pointer;
+  transition:opacity .2s ease, transform .1s ease;
+  color:var(--text);          /* usa color de texto actual (claro u oscuro) */
+}
+.toggle-pass:hover{ transform:translateY(-50%) scale(1.05); }
+.toggle-pass:active{ transform:translateY(-50%) scale(0.95); }
+
+.toggle-pass svg{
+  width:22px; height:22px;
+  stroke:currentColor;
+  stroke-width:2;
+  fill:none;
+}
+
+/* slash (ocultar) */
+.toggle-pass .slash{
+  stroke-width:2.2;
+  stroke-linecap:round;
+  transform-origin:50% 50%;
+  transform:scale(0);
+  transition:transform .2s ease;
+}
+.toggle-pass.off .slash{ transform:scale(1); }
+
+/* Pupila parpadeo */
+.toggle-pass .pupil{
+  fill:currentColor;
+  transition:transform .18s ease;
+}
+.toggle-pass.blink .pupil{ transform:scaleY(0.15); }
+
+/* --- Modo oscuro: icono blanco --- */
+:root[data-theme="dark"] .toggle-pass{ color:#ffffff; }
+
+
+
+

@@ -159,3 +159,29 @@ input:focus{
   .content{ padding:20px }
   .step{ padding:18px }
 }
+
+
+/* Quitar flechas de los inputs type="number" */
+
+/* Chrome, Edge, Safari */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield; /* estándar moderno */
+}
+
+/* ===== Ocultar ícono de calendario SOLO en modo oscuro ===== */
+:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
+:root[data-theme="dark"] input[type="date"] {
+  appearance: textfield; /* Firefox también */
+}

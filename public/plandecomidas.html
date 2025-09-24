@@ -4,397 +4,8 @@
   <meta charset="UTF-8" />
   <title>Plan de Comidas - PetCare</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-  /* ========= PALETA (CLARO por defecto) ========= */
-  :root{
-    --bg:#95b8f6;          /* fondo global */
-    --text:#0f172a;        /* texto principal */
-    --muted:#35537a;       /* texto secundario */
-
-    --panel:#e6f0ff;       /* rectángulo principal */
-    --panel-2:#ffffff;     /* superficies internas / campos */
-    --ring:#aac8ff;        /* bordes suaves */
-
-    --accent:#eeb31e;      /* botón primario (amarillo) */
-    --accent-press:#ffc21a;
-    --secondary:#cfe2ff;   /* botón secundario */
-    --secondary-text:#0f172a;
-
-    --good:#1db954;
-    --pending:#fbbf24;
-    --bad:#ef4444;
-  }
-
-  /* ========= MODO OSCURO ========= */
-  :root[data-theme="dark"]{
-    --bg:#0f172a;
-    --text:#e6eefc;
-    --muted:#9fb4d8;
-
-    --panel:#0f162b;
-    --panel-2:#0b1120;
-    --ring:#1f2a44;
-
-    --secondary:#12213d;
-    --secondary-text:#e6eefc;
-
-    --good:#22c55e;
-    --pending:#eeb31e;
-    --bad:#ef4444;
-  }
-
-  /* ===== Reset ===== */
-  *{ box-sizing:border-box; }
-  body{
-    margin:0;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
-    background:var(--bg);
-    color:var(--text);
-  }
-
-  .phone{
-    position:relative;
-    max-width:520px;
-    margin:auto;
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-    padding:16px;
-    background:var(--bg);
-  }
-
-  /* ===== TOPBAR + CONTENT = UN SOLO RECTÁNGULO ===== */
-  .topbar{
-    position:relative;
-    padding:16px 20px;
-    background:var(--panel);
-    border:1px solid var(--ring);
-    border-bottom:none;                 /* unión con .content */
-    border-radius:14px 14px 0 0;
-    text-align:center;
-    box-shadow:0 8px 18px rgba(0,0,0,.10);
-    z-index:1;
-  }
-  .topbar h1{ margin:0; font-size:18px; font-weight:800; letter-spacing:.2px; }
-
-  /* botón volver (fuera del topbar en el HTML) */
-  .back{
-    position:absolute; left:26px; top:26px;
-    width:34px; height:34px; border-radius:10px;
-    display:grid; place-items:center;
-    background:var(--panel-2);
-    color:var(--text);
-    border:1px solid var(--ring);
-    box-shadow:0 2px 6px rgba(0,0,0,.06);
-  }
-  .back img{ display:block; }
-
-  .content{
-    background:var(--panel);
-    border:1px solid var(--ring);
-    border-top:none;                    /* unión con .topbar */
-    border-radius:0 0 14px 14px;
-    padding:20px;
-    display:grid; gap:20px;
-    box-shadow:0 8px 18px rgba(0,0,0,.10);
-  }
-
-  /* ===== Integramos las “cards” al mismo rectángulo ===== */
-  .card{
-    background:transparent;
-    border:none;
-    border-radius:0;
-    padding:0;
-    box-shadow:none;
-  }
-
-  .card h2{ margin:0 0 10px; font-size:16px; font-weight:800; }
-  .subtle{ color:var(--muted); font-size:13px; margin:4px 0 12px; }
-
-  /* ===== Formularios ===== */
-  label{
-    font-size:13px; color:var(--text);
-    display:block; margin:10px 0 6px;
-  }
-  input[type="text"],
-  input[type="number"],
-  select,
-  input[type="time"]{
-    width:100%;
-    padding:12px;
-    border-radius:10px;
-    border:2px solid var(--ring);
-    background:var(--panel-2);
-    color:var(--text);
-    outline:none;
-    transition:border .2s, box-shadow .2s, background .2s;
-  }
-  input:focus, select:focus{
-    border-color:var(--secondary);
-    box-shadow:0 0 0 2px rgba(58,160,255,.25);
-  }
-
-  .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .row3{ display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center; }
-  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-
-  /* ===== Botones ===== */
-  .btn{
-    display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    padding:12px 14px; border:none; border-radius:10px; cursor:pointer;
-    font-weight:800; transition:transform .05s ease, filter .15s ease, background .15s ease;
-    box-shadow:0 4px 10px rgba(0,0,0,.08);
-    color:var(--text);
-  }
-  .btn:active{ transform:translateY(1px) }
-  .btn.primary  { background:var(--accent); color:#1b1302; }
-  .btn.primary:hover{ background:var(--accent-press); }
-  .btn.secondary{ background:var(--secondary); color:var(--secondary-text); border:1px solid var(--ring); }
-  .btn.ghost    { background:transparent; color:var(--text); border:1px solid var(--ring); }
-  .btn-block{ width:100%; }
-
-  .divider{ height:1px; background:var(--ring); margin:12px 0; opacity:.9; }
-
-  #response{
-    margin:0; padding:12px 14px;
-    background:var(--panel-2);
-    border:1px solid var(--ring);
-    border-radius:10px; color:var(--text); font-size:14px;
-  }
-
-  .hint{ font-size:12px; color:var(--muted); }
-  .tag{
-    display:inline-flex; align-items:center; gap:6px;
-    background:var(--panel-2); border:1px solid var(--ring);
-    color:var(--text); padding:6px 10px; border-radius:999px; font-size:12px;
-  }
-
-  /* ===== Tabla ===== */
-  .table-wrap{
-    overflow:auto; border-radius:12px;
-    border:1px solid var(--ring); background:var(--panel);
-  }
-  table{ width:100%; border-collapse:separate; border-spacing:0; min-width:360px; }
-  thead th{
-    position:sticky; top:0; z-index:1;
-    background:var(--panel);
-    border-bottom:1px solid var(--ring);
-    padding:10px; text-align:left; font-weight:700; font-size:13px; color:var(--text);
-  }
-  tbody td{
-    padding:10px; border-bottom:1px solid var(--ring);
-    font-size:14px; color:var(--text);
-  }
-  tbody tr:hover{ background:var(--panel-2); }
-  .action{ display:inline-flex; gap:6px; }
-  .sm{ padding:6px 10px; font-size:12px; border-radius:8px; }
-
-  .danger{
-    border:1px solid rgba(239,68,68,.35);
-    background:rgba(239,68,68,.12);
-    color:var(--bad);
-  }
-  .ok{
-    border:1px solid rgba(34,197,94,.35);
-    background:rgba(34,197,94,.12);
-    color:var(--good);
-  }
-
-  .navdays{ display:flex; gap:8px; align-items:center; }
-  .daylabel{ font-weight:700; }
-
-  /* ===== MODAL IA ===== */
-  .modal{
-    position:fixed; inset:0;
-    display:none; align-items:center; justify-content:center;
-    background:rgba(0,0,0,.45); z-index:50;
-  }
-  .modal.open{ display:flex; }
-  .modal-card{
-    width:100%; max-width:520px;
-    background:var(--panel);
-    border:1px solid var(--ring);
-    border-radius:14px; padding:16px; position:relative;
-    box-shadow:0 16px 40px rgba(0,0,0,.25);
-    color:var(--text);
-  }
-  .close-x{
-    position:absolute; top:10px; right:12px;
-    background:transparent; border:none; color:var(--muted);
-    font-size:20px; cursor:pointer;
-  }
-  .list{
-    display:grid; gap:8px; max-height:220px; overflow:auto;
-    border:1px solid var(--ring); border-radius:10px; padding:8px; background:var(--panel-2);
-  }
-  .item{
-    display:flex; justify-content:space-between; gap:10px;
-    padding:10px; border:1px solid var(--ring); border-radius:10px; background:var(--panel-2); color:var(--text);
-  }
-  .pill{
-    padding:3px 8px; border:1px solid var(--ring); border-radius:999px; font-size:12px; color:var(--text);
-    background:var(--panel-2);
-  }
-
-  /* Botón “Volver” debajo del título (si lo usás inline) */
-  .back-inline{
-    display:inline-flex; align-items:center; gap:8px;
-    margin-top:10px; padding:8px 12px;
-    border-radius:10px; background:var(--panel-2); color:var(--text);
-    border:1px solid var(--ring); font-weight:800; text-decoration:none;
-    box-shadow:0 2px 6px rgba(0,0,0,.06);
-    transition:filter .15s ease, transform .05s ease, background .15s ease;
-  }
-  .back-inline .arr{ font-size:18px; line-height:1 }
-  .back-inline:hover{ filter:brightness(.98) }
-  .back-inline:active{ transform:translateY(1px) }
-
-  /* ==== Select fachero (custom) ==== */
-
-  /* Oculta visualmente el select original pero sigue funcionando */
-  .sr-only{
-    position:absolute!important; width:1px!important; height:1px!important;
-    padding:0!important; margin:-1px!important; overflow:hidden!important;
-    clip:rect(0 0 0 0)!important; clip-path:inset(50%)!important; white-space:nowrap!important;
-    border:0!important;
-  }
-
-  .nice-select{ position:relative; width:100%; }
-  .nice-select__button{
-    width:100%; text-align:left;
-    padding:12px 42px 12px 12px;
-    border-radius:10px; border:2px solid var(--ring);
-    background:var(--panel-2); color:var(--text);
-    font-weight:700; cursor:pointer;
-    box-shadow:0 4px 10px rgba(0,0,0,.08);
-    transition:border .15s ease, box-shadow .15s ease, background .15s ease;
-  }
-  .nice-select__button:focus{ outline:none; border-color:var(--secondary); box-shadow:0 0 0 2px rgba(58,160,255,.25); }
-
-  /* Flechita */
-  .nice-select__button::after{
-    content:"";
-    position:absolute; right:12px; top:50%;
-    width:10px; height:10px;
-    border-right:2px solid var(--text);
-    border-bottom:2px solid var(--text);
-    transform:translateY(-60%) rotate(45deg);
-    opacity:.65; transition:transform .2s ease;
-  }
-  .nice-select.open .nice-select__button::after{
-    transform:translateY(-20%) rotate(-135deg);
-  }
-
-  /* Menú flotante */
-  .nice-select__menu{
-    position:absolute; left:0; right:0; top:calc(100% + 6px);
-    background:var(--panel-2);
-    border:1px solid var(--ring);
-    border-radius:12px;
-    box-shadow:0 16px 28px rgba(0,0,0,.16);
-    padding:6px;
-    display:none;
-    z-index:40;
-    list-style:none; margin:6px 0 0 0;
-  }
-  .nice-select.open .nice-select__menu{ display:block; }
-
-  /* Opción */
-  .nice-select__option{
-    padding:10px 12px;
-    border-radius:8px;
-    cursor:pointer;
-    color:var(--text);
-    transition:background .12s ease;
-    list-style:none;
-  }
-  .nice-select__option:hover{ background:var(--panel-2); box-shadow:inset 0 0 0 1px var(--ring); }
-  .nice-select__option[aria-selected="true"]{
-    background:var(--panel-2);
-    box-shadow:inset 0 0 0 1px var(--ring);
-  }
-
-
-  /* ================== FIXES MODO OSCURO ================== */
-
-/* inputs nativos (time/number) y placeholders */
-:root[data-theme="dark"] input,
-:root[data-theme="dark"] select {
-  color-scheme: dark;           /* controles del SO oscuros */
-}
-:root[data-theme="dark"] input::placeholder {
-  color: #9fb4d8; opacity: .75;
-}
-
-/* botón “neutro” (el de Agregar) y sombras en dark */
-.btn{ 
-  background: var(--panel-2);   /* neutro claro/oscuro según tema */
-  color: var(--text);
-}
-.btn.ghost{ background: transparent; }
-:root[data-theme="dark"] .btn{ box-shadow: 0 6px 14px rgba(0,0,0,.35); }
-:root[data-theme="dark"] .btn.ghost{ border-color: var(--ring); }
-
-/* botón secundario en dark (por si lo usás) */
-:root[data-theme="dark"] .btn.secondary{
-  background:#12213d; color: var(--text); border-color: var(--ring);
-}
-
-/* select custom (botón y menú) */
-:root[data-theme="dark"] .nice-select__button{
-  background: var(--panel-2); border-color: var(--ring);
-}
-:root[data-theme="dark"] .nice-select__menu{
-  background: var(--panel-2); border-color: var(--ring);
-  box-shadow: 0 16px 28px rgba(0,0,0,.35);
-}
-:root[data-theme="dark"] .nice-select__option:hover{
-  background:#121a2f;           /* highlight oscuro */
-  box-shadow: inset 0 0 0 1px var(--ring);
-}
-
-/* tablas y contenedores: sombras algo más marcadas en dark */
-:root[data-theme="dark"] .topbar,
-:root[data-theme="dark"] .content{
-  box-shadow: 0 10px 26px rgba(0,0,0,.45);
-}
-/* Ocultar flechas nativas en inputs type="number" */
-
-/* Chrome, Edge, Safari */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button{
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-/* Firefox */
-input[type="number"]{
-  -moz-appearance: textfield;
-  appearance: textfield; /* estándar */
-}
-/* Centrar verticalmente el contenido de cada item de la lista */
-.item{ align-items:center; }
-
-/* La cajita que contiene las pastillas */
-.item .pillbox{ display:flex; gap:6px; align-items:center; }
-
-/* La pastilla en sí misma, texto centrado vertical */
-.pill{
-  display:inline-flex;              /* en vez de inline */
-  align-items:center;
-  justify-content:center;
-  line-height:1;                    /* evita que “suba” por el baseline */
-  padding:6px 10px;                 /* un pelín más alta */
-}
-/* segundo hijo (las pastillas) centrado, sin cambiar JS */
-.item > div:nth-child(2){ display:flex; gap:6px; align-items:center; }
-
-#calcIA{ margin-left: 55px; }   /* probá 12–24px a gusto */
-
-
-</style>
-
-
+  <link rel="stylesheet" href="plandecomidas.css">
+  
 </head>
 <body>
   <div class="phone">
@@ -550,6 +161,9 @@ input[type="number"]{
           <button class="btn primary" id="calcIA">Calcular racion</button>
         </div>
       </div>
+
+      <!-- FIX: elemento para mostrar hints/errores de IA -->
+      <p id="ia_hint" class="subtle" style="margin-top:8px"></p>
   
     </div>
   </div>
@@ -848,8 +462,17 @@ input[type="number"]{
       if(m.edad_meses!=null) iaEdad.value = String(Math.round(m.edad_meses))
       else if(m.fecha_nacimiento) iaEdad.value = String(monthsFromDate(m.fecha_nacimiento))
       if(m.kcal_100g!=null) iaKcal.value = String(m.kcal_100g)
-      if(m.actividad) iaAct.value = String(m.actividad).toLowerCase()
-      if(typeof m.castrado!=="undefined") iaCas.value = (m.castrado===true || String(m.castrado).toLowerCase()==="si")?"si":"no"
+      if(m.actividad) {
+        iaAct.value = String(m.actividad).toLowerCase()
+        iaAct.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+      if(typeof m.castrado!=="undefined") {
+        iaCas.value = (m.castrado===true || String(m.castrado).toLowerCase()==="si")?"si":"no"
+        iaCas.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+      // limpiar hint/result al cargar mascota
+      if(iaHint) iaHint.textContent = "";
+      if(iaResult) iaResult.textContent = "";
     }
 
     document.getElementById('calcIA').addEventListener('click', async ()=>{
@@ -860,7 +483,7 @@ input[type="number"]{
         actividad: iaAct.value,
         castrado:  iaCas.value
       }
-      iaHint.textContent = "Calculando..."
+      if(iaHint) iaHint.textContent = "Calculando..."
       try{
         const res = await fetch(`${BACKEND_URL}/api/v1/racion_ml`, {
           method:"POST", headers:{ "Content-Type":"application/json" },
@@ -876,7 +499,7 @@ input[type="number"]{
         document.getElementById('iaResult').textContent = `Sugerencia IA: ${Math.round(gd)} g/dia → ${Math.round(gpc)} g dividido en 2 raciones`
         setTimeout(()=> iaModal.classList.remove('open'), 700)
       }catch(e){
-        iaHint.textContent = `no se pudo calcular: ${e.message}`
+        if(iaHint) iaHint.textContent = `no se pudo calcular: ${e.message}`
       }
     })
   </script>
@@ -982,15 +605,6 @@ input[type="number"]{
       if (el) enhanceSelect(el);
     });
   });
-
-  if(m.actividad) {
-  iaAct.value = String(m.actividad).toLowerCase();
-  iaAct.dispatchEvent(new Event('change', { bubbles:true }));   // <- NUEVO
-}
-if(typeof m.castrado!=="undefined") {
-  iaCas.value = (m.castrado===true || String(m.castrado).toLowerCase()==="si")?"si":"no";
-  iaCas.dispatchEvent(new Event('change', { bubbles:true }));   // <- NUEVO
-}
 
   // por si abrís el modal antes de que el DOMContentLoaded dispare (extra seguro)
   window.addEventListener('load', ()=>{

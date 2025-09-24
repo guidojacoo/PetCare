@@ -308,3 +308,42 @@ function refreshNiceSelectLabel(native){
   const txt = native.options[native.selectedIndex]?.text || 'Seleccionar';
   native.__niceBtn.textContent = txt;
 }
+
+// Logout: limpia sesión y te lleva a login
+const btnLogout = document.getElementById("btn-logout");
+if (btnLogout) {
+  btnLogout.addEventListener("click", () => {
+    try { localStorage.removeItem("petcare_user"); } catch {}
+    // Ir a login (desde ahí podés iniciar con otra cuenta o ir a registro)
+    location.href = "login.html";
+  });
+}
+
+// ------ Mostrar / ocultar contraseña (un ojo controla ambos) ------
+function setupPasswordToggle(btn) {
+  const targets = (btn.dataset.target || "").split(",");
+  const inputs = targets.map(id => document.getElementById(id)).filter(Boolean);
+
+  if (!inputs.length) return;
+
+  btn.addEventListener('click', () => {
+    // animación blink
+    btn.classList.add('blink');
+    setTimeout(() => btn.classList.remove('blink'), 160);
+
+    const isOff = btn.classList.contains('off');
+    if (isOff) {
+      // Mostrar
+      inputs.forEach(inp => inp.type = 'text');
+      btn.classList.remove('off');
+      btn.setAttribute('aria-label','Ocultar contraseña');
+    } else {
+      // Ocultar
+      inputs.forEach(inp => inp.type = 'password');
+      btn.classList.add('off');
+      btn.setAttribute('aria-label','Mostrar contraseña');
+    }
+  });
+}
+
+document.querySelectorAll('.toggle-pass').forEach(setupPasswordToggle);
