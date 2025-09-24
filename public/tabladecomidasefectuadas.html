@@ -235,6 +235,36 @@
   .stock-row{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
   .stock-right{ color:var(--muted); font-size:13px; opacity:.95; text-align:right; }
   @media (max-width:600px){ .stock-right{ flex-basis:100%; text-align:left; margin-top:6px } }
+
+  /* Ocultar flechas nativas en inputs type="number" */
+
+/* Chrome, Edge, Safari */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"]{
+  -moz-appearance: textfield;
+  appearance: textfield; /* estándar */
+}
+
+/* ===== Header fijo mientras scrolleás ===== */
+.topbar{
+  position: sticky;             /* se pega al borde superior del viewport */
+  position: -webkit-sticky;     /* Safari */
+  top: 0;                       /* distancia al borde superior */
+  z-index: 1000;                /* por encima de cards/tabla */
+  background: var(--panel);     /* mismo fondo que el contenedor */
+  border-bottom: 1px solid var(--border, var(--ring, #1f2a44));
+  /* Si ya tenías padding/bordes/redondeo, dejalos tal cual */
+}
+
+/* Asegurá que el contenedor no rompa sticky */
+.phone{ overflow: visible; }     /* por si algún reset puso overflow:auto/hidden */
+
 </style>
 
 

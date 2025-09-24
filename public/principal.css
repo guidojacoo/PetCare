@@ -13,7 +13,7 @@
   --danger:#ff6b6b;
   --danger-press:#ff4d4f;
 
-  --ok:#1db954;        /* verde ON (cámara) */
+  --ok:#04b946;        /* verde ON (cámara) */
   --bad:#d32f2f;       /* rojo OFF (cámara) */
 }
 
@@ -33,7 +33,7 @@
   --danger:#ff6b6b;
   --danger-press:#ff4d4f;
 
-  --ok:#22c55e;
+  --ok:#04b946;
   --bad:#ef4444;
 }
 

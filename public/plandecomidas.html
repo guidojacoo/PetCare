@@ -358,6 +358,39 @@
 :root[data-theme="dark"] .content{
   box-shadow: 0 10px 26px rgba(0,0,0,.45);
 }
+/* Ocultar flechas nativas en inputs type="number" */
+
+/* Chrome, Edge, Safari */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"]{
+  -moz-appearance: textfield;
+  appearance: textfield; /* estándar */
+}
+/* Centrar verticalmente el contenido de cada item de la lista */
+.item{ align-items:center; }
+
+/* La cajita que contiene las pastillas */
+.item .pillbox{ display:flex; gap:6px; align-items:center; }
+
+/* La pastilla en sí misma, texto centrado vertical */
+.pill{
+  display:inline-flex;              /* en vez de inline */
+  align-items:center;
+  justify-content:center;
+  line-height:1;                    /* evita que “suba” por el baseline */
+  padding:6px 10px;                 /* un pelín más alta */
+}
+/* segundo hijo (las pastillas) centrado, sin cambiar JS */
+.item > div:nth-child(2){ display:flex; gap:6px; align-items:center; }
+
+#calcIA{ margin-left: 55px; }   /* probá 12–24px a gusto */
+
 
 </style>
 
@@ -517,7 +550,7 @@
           <button class="btn primary" id="calcIA">Calcular racion</button>
         </div>
       </div>
-  <p class="subtle" id="ia_hint">Hace click en el boton de calcular</p>
+  
     </div>
   </div>
   <script src="plandecomidas.js"></script>
@@ -848,53 +881,58 @@
     })
   </script>
   <script>
-/* Convierte #mode a un select custom manteniendo eventos y envío del form */
+/* === Select "fachero" reutilizable: funciona con #mode, #ia_actividad y #ia_castrado === */
 (function(){
   function enhanceSelect(native){
     if(!native || native.__nice) return;
-    native.classList.add('sr-only');
+    native.classList.add('sr-only');   // oculto visual pero accesible
     native.__nice = true;
 
-    // contenedor
+    // contenedor y UI
     const wrap = document.createElement('div');
     wrap.className = 'nice-select';
 
-    // botón visible
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'nice-select__button';
     btn.setAttribute('aria-haspopup','listbox');
     btn.setAttribute('aria-expanded','false');
-    btn.textContent = native.options[native.selectedIndex]?.text || 'Seleccionar';
 
-    // menú
     const menu = document.createElement('ul');
     menu.className = 'nice-select__menu';
     menu.setAttribute('role','listbox');
 
-    // opciones
-    [...native.options].forEach(opt=>{
-      const li = document.createElement('li');
-      li.className = 'nice-select__option';
-      li.setAttribute('role','option');
-      li.dataset.value = opt.value;
-      li.textContent = opt.textContent;
-      if(opt.selected) li.setAttribute('aria-selected','true');
-      li.addEventListener('click', ()=>{
-        // actualizar nativo
-        native.value = opt.value;
-        native.dispatchEvent(new Event('change', {bubbles:true}));
-        // UI
-        btn.textContent = opt.textContent;
-        menu.querySelectorAll('[aria-selected="true"]').forEach(n=>n.removeAttribute('aria-selected'));
-        li.setAttribute('aria-selected','true');
-        wrap.classList.remove('open');
-        btn.setAttribute('aria-expanded','false');
+    // construir opciones
+    const buildOptions = () => {
+      menu.innerHTML = '';
+      [...native.options].forEach((opt, idx)=>{
+        const li = document.createElement('li');
+        li.className = 'nice-select__option';
+        li.setAttribute('role','option');
+        li.dataset.value = opt.value;
+        li.textContent = opt.textContent;
+        if(opt.selected) li.setAttribute('aria-selected','true');
+        li.addEventListener('click', ()=>{
+          native.value = opt.value;
+          native.dispatchEvent(new Event('change', {bubbles:true}));
+          wrap.classList.remove('open');
+          btn.setAttribute('aria-expanded','false');
+        });
+        menu.appendChild(li);
       });
-      menu.appendChild(li);
+      // texto del botón
+      btn.textContent = native.options[native.selectedIndex]?.text || 'Seleccionar';
+    };
+
+    // sincroniza UI cuando el valor cambia por código (ej: llenarDesdeMascota)
+    native.addEventListener('change', ()=>{
+      btn.textContent = native.options[native.selectedIndex]?.text || 'Seleccionar';
+      menu.querySelectorAll('[aria-selected="true"]').forEach(n=>n.removeAttribute('aria-selected'));
+      const sel = menu.querySelector(`.nice-select__option[data-value="${CSS.escape(native.value)}"]`);
+      if(sel) sel.setAttribute('aria-selected','true');
     });
 
-    // abrir/cerrar
+    // abrir / cerrar
     btn.addEventListener('click', ()=>{
       const open = wrap.classList.toggle('open');
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -913,9 +951,9 @@
       if(e.key==='Escape'){ wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false'); }
       if(e.key==='ArrowDown' || e.key==='ArrowUp'){
         e.preventDefault();
-        let i = iSel;
-        if(e.key==='ArrowDown') i = Math.min(opts.length-1, iSel+1);
-        if(e.key==='ArrowUp')   i = Math.max(0, iSel-1);
+        let i = iSel < 0 ? 0 : iSel;
+        if(e.key==='ArrowDown') i = Math.min(opts.length-1, i + 1);
+        if(e.key==='ArrowUp')   i = Math.max(0, i - 1);
         opts[i]?.click();
         wrap.classList.add('open'); btn.setAttribute('aria-expanded','true');
       }
@@ -924,18 +962,49 @@
       }
     });
 
-    // insertar antes del select nativo
+    // insertar en DOM
     native.parentNode.insertBefore(wrap, native);
     wrap.appendChild(btn);
     wrap.appendChild(menu);
+
+    // construir opciones iniciales
+    buildOptions();
+
+    // si el <select> cambia sus opciones dinámicamente
+    const obs = new MutationObserver(buildOptions);
+    obs.observe(native, { childList:true, subtree:false, attributes:false });
   }
 
+  // aplicar a los 3 selects: #mode (página) y los dos del modal IA
   document.addEventListener('DOMContentLoaded', ()=>{
-    const sel = document.getElementById('mode');
-    if(sel) enhanceSelect(sel);
+    ['mode','ia_actividad','ia_castrado'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) enhanceSelect(el);
+    });
   });
+
+  if(m.actividad) {
+  iaAct.value = String(m.actividad).toLowerCase();
+  iaAct.dispatchEvent(new Event('change', { bubbles:true }));   // <- NUEVO
+}
+if(typeof m.castrado!=="undefined") {
+  iaCas.value = (m.castrado===true || String(m.castrado).toLowerCase()==="si")?"si":"no";
+  iaCas.dispatchEvent(new Event('change', { bubbles:true }));   // <- NUEVO
+}
+
+  // por si abrís el modal antes de que el DOMContentLoaded dispare (extra seguro)
+  window.addEventListener('load', ()=>{
+    ['ia_actividad','ia_castrado'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) enhanceSelect(el);
+    });
+  });
+
+  // expone por si querés usarlo más adelante
+  window.enhanceSelect = enhanceSelect;
 })();
 </script>
+
 <script src="theme-toggle.js" defer></script>
 
 </body>
