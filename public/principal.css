@@ -10,11 +10,11 @@
   --accent:#eeb31e;    /* botones principales (amarillo) */
   --accent-press:#ffc21a;
 
-  --danger:#ff6b6b;
-  --danger-press:#ff4d4f;
+  --danger:#ee2727;
+  --danger-press:#fa1317;
 
   --ok:#04b946;        /* verde ON (cámara) */
-  --bad:#d32f2f;       /* rojo OFF (cámara) */
+  --bad:#f71010;       /* rojo OFF (cámara) */
 }
 
 /* ========= MODO OSCURO (se activa con <html data-theme="dark">) ========= */
@@ -30,11 +30,11 @@
   --accent:#eeb31e;
   --accent-press:#ffc21a;
 
-  --danger:#ff6b6b;
-  --danger-press:#ff4d4f;
+  --danger:#f72323;
+  --danger-press:#f8181b;
 
   --ok:#04b946;
-  --bad:#ef4444;
+  --bad:#f01515;
 }
 
 /* ===== BASE ===== */
