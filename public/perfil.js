@@ -313,7 +313,10 @@ function refreshNiceSelectLabel(native){
 const btnLogout = document.getElementById("btn-logout");
 if (btnLogout) {
   btnLogout.addEventListener("click", () => {
-    try { localStorage.removeItem("petcare_user"); } catch {}
+    try {
+      localStorage.removeItem("petcare_user");
+      localStorage.removeItem("usuario"); // <-- eliminar también la clave antigua
+    } catch {}
     // Ir a login (desde ahí podés iniciar con otra cuenta o ir a registro)
     location.href = "login.html";
   });
