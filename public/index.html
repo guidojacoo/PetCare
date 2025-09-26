@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PetCare • Inicio</title>
   <link rel="stylesheet" href="index.css" />
-  
 </head>
 <body>
 
@@ -42,7 +41,7 @@
     </div>
   </main>
 
-  <!-- Modal solo con Continuar / Otra cuenta -->
+  <!-- Modal Continuar / Otra cuenta -->
   <div id="continue-overlay" class="overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="continue-title">
       <h3 id="continue-title">¿Querés seguir con esta cuenta?</h3>
@@ -57,15 +56,21 @@
   <script src="theme-toggle.js"></script>
   <script src="inicio.js"></script>
   <script>
-    function getUser() {
-      try { return JSON.parse(localStorage.getItem("petcare_user")); } catch { return null; }
+    // === Sesión: leer cualquiera y preferir "usuario"
+    function getUserUnified() {
+      let u=null,p=null;
+      try { u = JSON.parse(localStorage.getItem("usuario")); } catch {}
+      try { p = JSON.parse(localStorage.getItem("petcare_user")); } catch {}
+      return (u && u.id) ? u : (p && p.id ? p : null);
     }
-    function clearUser() {
+    // === Logout fuerte: borra ambas claves para no “heredar” cuentas
+    function hardLogout() {
+      localStorage.removeItem("usuario");
       localStorage.removeItem("petcare_user");
     }
 
     window.addEventListener('load', () => {
-      const u = getUser();
+      const u = getUserUnified();
       if (!u || !u.id) return;
 
       const overlay  = document.getElementById('continue-overlay');
@@ -73,7 +78,7 @@
       const btnCont  = document.getElementById('btn-continue');
       const btnOther = document.getElementById('btn-other');
 
-      const nombre = (u && (u.nombre || (u.email ? u.email.split('@')[0] : 'usuario'))) || 'usuario';
+      const nombre = (u.nombre || (u.email ? u.email.split('@')[0] : 'usuario'));
       desc.textContent = `Sesión detectada: ${nombre}`;
       overlay.classList.add('show');
       overlay.setAttribute('aria-hidden','false');
@@ -87,11 +92,10 @@
       });
 
       btnOther.addEventListener('click', () => {
-        clearUser();
+        hardLogout();             // << cierra la sesión actual
         location.href = 'login.html';
       });
 
-      // cerrar si clickea fuera del modal
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
           overlay.classList.remove('show');

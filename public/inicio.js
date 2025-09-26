@@ -1,14 +1,20 @@
 // inicio.js
 const DBURL = "http://localhost:3000";
 
-// Helpers de sesión
-function getUser() {
-  try { return JSON.parse(localStorage.getItem("petcare_user")); } catch { return null; }
+// ===== Helpers de sesión (unificados) =====
+function getUserUnified() {
+  let u=null,p=null;
+  try { u = JSON.parse(localStorage.getItem("usuario")); } catch {}
+  try { p = JSON.parse(localStorage.getItem("petcare_user")); } catch {}
+  return (u && u.id) ? u : (p && p.id ? p : null);
 }
-function setUser(u) {
-  localStorage.setItem("petcare_user", JSON.stringify(u));
+function setUserUnified(user) {
+  // Guarda en ambas por compatibilidad con páginas viejas
+  localStorage.setItem("usuario", JSON.stringify(user));
+  localStorage.setItem("petcare_user", JSON.stringify(user));
 }
-function clearUser() {
+function clearUserUnified() {
+  localStorage.removeItem("usuario");
   localStorage.removeItem("petcare_user");
 }
 
@@ -46,9 +52,9 @@ function limpiarErrores() {
   if (mensaje) mensaje.textContent = "";
 }
 
-// Detectar sesión y sugerir continuar
+// Detectar sesión y sugerir continuar (solo en login/registro)
 async function buscarLogin() {
-  const u = getUser();
+  const u = getUserUnified();
   if (u && u.id) {
     const banner = document.createElement("div");
     banner.className = "banner";
@@ -69,10 +75,10 @@ async function registrarUsuario() {
   const passInput = document.getElementById("contrasena");
   const confirmarInput = document.getElementById("confirmar");
 
-  const nombre = nombreInput.value.trim();
-  const email = emailInput.value.trim();
-  const pass = passInput.value;
-  const confirmar = confirmarInput.value;
+  const nombre = (nombreInput?.value || "").trim();
+  const email = (emailInput?.value || "").trim();
+  const pass = passInput?.value || "";
+  const confirmar = confirmarInput?.value || "";
 
   let valido = true;
   if (!nombre) { mostrarError(nombreInput, "Completá tu nombre"); valido = false; }
@@ -98,7 +104,7 @@ async function registrarUsuario() {
     }
 
     // Auto-login: guardo usuario y voy directo a mascota.html
-    setUser({ id: datos.id, nombre: datos.nombre, email: datos.email, rol: datos.rol });
+    setUserUnified({ id: datos.id, nombre: datos.nombre, email: datos.email, rol: datos.rol });
     mostrarMensajeOk("¡Cuenta creada! Vamos a crear tu mascota…");
     setTimeout(() => { location.href = "mascota.html"; }, 800);
   } catch (e) {
@@ -145,7 +151,7 @@ function prepararLogin() {
       const d = await r.json();
 
       if (r.ok) {
-        setUser(d);
+        setUserUnified(d);
         await irSegunMascotas();
       } else {
         mostrarError(passInput,"Usuario o contraseña incorrectos");
@@ -159,16 +165,23 @@ function prepararLogin() {
 // ------- Ruteo post-login -------
 async function tieneMascotas(userId) {
   try {
+    // si tenés el endpoint /usuarios/:id/mascotas úsalo, si no, filtra cliente:
     const r = await fetch(`${DBURL}/usuarios/${userId}/mascotas`);
-    const data = await r.json();
-    return Array.isArray(data) && data.length > 0;
+    if (r.ok) {
+      const data = await r.json();
+      return Array.isArray(data) && data.length > 0;
+    }
+    // fallback
+    const r2 = await fetch(`${DBURL}/mascotas`);
+    const all = await r2.json();
+    return Array.isArray(all) && all.some(m => Number(m.usuario_id) === Number(userId));
   } catch {
     return false;
   }
 }
 
 async function irSegunMascotas() {
-  const u = getUser();
+  const u = getUserUnified();
   if (!u || !u.id) { location.href = "login.html"; return; }
   const hay = await tieneMascotas(u.id);
   location.href = hay ? "principal.html" : "mascota.html";
@@ -181,3 +194,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (path.endsWith("login.html")) prepararLogin();
   if (path.endsWith("login.html") || path.endsWith("registro.html")) buscarLogin();
 });
+
+// Export opcional por si lo usa index.html
+window.irSegunMascotas = irSegunMascotas;
