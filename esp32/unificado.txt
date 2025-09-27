@@ -718,6 +718,14 @@ void setup() {
   server.on("/getPlan",   HTTP_GET,     handleGetPlan);
   server.on("/getPlan",   HTTP_OPTIONS, handleOptions);
 
+  // === NUEVO: endpoint de bocina para disparar el mismo patrón desde el botón del front
+  server.on("/buzzer", HTTP_POST, []() {
+    enableCORS();
+    buzzerAvisoComida();  // suena con el patrón precomida
+    server.send(200, "application/json", "{\"ok\":true}");
+  });
+  server.on("/buzzer", HTTP_OPTIONS, handleOptions);
+
   server.begin();
  
   // === MIC NVS: cargar contadores y alinear el día actual
@@ -852,4 +860,3 @@ void loop() {
     }
   }
 }
-
