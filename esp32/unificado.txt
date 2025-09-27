@@ -6,6 +6,7 @@
 #include <Preferences.h>
 #include <math.h>   // <<< para fabsf, sqrtf, lroundf
 
+
 // ===========================
 // WiFi
 // ===========================
@@ -40,6 +41,51 @@ const unsigned long PUMP_GAP_MS = 2000; // 2 s
 inline void pump_on()  { digitalWrite(PUMP_PIN, PUMP_ON_LEVEL);  pumpOn = true;  }
 inline void pump_off() { digitalWrite(PUMP_PIN, PUMP_OFF_LEVEL); pumpOn = false; }
 
+
+// ===========================
+// === BUZZER ADD ===
+// ===========================
+#define BUZZER_PIN 27          // puedes usar cualquier GPIO libre
+#define BUZZER_CHANNEL 0       // canal LEDC para el tono
+
+// flags por comida para no repetir el aviso
+bool buzzed[7][12]; // 7 días x MAX_MEALS_PER_DAY (se define luego), pero necesitamos la constante aquí
+// Como MAX_MEALS_PER_DAY aún no está definido acá, lo re-declaramos abajo como extern:
+extern const int __maxMealsPerDayDeclHack__ = 12;
+
+void setupBuzzer() {
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+}
+
+static inline void buzzerTone(int freq, int ms) {
+  tone(BUZZER_PIN, freq, ms);  // genera el tono
+  delay(ms);
+  noTone(BUZZER_PIN);          // apaga
+}
+
+void buzzerAvisoComida() {
+  buzzerTone(2000, 1000);  // peep 1.0 s
+  delay(100);
+  buzzerTone(2000, 500);   // pep 0.5 s
+  delay(100);
+  buzzerTone(2000, 500);   // pep 0.5 s
+}
+
+// util: hh:mm -> hh:mm menos 1 minuto (maneja 00:00 -> 23:59)
+String prevMinute(const String& hhmm) {
+  if (hhmm.length()!=5 || hhmm.charAt(2)!=':') return "";
+  int hh = hhmm.substring(0,2).toInt();
+  int mm = hhmm.substring(3,5).toInt();
+  mm -= 1;
+  if (mm < 0) { mm = 59; hh -= 1; if (hh < 0) hh = 23; }
+  char buf[6];
+  snprintf(buf, sizeof(buf), "%02d:%02d", hh, mm);
+  return String(buf);
+}
+// ===========================
+
+
 // ===========================
 // Web Server
 // ===========================
@@ -69,6 +115,13 @@ bool           waitingEat       = false;
 int            pendingEatWday   = -1;
 int            pendingEatIndex  = -1;
 unsigned long  eatWindowStartMs = 0;
+
+// === BUZZER ADD: helpers de reset ===
+void resetBuzzedForDay(int wday){
+  if (wday < 0 || wday > 6) return;
+  for (int i=0;i<dayCount[wday];++i) buzzed[wday][i] = false;
+}
+void resetAllBuzzed(){ for(int d=0; d<7; ++d) resetBuzzedForDay(d); }
 
 // ===========================
 // NTP
@@ -468,6 +521,9 @@ void handleSetPlan() {
   }
 
   resetAllFed();
+  // === BUZZER ADD ===
+  resetAllBuzzed();
+
   waitingEat=false; pendingEatWday=-1; pendingEatIndex=-1;
 
   // Persistir plan
@@ -493,6 +549,8 @@ void handleClearPlan() {
     dayCount[d]=0;
     for(int i=0;i<MAX_MEALS_PER_DAY;i++){
       fed[d][i]=false; eaten[d][i]=false; water[d][i]=false;
+      // === BUZZER ADD ===
+      buzzed[d][i]=false;
     }
     saveDayFlags(d); // persistir reset de cada día
   }
@@ -564,6 +622,9 @@ void setup() {
   pinMode(PUMP_PIN, OUTPUT);
   pump_off(); // = digitalWrite(PUMP_PIN, PUMP_OFF_LEVEL)
 
+  // === BUZZER ADD ===
+  setupBuzzer();
+
   WiFi.begin(ssid, password);
   Serial.print("Conectando WiFi");
   while (WiFi.status()!=WL_CONNECTED){ delay(500); Serial.print("."); }
@@ -591,6 +652,8 @@ void setup() {
           dayCount[d]=0;
           for(int i=0;i<MAX_MEALS_PER_DAY;i++){
             fed[d][i]=false; eaten[d][i]=false; water[d][i]=false;
+            // === BUZZER ADD ===
+            buzzed[d][i]=false;
           }
         }
 
@@ -618,6 +681,8 @@ void setup() {
           }
         }
         resetAllFed();
+        // === BUZZER ADD ===
+        resetAllBuzzed();
         waitingEat=false; pendingEatWday=-1; pendingEatIndex=-1;
 
         Serial.println("Plan restaurado desde NVS.");
@@ -654,8 +719,7 @@ void setup() {
   server.on("/getPlan",   HTTP_OPTIONS, handleOptions);
 
   server.begin();
-  resetAllFed();
-
+ 
   // === MIC NVS: cargar contadores y alinear el día actual
   loadAllMicAlerts();
   struct tm _ti;
@@ -689,6 +753,9 @@ void loop() {
 
       if (wday != lastWday) {
         resetFedForDay(wday);
+        // === BUZZER ADD ===
+        resetBuzzedForDay(wday);
+
         lastWday = wday;
         saveDayFlags(wday); // persistir reset del nuevo día
         Serial.printf("Cambio de dia: wday=%d, reset flags\n", wday);
@@ -699,6 +766,18 @@ void loop() {
 
       int count = dayCount[wday];
       for (int i=0; i<count; i++) {
+
+        // === BUZZER ADD: aviso 1 minuto antes ===
+        if (!buzzed[wday][i]) {
+          String pre = prevMinute(dayTimes[wday][i]);
+          if (pre.length()==5 && nowHHMM == pre) {
+            Serial.printf("Aviso buzzer para comida (wday=%d idx=%d) a las %s\n", wday, i, nowHHMM.c_str());
+            buzzerAvisoComida();
+            buzzed[wday][i] = true;
+          }
+        }
+
+        // === Lógica original de alimentación ===
         if (!fed[wday][i] && nowHHMM == dayTimes[wday][i]) {
           fed[wday][i] = true;
 
@@ -773,3 +852,4 @@ void loop() {
     }
   }
 }
+

@@ -457,6 +457,49 @@ input[type="number"]{
   }
   setInterval(maybeRolloverDay, 30000);
 
+  // ======= Cache local de TICKS (por día) =======
+  function tickCacheKey(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `petcare_ticks_${y}-${m}-${day}`;
+  }
+  function loadTicksFromCache(){
+    try {
+      const raw = localStorage.getItem(tickCacheKey());
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== 'object') return null;
+      obj.comida = Array.isArray(obj.comida)? obj.comida : [];
+      obj.eaten  = Array.isArray(obj.eaten )? obj.eaten  : [];
+      obj.agua   = Array.isArray(obj.agua  )? obj.agua   : [];
+      return obj;
+    } catch { return null; }
+  }
+  function saveTicksToCache(sets){
+    try {
+      const obj = {
+        comida: Array.from(sets.setC || []),
+        eaten:  Array.from(sets.setE || []),
+        agua:   Array.from(sets.setA || []),
+      };
+      localStorage.setItem(tickCacheKey(), JSON.stringify(obj));
+    } catch {}
+  }
+  function applyTicksToTable(sets){
+    const setC = sets.setC || new Set();
+    const setE = sets.setE || new Set();
+    const setA = sets.setA || new Set();
+    document.querySelectorAll("#table tbody tr").forEach(tr => {
+      const hora = tr.children[1]?.textContent?.trim();
+      if (!hora) return;
+      if (setC.has(hora)) tr.children[2].textContent = "✅";
+      if (setE.has(hora)) tr.children[3].textContent = "✅";
+      if (setA.has(hora) || setC.has(hora)) tr.children[4].textContent = "✅";
+    });
+  }
+
   // Conexión guardada
   ipInput.value   = localStorage.getItem("petcare_ip")   || "";
   portInput.value = localStorage.getItem("petcare_port") || "8080";
@@ -511,6 +554,15 @@ input[type="number"]{
       msgEl.textContent = "Error: " + e.message;
       // En error mostramos el total persistido del día
       micAlertsEl.textContent = String(getTotalToday());
+      // Si hay ticks cacheados del día, aplicarlos para no perder los ✔️
+      const cached = loadTicksFromCache();
+      if (cached){
+        applyTicksToTable({
+          setC: new Set(cached.comida),
+          setE: new Set(cached.eaten),
+          setA: new Set(cached.agua)
+        });
+      }
     }
   }
 
@@ -556,14 +608,24 @@ input[type="number"]{
       tbody.appendChild(tr);
     });
 
+    // === APLICAR CACHÉ DE TICKS APENAS SE ARMA LA TABLA
+    {
+      const cached = loadTicksFromCache();
+      if (cached){
+        applyTicksToTable({
+          setC: new Set(cached.comida),
+          setE: new Set(cached.eaten),
+          setA: new Set(cached.agua)
+        });
+      }
+    }
+
     // ===== MIC en Estado (acumulador robusto)
     if (data.mic){
       const r = Number(data.mic.alertsToday) || 0; // lo que reporta la ESP en esta lectura
       const st = getDayState();
       // Primera lectura del día sin lastReported
       if (st.r == null) {
-        // Si ya teníamos total acumulado (p.ej. de reconexiones previas), lo conservamos;
-        // si era 0 y la ESP trae r>0 (primer fetch del día), arrancamos con r.
         if ((st.t|0) === 0 && r > 0) st.t = r;
         st.r = r;
       } else {
@@ -656,7 +718,7 @@ input[type="number"]{
     };
   })();
 
-  // ===== Repintar ticks desde DB =====
+  // ===== Repintar ticks desde DB (APLICA Y CACHEA)
   async function repintarDesdeDB(){
     try {
       const mascotaId = Number(localStorage.getItem("petcare_mascota_id") || "1");
@@ -681,15 +743,16 @@ input[type="number"]{
       const setC = new Set(norm(comida.ok ? comida.ticks : []));
       const setE = new Set(norm(eaten.ok  ? eaten.ticks  : []));
       const setA = new Set(norm(agua.ok   ? agua.ticks   : []));
-      document.querySelectorAll("#table tbody tr").forEach(tr => {
-        const hora = tr.children[1]?.textContent?.trim();
-        if (!hora) return;
 
-        if (setC.has(hora)) tr.children[2].textContent = "✅";
-        if (setE.has(hora)) tr.children[3].textContent = "✅";
-        if (setA.has(hora) || setC.has(hora)) tr.children[4].textContent = "✅";
-      });
-    } catch (_) { /* silencioso */ }
+      // aplicar a la tabla actual
+      applyTicksToTable({ setC, setE, setA });
+
+      // guardar en cache local para reconexiones
+      saveTicksToCache({ setC, setE, setA });
+
+    } catch (_) {
+      // si falla, dejamos lo que haya y NO borramos la caché
+    }
   }
 
   // ======= NUEVO: traer /getPlan desde la ESP y guardarlo en localStorage (una sola vez) =======

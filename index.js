@@ -10,6 +10,8 @@ import * as horarios from "./controllers/horarios.js";
 import * as usuarios from "./controllers/usuarios.js";
 import * as planes from "./controllers/planes.js";
 import * as eventos from "./controllers/eventos.js";
+import planesFilesRouter from "./routes/planes.js";
+
 
 let app = express();
 app.use(cors());
@@ -28,6 +30,9 @@ app.get("/mascotas/:id/horarios", mascotas.HorariosDeMascota);
 
 // NUEVA: mascotas de un usuario (para decidir flujo post-login)
 app.get("/usuarios/:id/mascotas", mascotas.ListarPorUsuario);
+
+app.use(planesFilesRouter);
+
 
 // Rutas Planes
 app.post("/db/plan", planes.GuardarPlanDB);

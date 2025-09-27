@@ -105,6 +105,13 @@
           </div>
         </div>
 
+        <!-- === NUEVO: Botón Recordar mi plan === -->
+        <div class="row" style="margin:10px 0">
+          <button type="button" id="rememberPlan" class="btn secondary btn-block">
+            Recordar mi plan
+          </button>
+        </div>
+
         <div class="divider"></div>
         <button type="submit" class="btn primary btn-block">Enviar plan al ESP32</button>
       </form>
@@ -175,6 +182,155 @@
 
     // ======= helpers usuario =======
     function getUsuario(){ try{ return JSON.parse(localStorage.getItem("usuario")) } catch { return null } }
+
+    /* ==================== NUEVO: Persistencia de plan por usuario ====================
+       - GET  /db/planes/:userId  -> { ok:true, data:{...} } (o data:null)
+       - PUT  /db/planes/:userId  -> { ok:true }
+       Además, cache local por usuario en localStorage.
+    ================================================================================ */
+    function planCacheKey(userId){
+      return `petcare_plan_cache_${userId || 'anon'}`;
+    }
+    function snapshotCurrentPlan() {
+      const grams = parseInt(document.getElementById('grams').value, 10);
+      const hopper = document.getElementById('hopper').value ? Number(document.getElementById('hopper').value) : null;
+      const mode = document.getElementById('mode').value;
+      const secondsOpen = Number.isFinite(grams) && grams > 0 ? (grams / 10) : null;
+      const doc = { 
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        gramsPerMeal: Number.isFinite(grams) ? grams : null,
+        hopper: Number.isFinite(hopper) ? hopper : null,
+        mode,
+        secondsOpen,
+        dayplan: Array.isArray(window.dayplan) ? [...window.dayplan] : [],
+        weekplan: window.weekplan ? {
+          mon:[...window.weekplan.mon],
+          tue:[...window.weekplan.tue],
+          wed:[...window.weekplan.wed],
+          thu:[...window.weekplan.thu],
+          fri:[...window.weekplan.fri],
+          sat:[...window.weekplan.sat],
+          sun:[...window.weekplan.sun],
+        } : null
+      };
+      return doc;
+    }
+
+// ===== Reemplazar SOLO esta función =====
+function applyPlanToUI(planDoc){
+  if(!planDoc || typeof planDoc !== 'object') return;
+
+  // Referencias a las MISMAS estructuras que usa tu UI
+  const keys = ["mon","tue","wed","thu","fri","sat","sun"];
+
+  // Ojo: let/const top-level NO van a window ⇒ usamos la variable si existe;
+  // si no, caemos a window.* y la inicializamos.
+  const dayplanVar  = (typeof dayplan  !== "undefined") ? dayplan  : (window.dayplan  ||= []);
+  const weekplanVar = (typeof weekplan !== "undefined") ? weekplan : (window.weekplan ||= { mon:[],tue:[],wed:[],thu:[],fri:[],sat:[],sun:[] });
+
+  // Asegurar arrays internos del objeto weekplan
+  keys.forEach(k => { if(!Array.isArray(weekplanVar[k])) weekplanVar[k] = []; });
+
+  // Gramos / hopper
+  if(Number.isFinite(planDoc.gramsPerMeal)){
+    const gramsEl = document.getElementById('grams');
+    if (gramsEl) gramsEl.value = String(planDoc.gramsPerMeal);
+  }
+  if(Number.isFinite(planDoc.hopper)){
+    const hopperEl = document.getElementById('hopper');
+    if (hopperEl){
+      hopperEl.value = String(planDoc.hopper);
+      localStorage.setItem('petcare_hopper', hopperEl.value.trim());
+    }
+  }
+
+  // Modo (dispara el change para mostrar/ocultar cajas)
+  if(planDoc.mode){
+    const modeSel = document.getElementById('mode');
+    if (modeSel){
+      modeSel.value = planDoc.mode;
+      modeSel.dispatchEvent(new Event('change', { bubbles:true }));
+    }
+  }
+
+  // ==== Horarios
+  if(planDoc.mode === 'repeat_week'){
+    // Copiar a la MISMA referencia que usa la tabla
+    const src = Array.isArray(planDoc.dayplan) ? planDoc.dayplan : [];
+    dayplanVar.length = 0;
+    src.forEach(t => { if(/^\d{2}:\d{2}$/.test(t) && !dayplanVar.includes(t)) dayplanVar.push(t); });
+    dayplanVar.sort();
+
+    if (typeof renderAllTable === 'function') renderAllTable();
+  }
+
+  if(planDoc.mode === 'per_day'){
+    // Acepta objeto {mon:...} o array [mon,tue,...]
+    let src = planDoc.weekplan || {};
+    if (Array.isArray(src) && src.length === 7){
+      src = { mon:src[0]||[], tue:src[1]||[], wed:src[2]||[], thu:src[3]||[], fri:src[4]||[], sat:src[5]||[], sun:src[6]||[] };
+    }
+    keys.forEach(k => {
+      const arr = Array.isArray(src[k]) ? src[k] : [];
+      // Mutar las MISMAS referencias usadas por la UI
+      weekplanVar[k].length = 0;
+      arr.forEach(t => { if(/^\d{2}:\d{2}$/.test(t) && !weekplanVar[k].includes(t)) weekplanVar[k].push(t); });
+      weekplanVar[k].sort();
+    });
+
+    if (typeof renderDayTable === 'function') renderDayTable();
+    if (typeof refreshWeekPreview === 'function') refreshWeekPreview();
+  }
+}
+
+    async function fetchUserPlanFromServer(userId){
+      try{
+        const r = await fetch(`${DBURL}/db/planes/${encodeURIComponent(userId)}`);
+        const text = await r.text();
+        let j; try{ j = JSON.parse(text) } catch { return null; }
+        if(r.ok && j && j.ok) return j.data || null;
+        return null;
+      }catch(_){ return null; }
+    }
+    async function saveUserPlanToServer(userId, planDoc){
+      try{
+        const r = await fetch(`${DBURL}/db/planes/${encodeURIComponent(userId)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(planDoc)
+        });
+        return r.ok;
+      }catch(_){ return false; }
+    }
+    function loadPlanFromLocalCache(userId){
+      try{
+        const raw = localStorage.getItem(planCacheKey(userId));
+        return raw ? JSON.parse(raw) : null;
+      }catch(_){ return null; }
+    }
+    function savePlanToLocalCache(userId, planDoc){
+      try{
+        localStorage.setItem(planCacheKey(userId), JSON.stringify(planDoc));
+      }catch(_){ }
+    }
+    async function rememberPlanFlow(){
+      const u = getUsuario();
+      if(!u || !u.id){
+        location.href = "login.html";
+        return;
+      }
+      const respEl = document.getElementById('response');
+      respEl.textContent = "Buscando tu último plan…";
+      let planDoc = await fetchUserPlanFromServer(u.id);
+      if(!planDoc){ planDoc = loadPlanFromLocalCache(u.id); }
+      if(!planDoc){
+        respEl.textContent = "No encontré un plan previo guardado para este usuario.";
+        return;
+      }
+      applyPlanToUI(planDoc);
+      respEl.textContent = "✅ Plan recordado y cargado en pantalla.";
+    }
 
     // ====== conexion & helpers ======
     const ipInput   = document.getElementById("ip");
@@ -406,10 +562,50 @@
         respEl.textContent = res.ok ? `✅ Plan enviado. ${msg}` : `⚠️ Error ${res.status}: ${msg}`;
 
         if (res.ok){ savePlanToDB(payload); }
+
+        /* ===== NUEVO: guardar .json por usuario + cache local SIN romper tu flujo ===== */
+        try{
+          const u = getUsuario();
+          const hopperVal = document.getElementById('hopper').value ? Number(document.getElementById('hopper').value) : null;
+          const planDoc = {
+            version: 1,
+            updatedAt: new Date().toISOString(),
+            userId: u && u.id ? u.id : null,
+            gramsPerMeal: Number.isFinite(grams) ? grams : null,
+            hopper: Number.isFinite(hopperVal) ? hopperVal : null,
+            mode: payload.mode,
+            secondsOpen: payload.secondsOpen,
+          };
+          if(payload.mode === 'repeat_week'){
+            planDoc.dayplan = Array.isArray(payload.dayplan) ? [...payload.dayplan] : [];
+            planDoc.weekplan = null;
+          } else {
+            const keys = ["mon","tue","wed","thu","fri","sat","sun"];
+            const obj = { mon:[],tue:[],wed:[],thu:[],fri:[],sat:[],sun:[] };
+            if(Array.isArray(payload.weekplan)){
+              keys.forEach((k, idx)=>{ obj[k] = Array.isArray(payload.weekplan[idx]) ? [...payload.weekplan[idx]] : []; });
+            }
+            planDoc.dayplan = [];
+            planDoc.weekplan = obj;
+          }
+          if(u && u.id){ savePlanToLocalCache(u.id, planDoc); }
+          if(u && u.id){ await saveUserPlanToServer(u.id, planDoc); }
+        }catch(_){ /* silencioso */ }
+
       }catch(err){
         respEl.textContent = `❌ No se pudo conectar: ${err.message}`;
       }
     });
+
+    /* ===== NUEVO: Botón Recordar mi plan (blindado) ===== */
+    const rememberBtn = document.getElementById('rememberPlan');
+    if(rememberBtn){
+      rememberBtn.addEventListener('click', async ()=>{
+        if(!window.dayplan) window.dayplan = [];
+        if(!window.weekplan) window.weekplan = { mon:[], tue:[], wed:[], thu:[], fri:[], sat:[], sun:[] };
+        await rememberPlanFlow();
+      });
+    }
 
     // ====== modal ia ======
     const iaModal=document.getElementById('iaModal'), openIA=document.getElementById('openIA'), closeIA=document.getElementById('closeIA')
@@ -502,6 +698,15 @@
         if(iaHint) iaHint.textContent = `no se pudo calcular: ${e.message}`
       }
     })
+
+    /* ===== (opcional): precargar automáticamente si hay plan guardado ===== */
+    document.addEventListener('DOMContentLoaded', async ()=>{
+      const u = getUsuario();
+      if(!u || !u.id) return;
+      let planDoc = await fetchUserPlanFromServer(u.id);
+      if(!planDoc) planDoc = loadPlanFromLocalCache(u.id);
+      if(planDoc) applyPlanToUI(planDoc);
+    });
   </script>
   <script>
 /* === Select "fachero" reutilizable: funciona con #mode, #ia_actividad y #ia_castrado === */
