@@ -656,32 +656,86 @@ input[type="number"]{
   }
 
   // ======= Sincronizar con el ÚLTIMO plan de la DB =======
+  // (Cambio #1: traer plan de la MASCOTA ACTUAL, no el global)
+  function getMascotaId(){
+    return Number(localStorage.getItem("petcare_mascota_id") || "0") || null;
+  }
+  function getUserId(){
+    try { const u = JSON.parse(localStorage.getItem("petcare_user")||"null"); return u?.id ?? null; }
+    catch { return null; }
+  }
+
   async function syncFromDB(){
     try{
-      const res = await fetch(`${BACKEND_URL}/db/planes`);
-      if (!res.ok) return;
-      const list = await res.json();
-      if (!Array.isArray(list) || list.length === 0) return;
+      const mascotaId = getMascotaId();
+      if (!mascotaId) return;
 
-      const latest = list[0];
-      if (Number.isFinite(latest.grams_per_meal)) {
-        localStorage.setItem('petcare_grams_per_meal', String(latest.grams_per_meal));
+      let plan = null;
+
+      // 1) Endpoint específico por mascota (ajustar si tu API difiere)
+      let res = await fetch(`${BACKEND_URL}/mascotas/${mascotaId}/plan`);
+      if (res.ok) plan = await res.json();
+
+      // 2) Fallback: lista filtrada por mascota_id (y limitada)
+      if (!plan || (Array.isArray(plan) && !plan.length)) {
+        res = await fetch(`${BACKEND_URL}/db/planes?mascota_id=${mascotaId}&limit=1`);
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list) && list.length){
+            plan = list.find(p => Number(p.mascota_id) === Number(mascotaId)) || list[0];
+          } else if (list && typeof list === "object") {
+            plan = list;
+          }
+        }
       }
-      if (Number.isFinite(latest.hopper_g)) {
-        localStorage.setItem('petcare_hopper', String(latest.hopper_g));
+
+      // Guardar SOLO si corresponde a esta mascota
+      if (plan && typeof plan === "object") {
+        if (plan.mascota_id != null && Number(plan.mascota_id) !== Number(mascotaId)) return;
+
+        if (Number.isFinite(plan.grams_per_meal)) {
+          localStorage.setItem('petcare_grams_per_meal', String(plan.grams_per_meal));
+        }
+        if (Number.isFinite(plan.hopper_g)) {
+          localStorage.setItem('petcare_hopper', String(plan.hopper_g));
+        }
+        // opcional: si tu backend guarda calibración
+        if (Number.isFinite(plan.grams_per_second)) {
+          localStorage.setItem('petcare_grams_per_second', String(plan.grams_per_second));
+        }
       }
     }catch(_){}
   }
 
-  // ===== Cálculo de raciones restantes (hook) =====
+  // ===== Cálculo de raciones restantes (hook)
   (function(){
     const originalRender = window.render;
 
+    // (Cambio #2: numbers() prioriza plan de esta mascota, si no deriva de secondsOpen*grams_per_second)
     function numbers(){
       const hopper = parseFloat(localStorage.getItem('petcare_hopper') || '0');
-      const gramsPerMeal = parseFloat(localStorage.getItem('petcare_grams_per_meal') || '0');
+
+      // 1) Preferir grams_per_meal del plan de ESTA mascota (guardado por syncFromDB)
+      let gramsPerMeal = parseFloat(localStorage.getItem('petcare_grams_per_meal') || 'NaN');
+
+      // 2) Si no hay, derivar: secondsOpen (ESP) * grams_per_second (calibración)
+      if (!(Number.isFinite(gramsPerMeal) && gramsPerMeal > 0)) {
+        try {
+          const plan = JSON.parse(localStorage.getItem('petcare_plan_json') || 'null');
+          const secondsOpen = Number(plan?.secondsOpen);
+          const gps = parseFloat(localStorage.getItem('petcare_grams_per_second') || 'NaN');
+          if (Number.isFinite(secondsOpen) && Number.isFinite(gps) && gps > 0) {
+            gramsPerMeal = secondsOpen * gps; // sin dividir por 100
+          }
+        } catch {}
+      }
+
+      if (!(Number.isFinite(gramsPerMeal) && gramsPerMeal > 0)) {
+        return { hopper: 0, gramsPerMeal: 0 };
+      }
       return { hopper, gramsPerMeal };
     }
+
     function calcRemaining(hopper, gramsPerMeal, fedCount){
       if (!Number.isFinite(hopper) || hopper < 0 || !Number.isFinite(gramsPerMeal) || gramsPerMeal <= 0){
         return { gramsLeft: 0, mealsExact: 0, mealsFull: 0 };

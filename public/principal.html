@@ -63,6 +63,8 @@
 
       const STREAM_URL = `http://${CAM_IP}:81/stream`;
       const SERVO_URL  = `http://${CTRL_IP}:8080/servo`;
+      const BUZZER_URL = `http://${CTRL_IP}:8080/buzzer`;
+
 
       const img = document.getElementById("camara-stream");
 
@@ -154,19 +156,22 @@
 
       // comportamiento sencillo de bocina (UN SOLO MODO).
       // Al tocar siempre muestra "Bocina Activada" y desaparece después.
-      if (micBtn) {
-        micBtn.addEventListener("click", () => {
-          // marcar como activado (permanece activado para futuras mejoras)
-          micBtn.setAttribute("data-state", "on");
-          micBtn.setAttribute("aria-label", "Bocina activada");
-          micBtn.classList.add("active");
+    
+  // ...
+  if (micBtn) {
+    micBtn.addEventListener("click", () => {
+      micBtn.setAttribute("data-state", "on");
+      micBtn.setAttribute("aria-label", "Bocina activada");
+      micBtn.classList.add("active");
 
-          // mostrar mensaje siempre (reinicia timeout si se pulsa de nuevo)
-          showToast(" Bocina Activada", true, 2500);
+      // 🔔 Disparar la bocina con el patrón pre-comida (usar POST)
+      fetch(BUZZER_URL, { method: "POST" })
+        .catch(err => console.error("Error buzzer:", err));
 
-          // aquí podrás añadir la lógica para reproducir audio más adelante
-        });
-      }
+      showToast(" Bocina Activada", true, 2500);
+    });
+  }
+
     </script>
 
     <!-- Auto-mostrar cámara 10 min tras finalizar la ventana del sensor -->
