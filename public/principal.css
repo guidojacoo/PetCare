@@ -7,7 +7,7 @@
   --muted:#35537a;     /* texto secundario */
   --ring:#aac8ff;      /* bordes suaves */
 
-  --accent:#eeb31e;    /* botones principales (amarillo) */
+  --accent:#FCB527;    /* botones principales (amarillo) */
   --accent-press:#ffc21a;
 
   --danger:#ee2727;
@@ -27,7 +27,7 @@
   --ring:#1f2a44;
 
   /* mantenemos los acentos */
-  --accent:#eeb31e;
+  --accent:#FCB527;
   --accent-press:#ffc21a;
 
   --danger:#f72323;
