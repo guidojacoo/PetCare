@@ -73,7 +73,25 @@ body{
   background:var(--surface-2);
   border:1px solid var(--ring);
   box-shadow:0 2px 6px rgba(0,0,0,.06);
+  
 }
+
+.back{
+  /* mantené tu layout; sólo corregimos la alineación del ícono */
+  display:grid;
+  place-items:center;
+  font-size:0;            /* oculto el glifo original para controlarlo con ::before */
+}
+.back::before{
+  content:"←";
+  font-size:18px;
+  line-height:1;
+  color:inherit;
+  position:relative;
+  top:1px;               /* súbelo un poquito; probá -1px/-3px según tu ojo */
+}
+
+
 
 /* ===== contenido en “tarjetas” claras ===== */
 .content{
