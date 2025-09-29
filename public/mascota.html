@@ -61,6 +61,36 @@
       </div>
 
     </section>
+<div id="msg-overlay" class="overlay" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true">
+    <p id="msg-text" style="font-size:18px; text-align:center; margin:20px 0;"></p>
+    <div style="text-align:center;">
+      <button id="msg-close" class="btn btn-danger">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  .overlay.active { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px 30px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+  }
+</style>
+
   </main>
 
   <script src="mascota.js"></script>

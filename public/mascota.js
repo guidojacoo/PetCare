@@ -31,27 +31,41 @@ function showStep(n) {
   if (el) el.classList.add("active");
 }
 
+function showMessage(msg) {
+  let overlay = document.getElementById("msg-overlay");
+  let txt = document.getElementById("msg-text");
+  let btn = document.getElementById("msg-close");
+
+  txt.textContent = msg;
+  overlay.classList.add("active");
+  overlay.setAttribute("aria-hidden", "false");
+
+  btn.onclick = () => {
+    overlay.classList.remove("active");
+    overlay.setAttribute("aria-hidden", "true");
+  };
+}
+
 function requireVal(cond, msg) {
-  if (!cond) { alert(msg); return false; }
+  if (!cond) { showMessage(msg); return false; }
   return true;
 }
 
 (function initUser(){
-  // 🔴 Unificado: usamos petcare_user
   let user = localStorage.getItem("petcare_user");
-  if (!user) { alert("Iniciá sesión"); location.href = "login.html"; return; }
+  if (!user) { showMessage("inicia sesion"); location.href = "login.html"; return; }
   try {
     let u = JSON.parse(user);
     datos.usuario_id = u?.id || null;
   } catch(e) {}
-  if (!datos.usuario_id) { alert("No se encontró el usuario"); location.href = "login.html"; return; }
+  if (!datos.usuario_id) { showMessage("no se encontro el usuario"); location.href = "login.html"; return; }
   showStep(1);
 })();
 
 // Paso 1: nombre
 document.querySelector("#step-1 .next").addEventListener("click", () => {
   let nombre = (document.getElementById("nombre").value || "").trim();
-  if (!requireVal(nombre.length >= 2, "Ingresá un nombre válido")) return;
+  if (!requireVal(nombre.length >= 2, "Ingresa un nombre valido")) return;
   datos.nombre = nombre;
   showStep(2);
 });
@@ -68,7 +82,7 @@ let iS = 0; while (iS < chipsSexo.length) {
   iS++;
 }
 document.querySelector("#step-2 .next").addEventListener("click", () => {
-  if (!requireVal(!!datos.sexo, "Elegí sexo")) return;
+  if (!requireVal(!!datos.sexo, "Elegi un sexo")) return;
   showStep(3);
 });
 
@@ -90,14 +104,14 @@ document.querySelector("#step-3 .next").addEventListener("click", () => {
     let v = parseFloat(document.getElementById("peso").value || "0");
     if (v > 0) datos.peso_kg = v;
   }
-  if (!requireVal(!!datos.peso_kg, "Ingresá un peso válido")) return;
+  if (!requireVal(!!datos.peso_kg, "Ingresa un peso valido")) return;
   showStep(4);
 });
 
 // Paso 4: raza
 document.querySelector("#step-4 .next").addEventListener("click", () => {
   let raza = (document.getElementById("raza").value || "").trim();
-  if (!requireVal(raza.length >= 2, "Ingresá una raza")) return;
+  if (!requireVal(raza.length >= 2, "Ingresa una raza")) return;
   datos.raza = raza;
   showStep(5);
 });
@@ -106,14 +120,14 @@ document.querySelector("#step-4 .next").addEventListener("click", () => {
 const finish5Btn = document.querySelector("#step-5 .finish");
 if (finish5Btn) finish5Btn.addEventListener("click", async () => {
   let fecha = (document.getElementById("fecha").value || "").trim();
-  if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { alert("Fecha inválida"); return; }
+  if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { showMessage("fecha invalida"); return; }
   datos.fecha_nacimiento = fecha || null;
 
-  if (!requireVal(!!datos.usuario_id, "Usuario no válido")) return;
-  if (!requireVal(!!datos.nombre, "Falta nombre")) return;
-  if (!requireVal(!!datos.sexo, "Falta sexo")) return;
-  if (!requireVal(!!datos.peso_kg, "Falta peso")) return;
-  if (!requireVal(!!datos.raza, "Falta raza")) return;
+  if (!requireVal(!!datos.usuario_id, "Usuario no valido")) return;
+  if (!requireVal(!!datos.nombre, "Falta un nombre")) return;
+  if (!requireVal(!!datos.sexo, "Falta un sexo")) return;
+  if (!requireVal(!!datos.peso_kg, "Falta un peso")) return;
+  if (!requireVal(!!datos.raza, "Falta una raza")) return;
 
   try {
     let body = {
@@ -126,17 +140,16 @@ if (finish5Btn) finish5Btn.addEventListener("click", async () => {
     };
     let m = await post(`${API}/mascotas`, body);
     if (!m || !m.id) throw new Error("No se pudo crear la mascota");
-    alert("Mascota creada con éxito");
+    showMessage("Mascota creada con exito");
     location.href = "principal.html";
   } catch (e) {
-    alert("Error al guardar: " + (e.message || "desconocido"));
+    showMessage("Error al guardar: " + (e.message || "desconocido"));
   }
 });
 
 // Estado kcal
 if (!("kcal_100g" in datos)) datos.kcal_100g = null;
 
-// Redirección a Paso 6 si falta kcal
 (function wireStep6(){
   const step6 = document.getElementById("step-6");
   const kcalInput = document.getElementById("kcal");
@@ -145,14 +158,14 @@ if (!("kcal_100g" in datos)) datos.kcal_100g = null;
   if (step6 && finish5) {
     finish5.addEventListener("click", function(e){
       let fecha = (document.getElementById("fecha").value || "").trim();
-      if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { alert("Fecha inválida"); e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { showMessage("La fecha es invalida"); e.stopImmediatePropagation(); e.preventDefault(); return; }
       datos.fecha_nacimiento = fecha || null;
 
-      if (!requireVal(!!datos.usuario_id, "Usuario no válido")) { e.stopImmediatePropagation(); e.preventDefault(); return; }
-      if (!requireVal(!!datos.nombre, "Falta nombre"))         { e.stopImmediatePropagation(); e.preventDefault(); return; }
-      if (!requireVal(!!datos.sexo, "Falta sexo"))             { e.stopImmediatePropagation(); e.preventDefault(); return; }
-      if (!requireVal(!!datos.peso_kg, "Falta peso"))          { e.stopImmediatePropagation(); e.preventDefault(); return; }
-      if (!requireVal(!!datos.raza, "Falta raza"))             { e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if (!requireVal(!!datos.usuario_id, "Usuario no valido")) { e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if (!requireVal(!!datos.nombre, "Falta un nombre"))         { e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if (!requireVal(!!datos.sexo, "Falta un sexo"))             { e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if (!requireVal(!!datos.peso_kg, "Falta un peso"))          { e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if (!requireVal(!!datos.raza, "Falta una raza"))             { e.stopImmediatePropagation(); e.preventDefault(); return; }
 
       if (!datos.kcal_100g && kcalInput) {
         e.stopImmediatePropagation();
@@ -167,15 +180,15 @@ if (!("kcal_100g" in datos)) datos.kcal_100g = null;
     finish6.addEventListener("click", async function(){
       const kcalStr = (document.getElementById("kcal")?.value || "").trim();
       const kcal = parseInt(kcalStr, 10);
-      if (!requireVal(!isNaN(kcal), "Ingresá calorías por 100g")) return;
-      if (!requireVal(kcal >= 200 && kcal <= 600, "Calorías fuera de rango (200-600)")) return;
+      if (!requireVal(!isNaN(kcal), "ingresa calorias por 100g")) return;
+      if (!requireVal(kcal >= 200 && kcal <= 600, "Calorias fuera de rango (200-600)")) return;
       datos.kcal_100g = kcal;
 
-      if (!requireVal(!!datos.usuario_id, "Usuario no válido")) return;
-      if (!requireVal(!!datos.nombre, "Falta nombre")) return;
-      if (!requireVal(!!datos.sexo, "Falta sexo")) return;
-      if (!requireVal(!!datos.peso_kg, "Falta peso")) return;
-      if (!requireVal(!!datos.raza, "Falta raza")) return;
+      if (!requireVal(!!datos.usuario_id, "Usuario no valido")) return;
+      if (!requireVal(!!datos.nombre, "Falta un nombre")) return;
+      if (!requireVal(!!datos.sexo, "Falta un sexo")) return;
+      if (!requireVal(!!datos.peso_kg, "Falta un peso")) return;
+      if (!requireVal(!!datos.raza, "Falta una raza")) return;
       if (!datos.fecha_nacimiento) {
         const fecha = (document.getElementById("fecha")?.value || "").trim();
         datos.fecha_nacimiento = fecha || null;
@@ -193,10 +206,10 @@ if (!("kcal_100g" in datos)) datos.kcal_100g = null;
         };
         const m = await post(`${API}/mascotas`, body);
         if (!m || !m.id) throw new Error("No se pudo crear la mascota");
-        alert("Mascota creada con éxito");
+        showMessage("Mascota creada con exito");
         location.href = "principal.html";
       } catch (e) {
-        alert("Error al guardar: " + (e.message || "desconocido"));
+        showMessage("error al guardar: " + (e.message || "desconocido"));
       }
     });
   }
@@ -207,16 +220,16 @@ const next5Btn = document.querySelector("#step-5 .next");
 if (next5Btn) next5Btn.addEventListener("click", () => {
   const fecha = (document.getElementById("fecha").value || "").trim();
   if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-    alert("Fecha inválida");
+    showMessage("Fecha invalida");
     return;
   }
   datos.fecha_nacimiento = fecha || null;
 
-  if (!requireVal(!!datos.usuario_id, "Usuario no válido")) return;
-  if (!requireVal(!!datos.nombre, "Falta nombre")) return;
-  if (!requireVal(!!datos.sexo, "Falta sexo")) return;
-  if (!requireVal(!!datos.peso_kg, "Falta peso")) return;
-  if (!requireVal(!!datos.raza, "Falta raza")) return;
+  if (!requireVal(!!datos.usuario_id, "Usuario no valido")) return;
+  if (!requireVal(!!datos.nombre, "Falta un nombre")) return;
+  if (!requireVal(!!datos.sexo, "Falta un sexo")) return;
+  if (!requireVal(!!datos.peso_kg, "Falta un peso")) return;
+  if (!requireVal(!!datos.raza, "Falta una raza")) return;
 
   showStep(6);
 });
