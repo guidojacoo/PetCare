@@ -81,13 +81,24 @@
     z-index: 9999;
   }
   .overlay.active { display: flex; }
+
+  /* Usamos las variables del tema para que funcione igual en claro/oscuro */
   .modal {
-    background: #fff;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--ring);
     border-radius: 10px;
     padding: 20px 30px;
     max-width: 400px;
     width: 90%;
     text-align: center;
+    box-shadow: 0 10px 24px rgba(0,0,0,.18);
+  }
+
+  /* Mensaje en negrita y con el color correcto del tema */
+  #msg-text{
+    font-weight: 800;          /* negrita */
+    color: var(--text);        /* asegura contraste en ambos temas */
   }
 </style>
 
