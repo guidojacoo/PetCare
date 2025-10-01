@@ -1,7 +1,81 @@
 // perfil.js
 const DBURL = "http://localhost:3000";
 
-// ====== Sesión unificada + migración (usuario -> petcare_user) ======
+/* ========= Modal unificado (inyectado por JS, no requiere tocar HTML) ========= */
+(function ensureModal(){
+  if (document.getElementById("pc-overlay")) return;
+  const tpl = `
+    <div id="pc-overlay" class="pc-overlay" aria-hidden="true">
+      <div class="pc-modal" role="dialog" aria-modal="true">
+        <p class="pc-msg" id="pc-msg"></p>
+        <div class="pc-actions" id="pc-actions">
+          <button class="pc-btn pc-btn-primary" id="pc-ok">Aceptar</button>
+        </div>
+      </div>
+    </div>`;
+  document.addEventListener("DOMContentLoaded", ()=> {
+    document.body.insertAdjacentHTML("beforeend", tpl);
+  });
+})();
+
+function showMessage(msg){
+  const overlay = document.getElementById("pc-overlay");
+  const txt = document.getElementById("pc-msg");
+  const actions = document.getElementById("pc-actions");
+  const ok = document.getElementById("pc-ok");
+  if(!overlay || !txt || !actions || !ok) return alert(msg); // fallback
+
+  txt.textContent = msg;
+  // reset acciones a sólo “Aceptar”
+  actions.innerHTML = "";
+  actions.appendChild(ok);
+  ok.textContent = "Cerrar";
+  overlay.classList.add("active");
+  overlay.setAttribute("aria-hidden","false");
+
+  const close = ()=> {
+    overlay.classList.remove("active");
+    overlay.setAttribute("aria-hidden","true");
+    ok.removeEventListener("click", close);
+  };
+  ok.addEventListener("click", close);
+}
+
+function showConfirm(msg){
+  return new Promise(resolve=>{
+    const overlay = document.getElementById("pc-overlay");
+    const txt = document.getElementById("pc-msg");
+    const actions = document.getElementById("pc-actions");
+    if(!overlay || !txt || !actions) { resolve(confirm(msg)); return; } // fallback
+
+    txt.textContent = msg;
+
+    actions.innerHTML = `
+      <button class="pc-btn pc-btn-ghost"  id="pc-cancel">Cancelar</button>
+      <button class="pc-btn pc-btn-danger" id="pc-yes">Eliminar</button>
+    `;
+    const btnYes = document.getElementById("pc-yes");
+    const btnCancel = document.getElementById("pc-cancel");
+
+    overlay.classList.add("active");
+    overlay.setAttribute("aria-hidden","false");
+
+    const cleanup = (val)=>{
+      overlay.classList.remove("active");
+      overlay.setAttribute("aria-hidden","true");
+      btnYes.removeEventListener("click", onYes);
+      btnCancel.removeEventListener("click", onCancel);
+      resolve(val);
+    };
+    const onYes = ()=> cleanup(true);
+    const onCancel = ()=> cleanup(false);
+
+    btnYes.addEventListener("click", onYes);
+    btnCancel.addEventListener("click", onCancel);
+  });
+}
+
+/* ====== Sesión unificada + migración (usuario -> petcare_user) ====== */
 (function migrateSessionKey(){
   try {
     const NEW_KEY = "petcare_user";
@@ -22,7 +96,7 @@ function setUser(u) {
   localStorage.setItem("petcare_user", JSON.stringify(u));
 }
 
-// ====== Boot ======
+/* ====== Boot ====== */
 document.addEventListener("DOMContentLoaded", async () => {
   const u = getUser();
   if (!u || !u.id) { location.href = "login.html"; return; }
@@ -34,7 +108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   enhanceSelect(document.getElementById('m-sexo'));
 });
 
-// ====== Usuario ======
+/* ====== Usuario ====== */
 async function cargarUsuario(userId) {
   try {
     const r = await fetch(`${DBURL}/usuarios/${userId}`);
@@ -46,7 +120,7 @@ async function cargarUsuario(userId) {
     const inEmail = document.getElementById("edit-email");
     if (inEmail) inEmail.value = d.email || "";
   } catch (e) {
-    alert("No se pudo cargar el usuario");
+    showMessage("No se pudo cargar el usuario");
   }
 }
 
@@ -65,9 +139,9 @@ function wireEditarPerfil(userId) {
       const pass1 = document.getElementById("edit-pass").value || "";
       const pass2 = document.getElementById("edit-pass2").value || "";
 
-      if (!email) { alert("Ingresá un email válido"); return; }
-      if ((pass1 && !pass2) || (!pass1 && pass2)) { alert("Completá ambas contraseñas"); return; }
-      if (pass1 && pass2 && pass1 !== pass2) { alert("Las contraseñas no coinciden"); return; }
+      if (!email) { showMessage("Ingresá un email válido"); return; }
+      if ((pass1 && !pass2) || (!pass1 && pass2)) { showMessage("Completá ambas contraseñas"); return; }
+      if (pass1 && pass2 && pass1 !== pass2) { showMessage("Las contraseñas no coinciden"); return; }
 
       const body = { email };
       if (pass1) body.password = pass1;
@@ -84,18 +158,18 @@ function wireEditarPerfil(userId) {
         const u = getUser();
         setUser({ ...u, email: d.email || email });
 
-        alert("Perfil actualizado");
+        showMessage("Perfil actualizado");
         form.classList.add("hidden");
         document.getElementById("edit-pass").value = "";
         document.getElementById("edit-pass2").value = "";
       } catch (e) {
-        alert("No se pudo actualizar el perfil");
+        showMessage("No se pudo actualizar el perfil");
       }
     });
   }
 }
 
-// ====== Mascotas ======
+/* ====== Mascotas ====== */
 async function cargarMascotas(userId) {
   const ul = document.getElementById("lista-mascotas");
   ul.innerHTML = "<li class='item'><span class='meta'>Cargando...</span></li>";
@@ -151,7 +225,7 @@ async function cargarMascotas(userId) {
       });
     });
   } catch (e) {
-    alert("No se pudieron cargar las mascotas");
+    showMessage("No se pudieron cargar las mascotas");
   }
 }
 
@@ -197,10 +271,10 @@ function wireEditorMascota(userId) {
         const d = await r.json();
         if (!r.ok) throw new Error(d.error || "Error");
 
-        alert("Mascota actualizada");
+        showMessage("Mascota actualizada");
         await cargarMascotas(userId);
       } catch (e) {
-        alert("No se pudo actualizar la mascota");
+        showMessage("No se pudo actualizar la mascota");
       }
     });
   }
@@ -210,7 +284,8 @@ function wireEditorMascota(userId) {
     btnBorrar.addEventListener("click", async () => {
       const id = Number(document.getElementById("mascota-id").value);
       if (!id) return;
-      if (!confirm("¿Seguro que querés borrar esta mascota?")) return;
+      const ok = await showConfirm("¿Seguro que querés borrar esta mascota?");
+      if (!ok) return;
 
       try {
         const r = await fetch(`${DBURL}/mascotas/${id}`, { method: "DELETE" });
@@ -218,17 +293,17 @@ function wireEditorMascota(userId) {
           const d = await r.json().catch(()=> ({}));
           throw new Error(d.error || "Error");
         }
-        alert("Mascota eliminada");
+        
         editor.classList.add("hidden");
         await cargarMascotas(userId);
       } catch (e) {
-        alert("No se pudo borrar la mascota");
+        
       }
     });
   }
 }
 
-// ====== "Select lindo" para #m-sexo ======
+/* ====== "Select lindo" para #m-sexo ====== */
 function enhanceSelect(native){
   if(!native || native.__nice) return;
   native.classList.add('sr-only');    // oculto visual pero accesible
@@ -309,7 +384,7 @@ function refreshNiceSelectLabel(native){
   native.__niceBtn.textContent = txt;
 }
 
-// Logout: limpia sesión y te lleva a login
+/* Logout: limpia sesión y te lleva a login */
 const btnLogout = document.getElementById("btn-logout");
 if (btnLogout) {
   btnLogout.addEventListener("click", () => {
@@ -322,7 +397,7 @@ if (btnLogout) {
   });
 }
 
-// ------ Mostrar / ocultar contraseña (un ojo controla ambos) ------
+/* ------ Mostrar / ocultar contraseña (un ojo controla ambos) ------ */
 function setupPasswordToggle(btn) {
   const targets = (btn.dataset.target || "").split(",");
   const inputs = targets.map(id => document.getElementById(id)).filter(Boolean);
