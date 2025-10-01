@@ -58,7 +58,7 @@ body{
   background:var(--surface);
   border:1px solid var(--ring);
   border-radius:14px;
-  box-shadow:0 8px 18px rgba(0,0,0,.10);
+  box-shadow:0 8px 18px rgba(0,0,0/.10);
 }
 .topbar > span{
   font-weight:800;       /* negrita */
@@ -72,7 +72,7 @@ body{
   text-decoration:none; color:var(--text);
   background:var(--surface-2);
   border:1px solid var(--ring);
-  box-shadow:0 2px 6px rgba(0,0,0,.06);
+  box-shadow:0 2px 6px rgba(0,0,0/.06);
   
 }
 
@@ -91,8 +91,6 @@ body{
   top:1px;               /* súbelo un poquito; probá -1px/-3px según tu ojo */
 }
 
-
-
 /* ===== contenido en “tarjetas” claras ===== */
 .content{
   padding:0;
@@ -106,7 +104,7 @@ body{
   border:1px solid var(--ring);
   border-radius:14px;
   padding:14px;
-  box-shadow:0 8px 18px rgba(0,0,0,.10);
+  box-shadow:0 8px 18px rgba(0,0,0/.10);
 }
 
 /* usuario */
@@ -116,7 +114,7 @@ body{
   display:grid; place-items:center; font-size:24px;
   background:var(--surface-2);
   border:1px solid var(--ring);
-  box-shadow:0 2px 5px rgba(0,0,0,.06);
+  box-shadow:0 2px 5px rgba(0,0,0/.06);
 }
 .title{ margin:0; font-size:18px; font-weight:800; color:var(--text) }
 .muted{ margin:2px 0 0; color:var(--muted) }
@@ -157,7 +155,7 @@ body{
 }
 .input:focus, select:focus{
   border-color:#89b6ff;
-  box-shadow:0 0 0 3px rgba(58,160,255,.18);
+  box-shadow:0 0 0 3px rgba(58,160,255/.18);
 }
 
 /* botones */
@@ -168,7 +166,7 @@ body{
   font-weight:700;
   cursor:pointer;
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  box-shadow:0 3px 8px rgba(0,0,0,.08);
+  box-shadow:0 3px 8px rgba(0,0,0/.08);
   transition:transform .05s ease, filter .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
 }
 .btn:active{ transform:translateY(1px) }
@@ -221,8 +219,8 @@ body{
   width:var(--tg-w); height:var(--tg-h);
   display:inline-block; position:relative; overflow:hidden;
   border-radius:999px; cursor:pointer;
-  border:1.5px solid rgba(0,0,0,.08);
-  box-shadow:inset 0 -8px 14px rgba(0,0,0,.08), 0 3px 10px rgba(0,0,0,.18);
+  border:1.5px solid rgba(0,0,0/.08);
+  box-shadow:inset 0 -8px 14px rgba(0,0,0/.08), 0 3px 10px rgba(0,0,0/.18);
 }
 
 /* Cielo (cambia de gradiente) */
@@ -343,12 +341,12 @@ input[type="number"]{
   border-radius:10px; border:1px solid var(--ring);
   background:var(--surface-2); color:var(--text);
   font-weight:700; cursor:pointer;
-  box-shadow:0 3px 8px rgba(0,0,0,.08);
+  box-shadow:0 3px 8px rgba(0,0,0/.08);
   transition:border .15s ease, box-shadow .15s ease, background .15s ease;
 }
 .nice-select__button:focus{
   outline:none; border-color:#89b6ff;
-  box-shadow:0 0 0 3px rgba(58,160,255,.18);
+  box-shadow:0 0 0 3px rgba(58,160,255/.18);
 }
 
 /* flechita */
@@ -371,7 +369,7 @@ input[type="number"]{
   background:var(--surface-2);
   border:1px solid var(--ring);
   border-radius:12px;
-  box-shadow:0 16px 28px rgba(0,0,0,.16);
+  box-shadow:0 16px 28px rgba(0,0,0/.16);
   padding:6px; display:none; z-index:40; list-style:none; margin:6px 0 0 0;
 }
 .nice-select.open .nice-select__menu{ display:block; }
@@ -390,11 +388,11 @@ input[type="number"]{
 /* Dark mode tweaks para el select */
 :root[data-theme="dark"] .nice-select__button{
   background:var(--surface-2); border-color:var(--ring);
-  box-shadow:0 6px 14px rgba(0,0,0,.35);
+  box-shadow:0 6px 14px rgba(0,0,0/.35);
 }
 :root[data-theme="dark"] .nice-select__menu{
   background:var(--surface-2); border-color:var(--ring);
-  box-shadow:0 16px 28px rgba(0,0,0,.35);
+  box-shadow:0 16px 28px rgba(0,0,0/.35);
 }
 :root[data-theme="dark"] .nice-select__option:hover{
   background:#121a2f; box-shadow:inset 0 0 0 1px var(--ring);
@@ -444,7 +442,6 @@ input[type="number"]{
   #perfil-actions .btn{ width: 100%; }
 }
 
-
 /* === Ajuste del botón ojo === */
 .password-wrap { position: relative; }
 .password-wrap .input { padding-right: 44px; } /* espacio para el ojo */
@@ -492,6 +489,39 @@ input[type="number"]{
 /* --- Modo oscuro: icono blanco --- */
 :root[data-theme="dark"] .toggle-pass{ color:#ffffff; }
 
-
-
-
+/* ===== Modal unificado (mismo look que en “Crear Mascota”) ===== */
+.pc-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.pc-overlay.active{ display:flex }
+.pc-modal{
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--ring);
+  border-radius: 12px;
+  padding: 20px 24px;
+  width: min(420px, 92vw);
+  box-shadow: 0 10px 24px rgba(0,0,0,.18);
+  text-align: center;
+}
+.pc-modal .pc-msg{
+  font-size: 16px;
+  margin: 8px 0 16px;
+  font-weight: 800;              /* negrita como pediste */
+  color: var(--text);
+}
+.pc-modal .pc-actions{
+  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+}
+.pc-modal .pc-btn{
+  border:0; border-radius:10px; padding:10px 12px; font-weight:800; cursor:pointer;
+}
+.pc-modal .pc-btn-primary{ background: var(--accent); color:#1b1302; }
+.pc-modal .pc-btn-danger { background: var(--danger); color:#fff; }
+.pc-modal .pc-btn-ghost  { background: transparent; border:1px solid var(--ring); color: var(--text); }
