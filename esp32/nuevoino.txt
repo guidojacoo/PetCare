@@ -1,4 +1,4 @@
-#include <WiFi.h>
+#include <WiFi.h> 
 #include <WebServer.h>
 #include <ESP32Servo.h>
 #include <ArduinoJson.h>
@@ -9,8 +9,8 @@
 // ===========================
 // WiFi
 // ===========================
-const char *ssid = "Fibertel WiFi450 2.4GHz";
-const char *password = "mlc2009iB";
+const char *ssid = "IoTB";
+const char *password = "inventaronelVAR";
 
 // ===========================
 // Servo
@@ -452,67 +452,96 @@ void handleCalibGet(){
   String j = String("{\"ok\":true,\"gps\":") + String(gps,3) + "}";
   server.send(200,"application/json", j);
 }
+
+// ======= CAMBIO: versión compatible con ArduinoJson v7 =======
 void handleCalibPost(){
   enableCORS();
-  if (!server.hasArg("plain")){
-    server.send(400,"application/json","{\"ok\":false,\"error\":\"no body\"}");
-    return;
+
+  String body = server.hasArg("plain") ? server.arg("plain") : "";
+  String user = "";
+  float  gps  = 0.0f;
+
+  if (body.length()>0){
+    StaticJsonDocument<256> doc;
+    DeserializationError err = deserializeJson(doc, body);
+    if (!err){
+      user = doc["userId"].as<String>();      // << usar as<String>()
+      gps  = doc["gps"].as<float>();
+    }
   }
-  StaticJsonDocument<256> doc;
-  DeserializationError err = deserializeJson(doc, server.arg("plain"));
-  if (err){ server.send(400,"application/json","{\"ok\":false,\"error\":\"bad json\"}"); return; }
-  String user = doc["userId"] | "";
-  float gps   = doc["gps"]   | 0.0f;
+
+  if ((user.length()==0 || !(gps>0)) && (server.hasArg("userId") || server.hasArg("gps"))) {
+    user = server.arg("userId");
+    gps  = server.arg("gps").toFloat();
+  }
+
   if (user.length()==0 || !isfinite(gps) || gps<=0){
-    server.send(400,"application/json","{\"ok\":false,\"error\":\"invalid params\"}");
+    server.send(400,"application/json","{\"ok\":false,\"error\":\"invalid params: need userId & gps\"}");
     return;
   }
+
   bool ok = saveUserGPS(user, gps);
   server.send(ok?200:500,"application/json", ok?"{\"ok\":true}":"{\"ok\":false}");
 }
 
+// ======= NUEVO: GET /water para evitar el error de símbolo no declarado =======
 void handleWaterGet(){
   enableCORS();
-  if (!server.hasArg("user")){
-    server.send(400,"application/json","{\"ok\":false,\"error\":\"missing user\"}");
-    return;
-  }
-  String user = server.arg("user");
-  float ml   = loadUserWaterML(user);
-  float flow = loadUserPumpFlow(user);
-  String j = "{";
-  j += "\"ok\":true,";
-  if (isfinite(ml)   && ml>=0) j += "\"ml\":"   + String(ml,1);   else j += "\"ml\":null";
-  j += ",";
-  if (isfinite(flow) && flow>0) j += "\"rate\":" + String(flow,2); else j += "\"rate\":null";
-  j += "}";
-  server.send(200,"application/json", j);
-}
-void handleWaterPost(){
-  enableCORS();
-  if (!server.hasArg("plain")){
-    server.send(400,"application/json","{\"ok\":false,\"error\":\"no body\"}");
-    return;
+  String user = server.hasArg("user") ? server.arg("user") : server.arg("userId");
+  float ml   = DEFAULT_WATER_ML_PER_MEAL;
+  float rate = DEFAULT_PUMP_ML_PER_SEC;
+  if (user.length()){
+    float uMl = loadUserWaterML(user);
+    float uRt = loadUserPumpFlow(user);
+    if (isfinite(uMl) && uMl>=0) ml = uMl;
+    if (isfinite(uRt) && uRt>0)  rate = uRt;
   }
   StaticJsonDocument<256> doc;
-  auto err = deserializeJson(doc, server.arg("plain"));
-  if (err){ server.send(400,"application/json","{\"ok\":false,\"error\":\"bad json\"}"); return; }
+  doc["ok"]=true;
+  if (user.length()) doc["userId"]=user;
+  doc["ml"]=ml;
+  doc["rate"]=rate;
+  String out; serializeJson(doc,out);
+  server.send(200,"application/json", out);
+}
 
-  String user = doc["userId"] | "";
-  float ml    = doc["ml"]     | -1.0f;
-  float rate  = doc["rate"]   | -1.0f; // opcional
+// ======= CAMBIO: versión compatible con ArduinoJson v7 =======
+void handleWaterPost(){
+  enableCORS();
 
-  if (user.length()==0 || (!isfinite(ml) && !isfinite(rate))){
-    server.send(400,"application/json","{\"ok\":false,\"error\":\"invalid params\"}");
+  String body = server.hasArg("plain") ? server.arg("plain") : "";
+  String user = "";
+  float ml   = NAN;
+  float rate = NAN;
+
+  if (body.length()>0){
+    StaticJsonDocument<256> doc;
+    DeserializationError err = deserializeJson(doc, body);
+    if (!err){
+      user = doc["userId"].as<String>();          // << usar as<String>()
+      if (!doc["ml"].isNull())   ml   = doc["ml"].as<float>();
+      if (!doc["rate"].isNull()) rate = doc["rate"].as<float>();
+    }
+  }
+
+  if (user.length()==0 && (server.hasArg("userId") || server.hasArg("ml") || server.hasArg("rate"))) {
+    user = server.arg("userId");
+    if (server.hasArg("ml"))   ml   = server.arg("ml").toFloat();
+    if (server.hasArg("rate")) rate = server.arg("rate").toFloat();
+  }
+
+  if (user.length()==0){
+    server.send(400,"application/json","{\"ok\":false,\"error\":\"invalid params: need userId\"}");
     return;
   }
 
   bool ok = true;
-  if (isfinite(ml) && ml>=0)    ok = ok && saveUserWaterML(user, ml);
+  if (isfinite(ml)   && ml>=0) ok = ok && saveUserWaterML(user, ml);
   if (isfinite(rate) && rate>0) ok = ok && saveUserPumpFlow(user, rate);
 
   server.send(ok?200:500,"application/json", ok?"{\"ok\":true}":"{\"ok\":false}");
 }
+
 
 // ===========================
 // /setPlan  (POST)
@@ -571,7 +600,8 @@ void handleSetPlan() {
       int idx=0;
       for (JsonVariant v: times){
         if (idx>=MAX_MEALS_PER_DAY) break;
-        String t=v.asString(); t.trim();
+        String t = v.as<String>(); 
+          t.trim();
         if (isValidHHMM(t)) { dayTimes[wday][idx]=t; idx++; }
       }
       dayCount[wday]=idx;
