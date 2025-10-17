@@ -32,21 +32,21 @@
       <form id="calibForm" class="card" autocomplete="off">
         <h2>Calibrar máquina</h2>
         <p class="subtle">
-          1) Poné un recipiente en la balanza. 2) Tocá <em>Abrir 1s</em> para que caiga comida.
-          3) Pesá lo que cayó y guardá ese valor. Con eso calculamos gramos/segundo de tu máquina.
+          instrucciones: toca el botón "Abrir" y pesa la comida que salga y decinos cuanto salio (en gramos). guardalo y listo.
         </p>
 
         <div class="row" style="gap:8px">
-          <button type="button" id="calibOpen1s" class="btn">Abrir 1s</button>
+          <button type="button" id="calibOpen1s" class="btn secondary" >Abrir</button>
           <input type="number" id="calibMeasured" min="1" step="1" placeholder="gramos medidos" style="flex:1">
-          <button type="button" id="calibSave" class="btn primary">Guardar calibración</button>
+          
+          <button type="button" id="calibSave" class="btn primary" class="calibraciónbtn">Guardar calibración</button>
         </div>
 
         <p class="hint" id="calibHint" style="margin-top:8px">Aún sin calibrar: se asume 10 g/s.</p>
         <div class="divider"></div>
 
         <div class="row" style="align-items:center">
-          <span class="subtle">Con tu calibración, la ración abrirá:</span>
+          <span class="subtle">Tardaremos estos suegundos por comida</span>
           <strong id="secPreview" style="margin-left:6px">—</strong>
         </div>
       </form>
@@ -372,7 +372,7 @@
       }catch(_){}
       refreshSecondsPreview();
 
-      respEl.textContent = "✅ Plan recordado y cargado en pantalla.";
+      respEl.textContent = "Plan recordado y cargado en pantalla.";
     }
 
     // ====== conexion & helpers ======
@@ -632,7 +632,7 @@
       e.preventDefault();
       const grams = parseInt(document.getElementById('grams').value, 10);
       if(!Number.isFinite(grams) || grams<=0){
-        document.getElementById('response').textContent = "❌ Gramos invalidos.";
+        document.getElementById('response').textContent = "Gramos invalidos.";
         return;
       }
       localStorage.setItem('petcare_grams_per_meal', String(grams));
@@ -646,7 +646,7 @@
       const waterMlInput = document.getElementById('water_ml');
       const waterMl = Number(waterMlInput?.value || 0);
       if (!Number.isFinite(waterMl) || waterMl < 0){
-        document.getElementById('response').textContent = "❌ Agua (ml) inválida.";
+        document.getElementById('response').textContent = "Agua (ml) inválida.";
         return;
       }
 
@@ -654,7 +654,7 @@
       if(mode === 'repeat_week'){
         payload.dayplan = [...dayplan];
         if(payload.dayplan.length===0){
-          document.getElementById('response').textContent = "⚠️ Agrega al menos un horario para toda la semana.";
+          document.getElementById('response').textContent = " Agrega al menos un horario para toda la semana.";
           return;
         }
       } else {
@@ -662,7 +662,7 @@
         payload.weekplan = wp;
         const any = wp.some(arr=>arr.length>0);
         if(!any){
-          document.getElementById('response').textContent = "⚠️ Carga al menos un horario en algun dia.";
+          document.getElementById('response').textContent = " Carga al menos un horario en algun dia.";
           return;
         }
       }
@@ -677,7 +677,7 @@
           body: JSON.stringify(payload)
         });
         const msg = await res.text();
-        respEl.textContent = res.ok ? `✅ Plan enviado. ${msg}` : `⚠️ Error ${res.status}: ${msg}`;
+        respEl.textContent = res.ok ? ` Plan enviado. ${msg}` : ` Error ${res.status}: ${msg}`;
 
         if (res.ok){
           savePlanToDB(payload);
@@ -714,7 +714,7 @@
         }
 
       }catch(err){
-        respEl.textContent = `❌ No se pudo conectar: ${err.message}`;
+        respEl.textContent = ` No se pudo conectar: ${err.message}`;
       }
     });
 
@@ -874,34 +874,41 @@ if (Number.isFinite(userGPS) && userGPS>0){
           respEl.textContent = r.ok ? 'Listo. Pesá lo que cayó y guardá el valor.' : `⚠️ Error: ${msg}`;
           calibSecLast = 1;
         }catch(e){
-          respEl.textContent = `❌ No se pudo conectar: ${e.message}`;
+          respEl.textContent = ` No se pudo conectar: ${e.message}`;
         }
       });
     }
 
     if (btnSaveCalib){
   btnSaveCalib.addEventListener('click', async ()=>{
-    // ...
-    const gps = grams / calibSecLast;
+  const u = getUsuario();        // <-- DEFINIR u EN ESTE SCOPE
+  if(!u || !u.id){
+    location.href = "login.html";
+    return;
+  }
 
-    // Siempre reflejar en UI y guardar local primero
-    saveLocalGPS(u.id, gps);
-    userGPS = gps;
+  const grams = Number(inpMeasured?.value || 0);
+  if (!Number.isFinite(grams) || grams <= 0){
+    document.getElementById('calibHint').textContent = 'Ingresá los gramos medidos (número > 0).';
+    return;
+  }
+  const gps = grams / calibSecLast;
 
-    // NUEVO: que el input también muestre el valor calibrado (g/s)
-    if (inpMeasured) inpMeasured.value = gps.toFixed(2);                  // NUEVO
+  // reflejar en UI y guardar local
+  saveLocalGPS(u.id, gps);
+  userGPS = gps;
 
-    // Intentar persistir en la ESP...
-    const okESP = await saveUserGPSOnESP(u.id, gps);
+  // intentar persistir en la ESP
+  const okESP = await saveUserGPSOnESP(u.id, gps);
 
-    const hint = document.getElementById('calibHint');
-    hint.textContent = okESP
-      ? `Calibrado ✔ (en ESP): ${gps.toFixed(2)} g/s`
-      : `Guardado local (ESP no disponible): ${gps.toFixed(2)} g/s`;
+  const hint = document.getElementById('calibHint');
+  hint.textContent = okESP
+    ? `Calibrado ✔ (en ESP): ${gps.toFixed(2)} g/s`
+    : `Guardado local (ESP no disponible): ${gps.toFixed(2)} g/s`;
 
-    refreshSecondsPreview();
-  });
-}
+  refreshSecondsPreview();
+});
+    }
 
 
     const gramsInputForPreview = document.getElementById('grams');
