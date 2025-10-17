@@ -1,11 +1,12 @@
 {
-  "version": 1,
-  "updatedAt": "2025-10-01T14:00:10.959Z",
+  "version": 2,
+  "updatedAt": "2025-10-17T14:30:24.188Z",
   "userId": 2,
   "gramsPerMeal": 100,
   "hopper": 900,
   "mode": "repeat_week",
-  "secondsOpen": 10,
+  "secondsOpen": 3.3333333333333335,
+  "water_ml_per_meal": 600,
   "dayplan": [
     "04:00"
   ],

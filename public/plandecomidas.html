@@ -5,17 +5,15 @@
   <title>Plan de Comidas - PetCare</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="plandecomidas.css">
-  
 </head>
 <body>
   <div class="phone">
     <div class="topbar"><h1>Plan de Comidas • PetCare</h1></div>
-      
     <div class="content">
 
       <a href="principal.html" class="back-inline" aria-label="Volver al principal">
-    <span class="arr">←</span> Volver
-  </a>
+        <span class="arr">←</span> Volver
+      </a>
 
       <!-- CONEXION -->
       <form id="connForm" class="card" autocomplete="off">
@@ -27,6 +25,29 @@
         <div class="row" style="margin-top:12px">
           <button type="submit" class="btn primary btn-block">Guardar conexion</button>
           <button type="button" id="goTable" class="btn secondary btn-block">Ver tabla de comidas</button>
+        </div>
+      </form>
+
+      <!-- === NUEVO: CALIBRACIÓN (arriba de Configurar plan) === -->
+      <form id="calibForm" class="card" autocomplete="off">
+        <h2>Calibrar máquina</h2>
+        <p class="subtle">
+          1) Poné un recipiente en la balanza. 2) Tocá <em>Abrir 1s</em> para que caiga comida.
+          3) Pesá lo que cayó y guardá ese valor. Con eso calculamos gramos/segundo de tu máquina.
+        </p>
+
+        <div class="row" style="gap:8px">
+          <button type="button" id="calibOpen1s" class="btn">Abrir 1s</button>
+          <input type="number" id="calibMeasured" min="1" step="1" placeholder="gramos medidos" style="flex:1">
+          <button type="button" id="calibSave" class="btn primary">Guardar calibración</button>
+        </div>
+
+        <p class="hint" id="calibHint" style="margin-top:8px">Aún sin calibrar: se asume 10 g/s.</p>
+        <div class="divider"></div>
+
+        <div class="row" style="align-items:center">
+          <span class="subtle">Con tu calibración, la ración abrirá:</span>
+          <strong id="secPreview" style="margin-left:6px">—</strong>
         </div>
       </form>
 
@@ -42,9 +63,13 @@
         </div>
         <p class="hint" id="iaResult"></p>
 
+        <!-- === NUEVO: Agua por comida === -->
+        <label for="water_ml">Agua por comida (ml)</label>
+        <input type="number" id="water_ml" min="0" step="50" placeholder="Ej: 600" />
+        <p class="hint" id="waterHint">Por defecto: 600 ml (bomba ~25 ml/s).</p>
+
         <label for="hopper">Almacen — comida disponible</label>
         <input type="number" id="hopper" min="0" step="10" placeholder="Ej: 1000" />
-        
 
         <label for="mode">Modo de plan</label>
         <select id="mode" required>
@@ -105,7 +130,7 @@
           </div>
         </div>
 
-        <!-- === NUEVO: Botón Recordar mi plan === -->
+        <!-- === Botón Recordar plan === -->
         <div class="row" style="margin:10px 0">
           <button type="button" id="rememberPlan" class="btn secondary btn-block">
             Recordar mi plan
@@ -169,11 +194,10 @@
         </div>
       </div>
 
-      <!-- FIX: elemento para mostrar hints/errores de IA -->
       <p id="ia_hint" class="subtle" style="margin-top:8px"></p>
-  
     </div>
   </div>
+
   <script src="plandecomidas.js"></script>
   <script>
     // ======= urls =======
@@ -183,11 +207,7 @@
     // ======= helpers usuario =======
     function getUsuario(){ try{ return JSON.parse(localStorage.getItem("usuario")) } catch { return null } }
 
-    /* ==================== NUEVO: Persistencia de plan por usuario ====================
-       - GET  /db/planes/:userId  -> { ok:true, data:{...} } (o data:null)
-       - PUT  /db/planes/:userId  -> { ok:true }
-       Además, cache local por usuario en localStorage.
-    ================================================================================ */
+    /* ==================== Persistencia de plan por usuario ==================== */
     function planCacheKey(userId){
       return `petcare_plan_cache_${userId || 'anon'}`;
     }
@@ -195,14 +215,19 @@
       const grams = parseInt(document.getElementById('grams').value, 10);
       const hopper = document.getElementById('hopper').value ? Number(document.getElementById('hopper').value) : null;
       const mode = document.getElementById('mode').value;
+      const waterEl = document.getElementById('water_ml');
+      const waterMl = waterEl ? Number(waterEl.value || 0) : null;
+
       const secondsOpen = Number.isFinite(grams) && grams > 0 ? (grams / 10) : null;
-      const doc = { 
-        version: 1,
+
+      const doc = {
+        version: 2,
         updatedAt: new Date().toISOString(),
         gramsPerMeal: Number.isFinite(grams) ? grams : null,
         hopper: Number.isFinite(hopper) ? hopper : null,
         mode,
         secondsOpen,
+        water_ml_per_meal: Number.isFinite(waterMl) && waterMl >= 0 ? waterMl : null,
         dayplan: Array.isArray(window.dayplan) ? [...window.dayplan] : [],
         weekplan: window.weekplan ? {
           mon:[...window.weekplan.mon],
@@ -217,72 +242,67 @@
       return doc;
     }
 
-// ===== Reemplazar SOLO esta función =====
-function applyPlanToUI(planDoc){
-  if(!planDoc || typeof planDoc !== 'object') return;
+    // ===== Reemplazar SOLO esta función =====
+    function applyPlanToUI(planDoc){
+      if(!planDoc || typeof planDoc !== 'object') return;
 
-  // Referencias a las MISMAS estructuras que usa tu UI
-  const keys = ["mon","tue","wed","thu","fri","sat","sun"];
+      const keys = ["mon","tue","wed","thu","fri","sat","sun"];
+      const dayplanVar  = (typeof dayplan  !== "undefined") ? dayplan  : (window.dayplan  ||= []);
+      const weekplanVar = (typeof weekplan !== "undefined") ? weekplan : (window.weekplan ||= { mon:[],tue:[],wed:[],thu:[],fri:[],sat:[],sun:[] });
 
-  // Ojo: let/const top-level NO van a window ⇒ usamos la variable si existe;
-  // si no, caemos a window.* y la inicializamos.
-  const dayplanVar  = (typeof dayplan  !== "undefined") ? dayplan  : (window.dayplan  ||= []);
-  const weekplanVar = (typeof weekplan !== "undefined") ? weekplan : (window.weekplan ||= { mon:[],tue:[],wed:[],thu:[],fri:[],sat:[],sun:[] });
+      keys.forEach(k => { if(!Array.isArray(weekplanVar[k])) weekplanVar[k] = []; });
 
-  // Asegurar arrays internos del objeto weekplan
-  keys.forEach(k => { if(!Array.isArray(weekplanVar[k])) weekplanVar[k] = []; });
+      if(Number.isFinite(planDoc.gramsPerMeal)){
+        const gramsEl = document.getElementById('grams');
+        if (gramsEl) gramsEl.value = String(planDoc.gramsPerMeal);
+      }
+      if(Number.isFinite(planDoc.hopper)){
+        const hopperEl = document.getElementById('hopper');
+        if (hopperEl){
+          hopperEl.value = String(planDoc.hopper);
+          localStorage.setItem('petcare_hopper', hopperEl.value.trim());
+        }
+      }
 
-  // Gramos / hopper
-  if(Number.isFinite(planDoc.gramsPerMeal)){
-    const gramsEl = document.getElementById('grams');
-    if (gramsEl) gramsEl.value = String(planDoc.gramsPerMeal);
-  }
-  if(Number.isFinite(planDoc.hopper)){
-    const hopperEl = document.getElementById('hopper');
-    if (hopperEl){
-      hopperEl.value = String(planDoc.hopper);
-      localStorage.setItem('petcare_hopper', hopperEl.value.trim());
+      // Agua por comida
+      if (planDoc.water_ml_per_meal != null) {
+        const waterEl = document.getElementById('water_ml');
+        if (waterEl) waterEl.value = String(Math.round(planDoc.water_ml_per_meal));
+      }
+
+      if(planDoc.mode){
+        const modeSel = document.getElementById('mode');
+        if (modeSel){
+          modeSel.value = planDoc.mode;
+          modeSel.dispatchEvent(new Event('change', { bubbles:true }));
+        }
+      }
+
+      if(planDoc.mode === 'repeat_week'){
+        const src = Array.isArray(planDoc.dayplan) ? planDoc.dayplan : [];
+        dayplanVar.length = 0;
+        src.forEach(t => { if(/^\d{2}:\d{2}$/.test(t) && !dayplanVar.includes(t)) dayplanVar.push(t); });
+        dayplanVar.sort();
+        if (typeof renderAllTable === 'function') renderAllTable();
+      }
+
+      if(planDoc.mode === 'per_day'){
+        let src = planDoc.weekplan || {};
+        if (Array.isArray(src) && src.length === 7){
+          src = { mon:src[0]||[], tue:src[1]||[], wed:src[2]||[], thu:src[3]||[], fri:src[4]||[], sat:src[5]||[], sun:src[6]||[] };
+        }
+        const keys2 = ["mon","tue","wed","thu","fri","sat","sun"];
+        keys2.forEach(k => {
+          const arr = Array.isArray(src[k]) ? src[k] : [];
+          weekplanVar[k].length = 0;
+          arr.forEach(t => { if(/^\d{2}:\d{2}$/.test(t) && !weekplanVar[k].includes(t)) weekplanVar[k].push(t); });
+          weekplanVar[k].sort();
+        });
+
+        if (typeof renderDayTable === 'function') renderDayTable();
+        if (typeof refreshWeekPreview === 'function') refreshWeekPreview();
+      }
     }
-  }
-
-  // Modo (dispara el change para mostrar/ocultar cajas)
-  if(planDoc.mode){
-    const modeSel = document.getElementById('mode');
-    if (modeSel){
-      modeSel.value = planDoc.mode;
-      modeSel.dispatchEvent(new Event('change', { bubbles:true }));
-    }
-  }
-
-  // ==== Horarios
-  if(planDoc.mode === 'repeat_week'){
-    // Copiar a la MISMA referencia que usa la tabla
-    const src = Array.isArray(planDoc.dayplan) ? planDoc.dayplan : [];
-    dayplanVar.length = 0;
-    src.forEach(t => { if(/^\d{2}:\d{2}$/.test(t) && !dayplanVar.includes(t)) dayplanVar.push(t); });
-    dayplanVar.sort();
-
-    if (typeof renderAllTable === 'function') renderAllTable();
-  }
-
-  if(planDoc.mode === 'per_day'){
-    // Acepta objeto {mon:...} o array [mon,tue,...]
-    let src = planDoc.weekplan || {};
-    if (Array.isArray(src) && src.length === 7){
-      src = { mon:src[0]||[], tue:src[1]||[], wed:src[2]||[], thu:src[3]||[], fri:src[4]||[], sat:src[5]||[], sun:src[6]||[] };
-    }
-    keys.forEach(k => {
-      const arr = Array.isArray(src[k]) ? src[k] : [];
-      // Mutar las MISMAS referencias usadas por la UI
-      weekplanVar[k].length = 0;
-      arr.forEach(t => { if(/^\d{2}:\d{2}$/.test(t) && !weekplanVar[k].includes(t)) weekplanVar[k].push(t); });
-      weekplanVar[k].sort();
-    });
-
-    if (typeof renderDayTable === 'function') renderDayTable();
-    if (typeof refreshWeekPreview === 'function') refreshWeekPreview();
-  }
-}
 
     async function fetchUserPlanFromServer(userId){
       try{
@@ -329,6 +349,29 @@ function applyPlanToUI(planDoc){
         return;
       }
       applyPlanToUI(planDoc);
+
+      // Traer calibración g/s y agua desde ESP32
+      try{
+        const gps = await fetchUserGPSFromESP(u.id);
+        if (gps && Number.isFinite(gps) && gps>0){
+         userGPS = gps;
+        const hint = document.getElementById('calibHint');
+        if (hint) hint.textContent = `Calibrado: ${gps.toFixed(2)} g/s`;
+        const calInput = document.getElementById('calibMeasured');           // NUEVO
+        if (calInput) calInput.value = gps.toFixed(2);                        // NUEVO
+    }
+      }catch(_){}
+      try{
+        const ml = await fetchUserWaterFromESP(u.id);
+        const waterEl = document.getElementById('water_ml');
+        const waterHint = document.getElementById('waterHint');
+        if (Number.isFinite(ml) && ml>=0 && waterEl){
+          waterEl.value = String(Math.round(ml));
+          if (waterHint) waterHint.textContent = `Agua por comida: ${Math.round(ml)} ml`;
+        }
+      }catch(_){}
+      refreshSecondsPreview();
+
       respEl.textContent = "✅ Plan recordado y cargado en pantalla.";
     }
 
@@ -355,6 +398,71 @@ function applyPlanToUI(planDoc){
       const port=(localStorage.getItem("petcare_port")||portInput?.value||"8080").trim();
       if(!ip) throw new Error("Falta IP del ESP32");
       return `http://${ip}:${port}${path}`;
+    }
+
+    // ====== NUEVO: Calibración & Agua helpers ======
+    let userGPS = null;           // g/s del usuario
+    let calibSecLast = 1;
+
+    function calibLocalKey(userId){ return `petcare_cal_gps_${userId||'anon'}`; }
+    function loadLocalGPS(userId){
+      const raw = localStorage.getItem(calibLocalKey(userId));
+      const v = Number(raw);
+      return Number.isFinite(v) && v>0 ? v : null;
+    }
+    function saveLocalGPS(userId, gps){
+      if (!Number.isFinite(gps) || gps<=0) return;
+      localStorage.setItem(calibLocalKey(userId), String(gps));
+    }
+    function effectiveGPS(){ return (Number.isFinite(userGPS) && userGPS>0) ? userGPS : 10; }
+
+    function waterLocalKey(userId){ return `petcare_water_ml_${userId||'anon'}`; }
+    async function fetchUserGPSFromESP(userId){
+      try{
+        const r = await fetch(buildURL(`/calibration?user=${encodeURIComponent(userId)}`));
+        const t = await r.text(); let j; try{ j = JSON.parse(t) } catch{ return null; }
+        if(r.ok && j?.ok && Number.isFinite(j.gps) && j.gps>0) return j.gps;
+        return null;
+      }catch(_){ return null; }
+    }
+    async function saveUserGPSOnESP(userId, gps){
+      try{
+        const r = await fetch(buildURL(`/calibration`), {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ userId, gps })
+        });
+        return r.ok;
+      }catch(_){ return false; }
+    }
+    async function fetchUserWaterFromESP(userId){
+      try{
+        const r = await fetch(buildURL(`/water?user=${encodeURIComponent(userId)}`));
+        const t = await r.text(); let j; try{ j = JSON.parse(t) } catch{ return null; }
+        if(r.ok && j?.ok){
+          return Number.isFinite(j.ml) && j.ml>0 ? j.ml : null;
+        }
+        return null;
+      }catch(_){ return null; }
+    }
+    async function saveUserWaterOnESP(userId, ml){
+      try{
+        const r = await fetch(buildURL(`/water`), {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ userId, ml })
+        });
+        return r.ok;
+      }catch(_){ return false; }
+    }
+    function refreshSecondsPreview(){
+      const gramsEl = document.getElementById('grams');
+      const preview = document.getElementById('secPreview');
+      const g = Number(gramsEl?.value || 0);
+      if (Number.isFinite(g) && g>0){
+        const sec = g / effectiveGPS();
+        preview.textContent = `${sec.toFixed(2)} s`;
+      } else {
+        preview.textContent = '—';
+      }
     }
 
     const modeSel = document.getElementById('mode');
@@ -529,10 +637,20 @@ function applyPlanToUI(planDoc){
       }
       localStorage.setItem('petcare_grams_per_meal', String(grams));
 
-      const secondsOpen = grams/10;
       const mode = modeSel.value;
 
-      let payload = { mode, secondsOpen };
+      // segundos del SERVO con calibración
+      const secondsOpen = grams / effectiveGPS();
+
+      const u = getUsuario();
+      const waterMlInput = document.getElementById('water_ml');
+      const waterMl = Number(waterMlInput?.value || 0);
+      if (!Number.isFinite(waterMl) || waterMl < 0){
+        document.getElementById('response').textContent = "❌ Agua (ml) inválida.";
+        return;
+      }
+
+      let payload = { userId: u?.id || null, mode, secondsOpen, water_ml_per_meal: waterMl };
       if(mode === 'repeat_week'){
         payload.dayplan = [...dayplan];
         if(payload.dayplan.length===0){
@@ -561,43 +679,46 @@ function applyPlanToUI(planDoc){
         const msg = await res.text();
         respEl.textContent = res.ok ? `✅ Plan enviado. ${msg}` : `⚠️ Error ${res.status}: ${msg}`;
 
-        if (res.ok){ savePlanToDB(payload); }
-
-        /* ===== NUEVO: guardar .json por usuario + cache local SIN romper tu flujo ===== */
-        try{
-          const u = getUsuario();
-          const hopperVal = document.getElementById('hopper').value ? Number(document.getElementById('hopper').value) : null;
-          const planDoc = {
-            version: 1,
-            updatedAt: new Date().toISOString(),
-            userId: u && u.id ? u.id : null,
-            gramsPerMeal: Number.isFinite(grams) ? grams : null,
-            hopper: Number.isFinite(hopperVal) ? hopperVal : null,
-            mode: payload.mode,
-            secondsOpen: payload.secondsOpen,
-          };
-          if(payload.mode === 'repeat_week'){
-            planDoc.dayplan = Array.isArray(payload.dayplan) ? [...payload.dayplan] : [];
-            planDoc.weekplan = null;
-          } else {
-            const keys = ["mon","tue","wed","thu","fri","sat","sun"];
-            const obj = { mon:[],tue:[],wed:[],thu:[],fri:[],sat:[],sun:[] };
-            if(Array.isArray(payload.weekplan)){
-              keys.forEach((k, idx)=>{ obj[k] = Array.isArray(payload.weekplan[idx]) ? [...payload.weekplan[idx]] : []; });
+        if (res.ok){
+          savePlanToDB(payload);
+          // guardar water local
+          if (u?.id) localStorage.setItem(waterLocalKey(u.id), String(Math.round(waterMl)));
+          // guardar plan cache local/DB
+          try{
+            const hopperVal = document.getElementById('hopper').value ? Number(document.getElementById('hopper').value) : null;
+            const planDoc = {
+              version: 2,
+              updatedAt: new Date().toISOString(),
+              userId: u && u.id ? u.id : null,
+              gramsPerMeal: Number.isFinite(grams) ? grams : null,
+              hopper: Number.isFinite(hopperVal) ? hopperVal : null,
+              mode: payload.mode,
+              secondsOpen: payload.secondsOpen,
+              water_ml_per_meal: waterMl
+            };
+            if(payload.mode === 'repeat_week'){
+              planDoc.dayplan = Array.isArray(payload.dayplan) ? [...payload.dayplan] : [];
+              planDoc.weekplan = null;
+            } else {
+              const keys = ["mon","tue","wed","thu","fri","sat","sun"];
+              const obj = { mon:[],tue:[],wed:[],thu:[],fri:[],sat:[],sun:[] };
+              if(Array.isArray(payload.weekplan)){
+                keys.forEach((k, idx)=>{ obj[k] = Array.isArray(payload.weekplan[idx]) ? [...payload.weekplan[idx]] : []; });
+              }
+              planDoc.dayplan = [];
+              planDoc.weekplan = obj;
             }
-            planDoc.dayplan = [];
-            planDoc.weekplan = obj;
-          }
-          if(u && u.id){ savePlanToLocalCache(u.id, planDoc); }
-          if(u && u.id){ await saveUserPlanToServer(u.id, planDoc); }
-        }catch(_){ /* silencioso */ }
+            if(u && u.id){ savePlanToLocalCache(u.id, planDoc); }
+            if(u && u.id){ await saveUserPlanToServer(u.id, planDoc); }
+          }catch(_){}
+        }
 
       }catch(err){
         respEl.textContent = `❌ No se pudo conectar: ${err.message}`;
       }
     });
 
-    /* ===== NUEVO: Botón Recordar mi plan (blindado) ===== */
+    // ===== NUEVO: Botón Recordar mi plan =====
     const rememberBtn = document.getElementById('rememberPlan');
     if(rememberBtn){
       rememberBtn.addEventListener('click', async ()=>{
@@ -666,7 +787,6 @@ function applyPlanToUI(planDoc){
         iaCas.value = (m.castrado===true || String(m.castrado).toLowerCase()==="si")?"si":"no"
         iaCas.dispatchEvent(new Event('change', { bubbles:true }));
       }
-      // limpiar hint/result al cargar mascota
       if(iaHint) iaHint.textContent = "";
       if(iaResult) iaResult.textContent = "";
     }
@@ -694,29 +814,110 @@ function applyPlanToUI(planDoc){
         document.getElementById('grams').value = String(Math.round(gpc))
         document.getElementById('iaResult').textContent = `Sugerencia IA: ${Math.round(gd)} g/dia → ${Math.round(gpc)} g dividido en 2 raciones`
         setTimeout(()=> iaModal.classList.remove('open'), 700)
+        refreshSecondsPreview();
       }catch(e){
         if(iaHint) iaHint.textContent = `no se pudo calcular: ${e.message}`
       }
     })
 
-    /* ===== (opcional): precargar automáticamente si hay plan guardado ===== */
+    /* ===== Precarga automática si hay plan guardado ===== */
     document.addEventListener('DOMContentLoaded', async ()=>{
       const u = getUsuario();
       if(!u || !u.id) return;
+
+      // Calibración
+          // Calibración
+userGPS = await fetchUserGPSFromESP(u.id);
+if (userGPS==null) userGPS = loadLocalGPS(u.id);
+const hint = document.getElementById('calibHint');
+const calInput = document.getElementById('calibMeasured');               // NUEVO
+if (Number.isFinite(userGPS) && userGPS>0){
+  if (hint) hint.textContent = `Calibrado: ${userGPS.toFixed(2)} g/s`;
+  if (calInput) calInput.value = userGPS.toFixed(2);                     // NUEVO
+} else {
+  if (hint) hint.textContent = `Aún sin calibrar: se asume 10 g/s.`;
+}
+
+
+      // Agua
+      const waterInput = document.getElementById('water_ml');
+      const waterHint  = document.getElementById('waterHint');
+      let waterMl = await fetchUserWaterFromESP(u.id);
+      if (waterMl==null) {
+        const local = Number(localStorage.getItem(waterLocalKey(u.id)));
+        waterMl = (Number.isFinite(local) && local>0) ? local : 600;
+      }
+      if (waterInput) waterInput.value = String(Math.round(waterMl));
+      if (waterHint)  waterHint.textContent = `Agua por comida: ${Math.round(waterMl)} ml`;
+
+      // Plan
       let planDoc = await fetchUserPlanFromServer(u.id);
       if(!planDoc) planDoc = loadPlanFromLocalCache(u.id);
       if(planDoc) applyPlanToUI(planDoc);
+
+      // Preview
+      refreshSecondsPreview();
     });
+
+    // === Calibración UI handlers ===
+    const btnOpen1s = document.getElementById('calibOpen1s');
+    const inpMeasured = document.getElementById('calibMeasured');
+    const btnSaveCalib = document.getElementById('calibSave');
+
+    if (btnOpen1s){
+      btnOpen1s.addEventListener('click', async ()=>{
+        const respEl = document.getElementById('calibHint');
+        respEl.textContent = 'Abriendo servo 1s...';
+        try{
+          const r = await fetch(buildURL('/calibration/open?sec=1'));
+          const msg = await r.text();
+          respEl.textContent = r.ok ? 'Listo. Pesá lo que cayó y guardá el valor.' : `⚠️ Error: ${msg}`;
+          calibSecLast = 1;
+        }catch(e){
+          respEl.textContent = `❌ No se pudo conectar: ${e.message}`;
+        }
+      });
+    }
+
+    if (btnSaveCalib){
+  btnSaveCalib.addEventListener('click', async ()=>{
+    // ...
+    const gps = grams / calibSecLast;
+
+    // Siempre reflejar en UI y guardar local primero
+    saveLocalGPS(u.id, gps);
+    userGPS = gps;
+
+    // NUEVO: que el input también muestre el valor calibrado (g/s)
+    if (inpMeasured) inpMeasured.value = gps.toFixed(2);                  // NUEVO
+
+    // Intentar persistir en la ESP...
+    const okESP = await saveUserGPSOnESP(u.id, gps);
+
+    const hint = document.getElementById('calibHint');
+    hint.textContent = okESP
+      ? `Calibrado ✔ (en ESP): ${gps.toFixed(2)} g/s`
+      : `Guardado local (ESP no disponible): ${gps.toFixed(2)} g/s`;
+
+    refreshSecondsPreview();
+  });
+}
+
+
+    const gramsInputForPreview = document.getElementById('grams');
+    if (gramsInputForPreview){
+      gramsInputForPreview.addEventListener('input', refreshSecondsPreview);
+    }
   </script>
+
   <script>
 /* === Select "fachero" reutilizable: funciona con #mode, #ia_actividad y #ia_castrado === */
 (function(){
   function enhanceSelect(native){
     if(!native || native.__nice) return;
-    native.classList.add('sr-only');   // oculto visual pero accesible
+    native.classList.add('sr-only');
     native.__nice = true;
 
-    // contenedor y UI
     const wrap = document.createElement('div');
     wrap.className = 'nice-select';
 
@@ -730,7 +931,6 @@ function applyPlanToUI(planDoc){
     menu.className = 'nice-select__menu';
     menu.setAttribute('role','listbox');
 
-    // construir opciones
     const buildOptions = () => {
       menu.innerHTML = '';
       [...native.options].forEach((opt, idx)=>{
@@ -748,11 +948,9 @@ function applyPlanToUI(planDoc){
         });
         menu.appendChild(li);
       });
-      // texto del botón
       btn.textContent = native.options[native.selectedIndex]?.text || 'Seleccionar';
     };
 
-    // sincroniza UI cuando el valor cambia por código (ej: llenarDesdeMascota)
     native.addEventListener('change', ()=>{
       btn.textContent = native.options[native.selectedIndex]?.text || 'Seleccionar';
       menu.querySelectorAll('[aria-selected="true"]').forEach(n=>n.removeAttribute('aria-selected'));
@@ -760,7 +958,6 @@ function applyPlanToUI(planDoc){
       if(sel) sel.setAttribute('aria-selected','true');
     });
 
-    // abrir / cerrar
     btn.addEventListener('click', ()=>{
       const open = wrap.classList.toggle('open');
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -772,7 +969,6 @@ function applyPlanToUI(planDoc){
       }
     });
 
-    // teclado básico
     btn.addEventListener('keydown', (e)=>{
       const opts = [...menu.querySelectorAll('.nice-select__option')];
       const iSel = opts.findIndex(o=>o.getAttribute('aria-selected')==='true');
@@ -790,20 +986,16 @@ function applyPlanToUI(planDoc){
       }
     });
 
-    // insertar en DOM
     native.parentNode.insertBefore(wrap, native);
     wrap.appendChild(btn);
     wrap.appendChild(menu);
 
-    // construir opciones iniciales
     buildOptions();
 
-    // si el <select> cambia sus opciones dinámicamente
     const obs = new MutationObserver(buildOptions);
     obs.observe(native, { childList:true, subtree:false, attributes:false });
   }
 
-  // aplicar a los 3 selects: #mode (página) y los dos del modal IA
   document.addEventListener('DOMContentLoaded', ()=>{
     ['mode','ia_actividad','ia_castrado'].forEach(id=>{
       const el = document.getElementById(id);
@@ -811,7 +1003,6 @@ function applyPlanToUI(planDoc){
     });
   });
 
-  // por si abrís el modal antes de que el DOMContentLoaded dispare (extra seguro)
   window.addEventListener('load', ()=>{
     ['ia_actividad','ia_castrado'].forEach(id=>{
       const el = document.getElementById(id);
@@ -819,12 +1010,10 @@ function applyPlanToUI(planDoc){
     });
   });
 
-  // expone por si querés usarlo más adelante
   window.enhanceSelect = enhanceSelect;
 })();
 </script>
 
 <script src="theme-toggle.js" defer></script>
-
 </body>
 </html>
