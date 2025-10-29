@@ -28,7 +28,7 @@
         </div>
       </form>
 
-<!-- === CALIBRACIÓN (versión con botón que abre modal) === -->
+        <!-- === CALIBRACIÓN (botón que abre modal) === -->
 <div class="card" id="calibCard">
   <h2>Calibrar máquina</h2>
   <p class="subtle">
@@ -40,15 +40,8 @@
       Abrir panel de calibración
     </button>
   </div>
-
-  <p class="hint" id="calibHint" style="margin-top:8px">Aún sin calibrar: se asume 10 g/s.</p>
-  <div class="divider"></div>
-
-  <div class="row" style="align-items:center">
-    <span class="subtle">Tardaremos estos segundos por comida</span>
-    <strong id="secPreview" style="margin-left:6px">—</strong>
-  </div>
 </div>
+
 
 
       <!-- PLAN -->
@@ -205,15 +198,22 @@
     <h2 style="margin:0 0 8px">Calibración de comida</h2>
 
     <div class="row" style="gap:8px">
-      <!-- Mismos ids que usabas antes -->
       <button type="button" id="calibOpen1s" class="btn secondary">Abrir 1 s</button>
       <input type="number" id="calibMeasured" min="1" step="1" placeholder="gramos medidos" style="flex:1">
       <button type="button" id="calibSave" class="btn primary">Guardar calibración</button>
     </div>
 
-    <p class="hint" style="margin-top:8px">
-      Tip: abrí 1 s, pesá lo que cayó y guardá. Se actualizará la velocidad (g/s).
+    <!-- MOVIDOS AL MODAL (mismos IDs) -->
+    <p class="hint" id="calibHint" style="margin:10px 0 8px">
+      Aún sin calibrar: se asume 10 g/s.
     </p>
+
+    <div class="divider"></div>
+
+    <div class="row" style="align-items:center">
+      <span class="subtle">Tardaremos estos segundos por comida</span>
+      <strong id="secPreview" style="margin-left:6px">—</strong>
+    </div>
   </div>
 </div>
 
@@ -1043,6 +1043,14 @@ if (Number.isFinite(userGPS) && userGPS>0){
 </script>
 
 <script>
+
+if (openCalib){
+  openCalib.addEventListener('click', ()=>{
+    calibModal.classList.add('open');
+    refreshSecondsPreview(); // opcional
+  });
+}
+
   // ====== modal calibración ======
   const calibModal = document.getElementById('calibModal');
   const openCalib  = document.getElementById('openCalib');
