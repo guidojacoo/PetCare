@@ -31,10 +31,6 @@
         <!-- === CALIBRACIÓN (botón que abre modal) === -->
 <div class="card" id="calibCard">
   <h2>Calibrar máquina</h2>
-  <p class="subtle">
-    Para calibrar, abrí el servo 1 s, pesá lo que cayó y guardá el valor (gramos).
-  </p>
-
   <div class="row" style="gap:8px">
     <button type="button" id="openCalib" class="btn secondary btn-block">
       Abrir panel de calibración
@@ -196,6 +192,9 @@
   <div class="modal-card" role="dialog" aria-modal="true">
     <button class="close-x" id="closeCalib" aria-label="cerrar">✕</button>
     <h2 style="margin:0 0 8px">Calibración de comida</h2>
+    <p class="subtle">
+      Para calibrar, abrí el servo 1 s, pesá lo que cayó y guardá el valor (gramos).
+    </p>
 
     <div class="row" style="gap:8px">
       <button type="button" id="calibOpen1s" class="btn secondary">Abrir 1 s</button>
