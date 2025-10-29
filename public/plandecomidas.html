@@ -28,28 +28,28 @@
         </div>
       </form>
 
-      <!-- === NUEVO: CALIBRACIÓN (arriba de Configurar plan) === -->
-      <form id="calibForm" class="card" autocomplete="off">
-        <h2>Calibrar máquina</h2>
-        <p class="subtle">
-          instrucciones: toca el botón "Abrir" y pesa la comida que salga y decinos cuanto salio (en gramos). guardalo y listo.
-        </p>
+<!-- === CALIBRACIÓN (versión con botón que abre modal) === -->
+<div class="card" id="calibCard">
+  <h2>Calibrar máquina</h2>
+  <p class="subtle">
+    Para calibrar, abrí el servo 1 s, pesá lo que cayó y guardá el valor (gramos).
+  </p>
 
-        <div class="row" style="gap:8px">
-          <button type="button" id="calibOpen1s" class="btn secondary" >Abrir</button>
-          <input type="number" id="calibMeasured" min="1" step="1" placeholder="gramos medidos" style="flex:1">
-          
-          <button type="button" id="calibSave" class="btn primary" class="calibraciónbtn">Guardar calibración</button>
-        </div>
+  <div class="row" style="gap:8px">
+    <button type="button" id="openCalib" class="btn secondary btn-block">
+      Abrir panel de calibración
+    </button>
+  </div>
 
-        <p class="hint" id="calibHint" style="margin-top:8px">Aún sin calibrar: se asume 10 g/s.</p>
-        <div class="divider"></div>
+  <p class="hint" id="calibHint" style="margin-top:8px">Aún sin calibrar: se asume 10 g/s.</p>
+  <div class="divider"></div>
 
-        <div class="row" style="align-items:center">
-          <span class="subtle">Tardaremos estos suegundos por comida</span>
-          <strong id="secPreview" style="margin-left:6px">—</strong>
-        </div>
-      </form>
+  <div class="row" style="align-items:center">
+    <span class="subtle">Tardaremos estos segundos por comida</span>
+    <strong id="secPreview" style="margin-left:6px">—</strong>
+  </div>
+</div>
+
 
       <!-- PLAN -->
       <form id="planForm" class="card" autocomplete="off">
@@ -197,6 +197,27 @@
       <p id="ia_hint" class="subtle" style="margin-top:8px"></p>
     </div>
   </div>
+
+  <!-- MODAL CALIBRACIÓN -->
+<div class="modal" id="calibModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true">
+    <button class="close-x" id="closeCalib" aria-label="cerrar">✕</button>
+    <h2 style="margin:0 0 8px">Calibración de comida</h2>
+
+    <div class="row" style="gap:8px">
+      <!-- Mismos ids que usabas antes -->
+      <button type="button" id="calibOpen1s" class="btn secondary">Abrir 1 s</button>
+      <input type="number" id="calibMeasured" min="1" step="1" placeholder="gramos medidos" style="flex:1">
+      <button type="button" id="calibSave" class="btn primary">Guardar calibración</button>
+    </div>
+
+    <p class="hint" style="margin-top:8px">
+      Tip: abrí 1 s, pesá lo que cayó y guardá. Se actualizará la velocidad (g/s).
+    </p>
+  </div>
+</div>
+
+
 
   <script src="plandecomidas.js"></script>
   <script>
