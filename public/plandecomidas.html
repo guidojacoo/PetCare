@@ -1043,21 +1043,16 @@ if (Number.isFinite(userGPS) && userGPS>0){
 </script>
 
 <script>
-
-if (openCalib){
-  openCalib.addEventListener('click', ()=>{
-    calibModal.classList.add('open');
-    refreshSecondsPreview(); // opcional
-  });
-}
-
   // ====== modal calibración ======
   const calibModal = document.getElementById('calibModal');
   const openCalib  = document.getElementById('openCalib');
   const closeCalib = document.getElementById('closeCalib');
 
   if (openCalib){
-    openCalib.addEventListener('click', ()=> calibModal.classList.add('open'));
+    openCalib.addEventListener('click', ()=>{
+      calibModal.classList.add('open');
+      refreshSecondsPreview(); // recalcula el preview al abrir
+    });
   }
   if (closeCalib){
     closeCalib.addEventListener('click', ()=> calibModal.classList.remove('open'));
