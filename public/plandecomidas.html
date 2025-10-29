@@ -1042,6 +1042,24 @@ if (Number.isFinite(userGPS) && userGPS>0){
 })();
 </script>
 
+<script>
+  // ====== modal calibración ======
+  const calibModal = document.getElementById('calibModal');
+  const openCalib  = document.getElementById('openCalib');
+  const closeCalib = document.getElementById('closeCalib');
+
+  if (openCalib){
+    openCalib.addEventListener('click', ()=> calibModal.classList.add('open'));
+  }
+  if (closeCalib){
+    closeCalib.addEventListener('click', ()=> calibModal.classList.remove('open'));
+  }
+  if (calibModal){
+    calibModal.addEventListener('click', (e)=>{ if(e.target===calibModal) calibModal.classList.remove('open') });
+  }
+</script>
+
+
 <script src="theme-toggle.js" defer></script>
 </body>
 </html>
