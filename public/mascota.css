@@ -186,145 +186,57 @@ input[type="number"] {
   appearance: textfield; /* Firefox también */
 }
 
-/* === Paso 2: layout centrado y tamaños iguales === */
-#step-2 {
-  display: flex;
-  flex-direction: column;
-  align-items: center;          /* centra el contenido del paso */
-}
 
-.sexo-grid{
-  display: grid;
-  grid-template-columns: repeat(2, 180px); /* 2 columnas del mismo ancho */
-  justify-content: center;                  /* centra la grilla en el paso */
-  gap: 12px;                                /* menos espacio entre tarjetas */
-  margin-top: 8px;
-}
+/* === Navegación por pasos (único bloque) === */
+.step{ display:none; }
+.step.active{ display:block; }
 
-.sexo-card{
-  width: 180px;                  /* mismo ancho para ambas */
-  height: 230px;                 /* misma altura para ambas */
-  background: var(--surface);
-  border: 1px solid #3a4154;     /* marco gris */
-  border-radius: 12px;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;           /* centra imagen y chip dentro del card */
-  justify-content: space-between;
-  text-align: center;
-  cursor: pointer;
-  transition: box-shadow .2s ease, border-color .2s ease, transform .08s ease;
-}
-
-.sexo-card img{
-  height: 130px;                 /* MISMA altura para ambas imágenes */
-  width: 100%;                   /* ocupa el ancho disponible */
-  object-fit: contain;           /* mantiene proporción, sin deformar */
-  margin: 0 auto 6px;
-}
-
-.sexo-card.active{
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring) inset, 0 2px 10px rgba(0,0,0,.25);
-}
-
-.sexo-card:focus{
-  outline: none;
-  box-shadow: 0 0 0 3px var(--ring) inset, 0 2px 10px rgba(0,0,0,.25);
-}
-
-/* El chip ocupa todo el ancho del card */
-#step-2 .chip{
-  width: 100%;
-  margin-top: 4px;
-}
-
-/* Responsive: si la pantalla es muy angosta, que sigan centradas */
-@media (max-width: 420px){
-  .sexo-grid{
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-  .sexo-card{
-    width: 100%;
-    height: 210px;
-  }
-  .sexo-card img{
-    height: 120px;
-  }
-}
-
-/* === Fix: que las tarjetas entren y queden centradas === */
-#step-2 { display: flex; flex-direction: column; align-items: center; }
-
+/* === Paso 2: Sexo (único bloque limpio) === */
+/* NO pongas display en #step-2: lo maneja .step/.active */
 #step-2 .sexo-grid{
   width: 100%;
-  max-width: 520px;                 /* nunca más ancho que el panel */
-  margin: 8px auto 0;               /* centrado */
-  padding: 0 8px;                   /* respirito para que no toque el borde */
-  box-sizing: border-box;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(140px, 1fr)); /* 2 columnas flexibles */
-  gap: 12px;                        /* espacio entre opciones */
-  justify-items: center;            /* centra cada card en su columna */
-}
-
-#step-2 .sexo-card{
-  width: 100%;                      /* SIN ancho fijo */
-  max-width: 240px;                 /* tope razonable dentro del panel */
-  height: 230px;                    /* mismo alto para ambas */
-}
-
-#step-2 .sexo-card img{
-  height: 130px;                    /* mismas dimensiones de imagen */
-  width: 100%;
-  object-fit: contain;
-}
-
-/* Opcional: en pantallas muy angostas sigue 2 columnas sin desbordar */
-@media (max-width: 420px){
-  #step-2 .sexo-grid{
-    max-width: 100%;
-    grid-template-columns: repeat(2, minmax(120px, 1fr));
-    gap: 10px;
-  }
-  #step-2 .sexo-card{ height: 210px; }
-  #step-2 .sexo-card img{ height: 120px; }
-}
-
-/* --- Repara la navegación por pasos --- */
-/* Oculta todos los pasos por defecto */
-.step { display: none; }
-.step.active { display: block; }
-
-/* IMPORTANT: no fuerces display en el paso 2 */
-#step-2 { /* sin display aquí; deja que .step maneje */ }
-#step-2.active { display: block; }  /* cuando está activo, se ve */
-
-/* Mantiene el layout centrado dentro del paso */
-#step-2 .sexo-grid{
-  width: 100%;
-  max-width: 520px;
+  max-width: 520px;          /* no se pasa del panel */
   margin: 8px auto 0;
   padding: 0 8px;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: repeat(2, minmax(140px, 1fr));
   gap: 12px;
-  justify-items: center;
+  justify-items: center;     /* centra cada tarjeta */
 }
 
 #step-2 .sexo-card{
   width: 100%;
   max-width: 240px;
   height: 230px;
+  background: var(--surface);
+  border: 1px solid #3a4154;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+  cursor: pointer;
+  transition: box-shadow .2s ease, border-color .2s ease;
 }
 
 #step-2 .sexo-card img{
-  height: 130px;
+  height: 130px;             /* misma altura en ambas imágenes */
   width: 100%;
   object-fit: contain;
+  margin: 0 auto 6px;
+}
+
+#step-2 .sexo-card.active{
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring) inset, 0 2px 10px rgba(0,0,0,.25);
+}
+
+#step-2 .chip{
+  width: 100%;
+  margin-top: 4px;
 }
 
 @media (max-width: 420px){
