@@ -71,20 +71,47 @@ document.querySelector("#step-1 .next").addEventListener("click", () => {
 });
 
 // Paso 2: sexo
-let chipsSexo = document.querySelectorAll("#step-2 .chip");
-let iS = 0; while (iS < chipsSexo.length) {
-  chipsSexo[iS].addEventListener("click", function(){
-    let v = this.getAttribute("data-sexo");
-    datos.sexo = v;
-    let j = 0; while (j < chipsSexo.length) { chipsSexo[j].classList.remove("active"); j++; }
-    this.classList.add("active");
+const chipsSexo = document.querySelectorAll("#step-2 .chip");
+const sexoCards = document.querySelectorAll("#step-2 .sexo-card");
+
+function selectSexo(v){
+  datos.sexo = v;
+
+  // Toggle visual en chips
+  chipsSexo.forEach(c => {
+    const is = c.getAttribute("data-sexo") === v;
+    c.classList.toggle("active", is);
   });
-  iS++;
+
+  // Toggle visual en cards (marco iluminado)
+  sexoCards.forEach(c => {
+    const is = c.getAttribute("data-sexo") === v;
+    c.classList.toggle("active", is);
+  });
 }
+
+// Click en chips
+chipsSexo.forEach(chip => {
+  chip.addEventListener("click", () => selectSexo(chip.getAttribute("data-sexo")));
+});
+
+// Click/teclado en cards (accesible con Enter/Espacio)
+sexoCards.forEach(card => {
+  const v = card.getAttribute("data-sexo");
+  card.addEventListener("click", () => selectSexo(v));
+  card.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      selectSexo(v);
+    }
+  });
+});
+
 document.querySelector("#step-2 .next").addEventListener("click", () => {
   if (!requireVal(!!datos.sexo, "Elegi un sexo")) return;
   showStep(3);
 });
+
 
 // Paso 3: peso
 let chipsPeso = document.querySelectorAll("#step-3 .chip");

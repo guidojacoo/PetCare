@@ -22,14 +22,30 @@
       </div>
 
       <!-- Paso 2 -->
-      <div class="step" id="step-2">
-        <h2>Sexo</h2>
-        <div class="chips">
-          <button class="chip" data-sexo="Macho">Macho</button>
-          <button class="chip" data-sexo="Hembra">Hembra</button>
-        </div>
-        <button class="btn next" data-next="3">Siguiente</button>
-      </div>
+<div class="step" id="step-2">
+  <h2>Sexo</h2>
+
+  <div class="sexo-grid">
+    <!-- MACHO -->
+    <figure class="sexo-card" data-sexo="Macho" tabindex="0" role="button" aria-label="Macho">
+      <img src="img/perro_macho_sin_texto_sin_fondo.png" alt="Perro macho">
+      <figcaption>
+        <button class="chip" data-sexo="Macho">Macho</button>
+      </figcaption>
+    </figure>
+
+    <!-- HEMBRA -->
+    <figure class="sexo-card" data-sexo="Hembra" tabindex="0" role="button" aria-label="Hembra">
+      <img src="img/perra_hembra_sin_texto_sin_fondo.png" alt="Perra hembra">
+      <figcaption>
+        <button class="chip" data-sexo="Hembra">Hembra</button>
+      </figcaption>
+    </figure>
+  </div>
+
+  <button class="btn next" data-next="3">Siguiente</button>
+</div>
+
 
       <!-- Paso 3 -->
       <div class="step" id="step-3">
