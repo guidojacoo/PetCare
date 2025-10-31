@@ -292,3 +292,47 @@ input[type="number"] {
   #step-2 .sexo-card{ height: 210px; }
   #step-2 .sexo-card img{ height: 120px; }
 }
+
+/* --- Repara la navegación por pasos --- */
+/* Oculta todos los pasos por defecto */
+.step { display: none; }
+.step.active { display: block; }
+
+/* IMPORTANT: no fuerces display en el paso 2 */
+#step-2 { /* sin display aquí; deja que .step maneje */ }
+#step-2.active { display: block; }  /* cuando está activo, se ve */
+
+/* Mantiene el layout centrado dentro del paso */
+#step-2 .sexo-grid{
+  width: 100%;
+  max-width: 520px;
+  margin: 8px auto 0;
+  padding: 0 8px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 12px;
+  justify-items: center;
+}
+
+#step-2 .sexo-card{
+  width: 100%;
+  max-width: 240px;
+  height: 230px;
+}
+
+#step-2 .sexo-card img{
+  height: 130px;
+  width: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 420px){
+  #step-2 .sexo-grid{
+    max-width: 100%;
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  #step-2 .sexo-card{ height: 210px; }
+  #step-2 .sexo-card img{ height: 120px; }
+}
