@@ -10,6 +10,7 @@
 const char *ssid     = "Fibertel WiFi450 2.4GHz";
 const char *password = "mlc2009iB";
 
+
 void startCameraServer();
 void setupLedFlash();
 
