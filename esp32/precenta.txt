@@ -117,20 +117,27 @@ inline void pump_on()  { digitalWrite(PUMP_PIN, PUMP_ON_LEVEL);  pumpOn = true; 
 inline void pump_off() { digitalWrite(PUMP_PIN, PUMP_OFF_LEVEL); pumpOn = false; }
 
 // ===========================
-// === BUZZER via RELÉ ===
+// === BUZZER DIRECT (activo, sin relé) ===
 // ===========================
-#define BUZZER_RELAY_PIN 26     // IN del módulo de relé para el buzzer (activo en LOW)
+// Cableado:
+//   Buzzer +  -> 3V3 (de la ESP32-CAM)
+//   Buzzer -  -> GPIO27 (ESP32 normal)
+//   GND ESP32, GND ESP32-CAM y riel negativo de la proto en común
+//
+// Lógica: LOW = ON (el pin "hunde" a GND), HIGH = OFF.
+
+#define BUZZER_PIN       27
+#define BUZZER_ON_LEVEL  LOW  // ON = LOW (sink); OFF = HIGH
+
 bool buzzed[7][12];
 extern const int __maxMealsPerDayDeclHack__ = 12;
 
-// Encendido/apagado del buzzer por relé
-inline void buzzer_on()  { digitalWrite(BUZZER_RELAY_PIN, LOW); }   // la mayoría de relés cierran con LOW
-inline void buzzer_off() { digitalWrite(BUZZER_RELAY_PIN, HIGH); }
+inline void buzzer_on()  { digitalWrite(BUZZER_PIN, BUZZER_ON_LEVEL); }
+inline void buzzer_off() { digitalWrite(BUZZER_PIN, !BUZZER_ON_LEVEL); }
 
-// Inicialización del "buzzer" (relé)
 void setupBuzzer() {
-  pinMode(BUZZER_RELAY_PIN, OUTPUT);
-  buzzer_off();  // reposo
+  pinMode(BUZZER_PIN, OUTPUT);
+  buzzer_off();  // reposo seguro
 }
 
 // Aviso (patrón peep-peep-peep) SIN tone(), con mutex de cámara
@@ -161,6 +168,7 @@ String prevMinute(const String& hhmm) {
   snprintf(buf, sizeof(buf), "%02d:%02d", hh, mm);
   return String(buf);
 }
+
 
 
 // ===========================
