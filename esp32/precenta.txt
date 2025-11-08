@@ -1,0 +1,1114 @@
+#include <WiFi.h> 
+#include <WebServer.h>
+#include <ESP32Servo.h>
+#include <ArduinoJson.h>
+#include <time.h>
+#include <Preferences.h>
+#include <math.h>   // fabsf, sqrtf, lroundf
+
+// ===========================
+// Activity Manager + Cámara (mutex duro)
+// ===========================
+
+enum ActBits : uint32_t {
+  ACT_NONE     = 0,
+  ACT_SERVO    = 1 << 0,
+  ACT_PUMP     = 1 << 1,
+  ACT_BUZZER   = 1 << 2,
+  ACT_MIC      = 1 << 3,
+  ACT_WAIT_EAT = 1 << 4,
+  ACT_CAMERA   = 1 << 5
+};
+
+volatile uint32_t actMask = ACT_NONE;
+
+inline void actSet(uint32_t bits, bool on){ if (on) actMask |= bits; else actMask &= ~bits; }
+inline bool anyNonCamBusy(){
+  return (actMask & (ACT_SERVO|ACT_PUMP|ACT_BUZZER|ACT_MIC|ACT_WAIT_EAT)) != 0;
+}
+
+// Blackout por plan (3 min antes / 1 min después)
+const unsigned long CAM_BLACKOUT_BEFORE_MS = 3UL * 60UL * 1000UL;
+const unsigned long CAM_BLACKOUT_AFTER_MS  = 1UL * 60UL * 1000UL;
+
+bool camOn = false;
+unsigned long camBlackoutUntilMs = 0;
+unsigned long camLastCheckMs = 0;
+
+static int hhmmToMin_cam(const String& s){
+  if (s.length()!=5) return -1;
+  int hh = s.substring(0,2).toInt();
+  int mm = s.substring(3,5).toInt();
+  return (hh>=0 && hh<24 && mm>=0 && mm<60) ? (hh*60+mm) : -1;
+}
+
+bool isNowWithinCamBlackoutByPlan(){
+  struct tm ti;
+  if (!getLocalTime(&ti)) return false;
+  int wday = ti.tm_wday;
+  unsigned long nowMs = (unsigned long)(ti.tm_hour*60 + ti.tm_min)*60UL*1000UL + (unsigned long)ti.tm_sec*1000UL;
+
+  for (int i=0;i<dayCount[wday];++i){
+    int m = hhmmToMin_cam(dayTimes[wday][i]); if (m<0) continue;
+    unsigned long mealMs = (unsigned long)m*60UL*1000UL;
+    if (nowMs + 1 < mealMs){
+      unsigned long dt = mealMs - nowMs;
+      if (dt <= CAM_BLACKOUT_BEFORE_MS) return true;
+    } else {
+      if (nowMs <= mealMs + CAM_BLACKOUT_AFTER_MS) return true;
+    }
+  }
+  return false;
+}
+
+// Stubs de cámara (reemplazá por init/deinit reales en ESP32-CAM cuando quieras)
+void cam_hw_start(){ Serial.println("[CAM] start (stub)"); }
+void cam_hw_stop(){  Serial.println("[CAM] stop (stub)");  }
+
+bool camAllowedNow(){
+  if (anyNonCamBusy()) return false;
+  if (millis() < camBlackoutUntilMs) return false;
+  if (isNowWithinCamBlackoutByPlan()) return false;
+  return true;
+}
+bool camStart(){
+  if (!camAllowedNow()) return false;
+  cam_hw_start();
+  camOn = true; actSet(ACT_CAMERA,true);
+  return true;
+}
+void camStop(){
+  if (!camOn) return;
+  cam_hw_stop();
+  camOn = false; actSet(ACT_CAMERA,false);
+}
+void camEnsureOffIfNeeded(){
+  if (camOn && !camAllowedNow()) camStop();
+}
+
+
+// ===========================
+// WiFi
+// ===========================
+const char *ssid = "IoTB";
+const char *password = "inventaronelVAR";
+
+// ===========================
+// Servo
+// ===========================
+Servo servoMotor;
+#define SERVO_PIN 14
+
+// ===========================
+// PIR HC-SR501
+// ===========================
+#define PIR_PIN 12
+const unsigned long EAT_WINDOW_MS = 120000UL;  // 120s
+
+// ===========================
+// Bomba (relé/MOSFET de control)
+// ===========================
+#define PUMP_PIN 25
+const uint8_t PUMP_ON_LEVEL  = LOW;   // Relé activo en LOW
+const uint8_t PUMP_OFF_LEVEL = HIGH;
+bool pumpOn = false;
+const unsigned long PUMP_GAP_MS = 2000; // 2 s entre servo y bomba
+inline void pump_on()  { digitalWrite(PUMP_PIN, PUMP_ON_LEVEL);  pumpOn = true;  }
+inline void pump_off() { digitalWrite(PUMP_PIN, PUMP_OFF_LEVEL); pumpOn = false; }
+
+// ===========================
+// === BUZZER via RELÉ ===
+// ===========================
+#define BUZZER_RELAY_PIN 26     // IN del módulo de relé para el buzzer (activo en LOW)
+bool buzzed[7][12];
+extern const int __maxMealsPerDayDeclHack__ = 12;
+
+// Encendido/apagado del buzzer por relé
+inline void buzzer_on()  { digitalWrite(BUZZER_RELAY_PIN, LOW); }   // la mayoría de relés cierran con LOW
+inline void buzzer_off() { digitalWrite(BUZZER_RELAY_PIN, HIGH); }
+
+// Inicialización del "buzzer" (relé)
+void setupBuzzer() {
+  pinMode(BUZZER_RELAY_PIN, OUTPUT);
+  buzzer_off();  // reposo
+}
+
+// Aviso (patrón peep-peep-peep) SIN tone(), con mutex de cámara
+void buzzerAvisoComida() {
+  camStop();                 // NO permitir cámara durante buzzer (mutex duro)
+  actSet(ACT_BUZZER, true);
+
+  // patrón: 1.0 s + 0.5 s + 0.5 s (con pequeños gaps)
+  buzzer_off(); delay(30);
+  buzzer_on();  delay(1000);
+  buzzer_off(); delay(120);
+  buzzer_on();  delay(500);
+  buzzer_off(); delay(120);
+  buzzer_on();  delay(500);
+  buzzer_off();
+
+  actSet(ACT_BUZZER, false);
+}
+
+// Utilidad "un minuto antes" (igual que antes)
+String prevMinute(const String& hhmm) {
+  if (hhmm.length()!=5 || hhmm.charAt(2)!=':') return "";
+  int hh = hhmm.substring(0,2).toInt();
+  int mm = hhmm.substring(3,5).toInt();
+  mm -= 1;
+  if (mm < 0) { mm = 59; hh -= 1; if (hh < 0) hh = 23; }
+  char buf[6];
+  snprintf(buf, sizeof(buf), "%02d:%02d", hh, mm);
+  return String(buf);
+}
+
+
+// ===========================
+// Web Server
+// ===========================
+WebServer server(8080);
+
+// ===========================
+// Plan (por día o por semana)
+// ===========================
+#define MAX_MEALS_PER_DAY 12
+String dayTimes[7][MAX_MEALS_PER_DAY];
+int    dayCount[7] = {0,0,0,0,0,0,0};
+bool   fed[7][MAX_MEALS_PER_DAY];
+bool   eaten[7][MAX_MEALS_PER_DAY];
+bool   water[7][MAX_MEALS_PER_DAY];
+float  secondsOpen = 1.0;
+int lastWday = -1;
+int    lastFeedWday  = -1;
+int    lastFeedIndex = -1;
+String lastFeedTime  = "";
+bool           waitingEat       = false;
+int            pendingEatWday   = -1;
+int            pendingEatIndex  = -1;
+unsigned long  eatWindowStartMs = 0;
+void resetBuzzedForDay(int wday){
+  if (wday < 0 || wday > 6) return;
+  for (int i=0;i<dayCount[wday];++i) buzzed[wday][i] = false;
+}
+void resetAllBuzzed(){ for(int d=0; d<7; ++d) resetBuzzedForDay(d); }
+
+// ===========================
+// NTP
+// ===========================
+const char* ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = -10800;
+const int  daylightOffset_sec = 0;
+
+// ===========================
+// CORS
+// ===========================
+void enableCORS() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+void handleOptions() { enableCORS(); server.send(204); }
+
+// ===========================
+// NVS (Preferences)
+// ===========================
+Preferences prefs;
+
+// Guarda/lee JSON del plan
+void savePlanJSONToNVS(const String& json) {
+  if (prefs.begin("petcare", false)) {
+    prefs.putString("weekplan_json", json);
+    prefs.end();
+  }
+}
+String loadPlanJSONFromNVS() {
+  String out;
+  if (prefs.begin("petcare", true)) {
+    out = prefs.getString("weekplan_json", "");
+    prefs.end();
+  }
+  return out;
+}
+
+// Flags por día
+void saveDayFlags(int wday) {
+  if (wday < 0 || wday > 6) return;
+  if (prefs.begin("petcare", false)) {
+    String kf = "fed_"    + String(wday);
+    String ke = "eaten_"  + String(wday);
+    String kw = "water_"  + String(wday);
+    prefs.putBytes(kf.c_str(),   fed[wday],   MAX_MEALS_PER_DAY);
+    prefs.putBytes(ke.c_str(),   eaten[wday], MAX_MEALS_PER_DAY);
+    prefs.putBytes(kw.c_str(),   water[wday], MAX_MEALS_PER_DAY);
+    prefs.end();
+  }
+}
+void loadDayFlags(int wday) {
+  if (wday < 0 || wday > 6) return;
+  if (prefs.begin("petcare", true)) {
+    String kf = "fed_"    + String(wday);
+    String ke = "eaten_"  + String(wday);
+    String kw = "water_"  + String(wday);
+    prefs.getBytes(kf.c_str(),   fed[wday],   MAX_MEALS_PER_DAY);
+    prefs.getBytes(ke.c_str(),   eaten[wday], MAX_MEALS_PER_DAY);
+    prefs.getBytes(kw.c_str(),   water[wday], MAX_MEALS_PER_DAY);
+    prefs.end();
+  }
+}
+void saveAllFlags() { for (int d=0; d<7; d++) saveDayFlags(d); }
+void loadAllFlags() { for (int d=0; d<7; d++) loadDayFlags(d); }
+
+// ===========================
+// Utils
+// ===========================
+bool isValidHHMM(const String& s) {
+  if (s.length() != 5 || s.charAt(2) != ':') return false;
+  int hh = s.substring(0,2).toInt();
+  int mm = s.substring(3,5).toInt();
+  return (hh>=0 && hh<=23 && mm>=0 && mm<=59);
+}
+void resetFedForDay(int wday) {
+  if (wday < 0 || wday > 6) return;
+  for (int i = 0; i < dayCount[wday]; i++) {
+    fed[wday][i]   = false;
+    eaten[wday][i] = false;
+    water[wday][i] = false;
+  }
+}
+void resetAllFed() { for (int d=0; d<7; d++) resetFedForDay(d); }
+String getDayName(int wday) {
+  const char* names[7]={"Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"};
+  if (wday<0||wday>6) return "Desconocido"; return String(names[wday]);
+}
+
+// ===========================
+// MIC (tu código tal cual)
+// ===========================
+#define MIC_PIN 34
+const int MIC_WINDOW_SAMPLES = 192;
+const int MIC_SAMPLE_US      = 200;
+volatile bool  micEnabled          = false;
+volatile bool  micSuspendedByPlan  = false;
+volatile float micLevel01          = 0.0f;
+volatile float micPeak01           = 0.0f;
+int            micThreshold        = 80;
+int            micAlertsToday      = 0;
+unsigned long  micStopAtMs         = 0;
+TaskHandle_t   micTaskHandle       = nullptr;
+const unsigned long MIC_BLACKOUT_BEFORE_MS = 2UL * 60UL * 1000UL;
+const unsigned long MIC_BLACKOUT_AFTER_MS  = 3UL * 60UL * 1000UL;
+bool micInAlert = false;
+int micAlerts[7] = {0};
+unsigned long micPersistMs = 0;
+
+int hhmmToMin(const String& s){
+  if (s.length()!=5) return -1;
+  int hh = s.substring(0,2).toInt();
+  int mm = s.substring(3,5).toInt();
+  return (hh>=0 && hh<24 && mm>=0 && mm<60) ? (hh*60+mm) : -1;
+}
+bool isNowWithinBlackout(){
+  struct tm ti;
+  if (!getLocalTime(&ti)) return false;
+  int wday = ti.tm_wday;
+  int nowMin = ti.tm_hour*60 + ti.tm_min;
+  unsigned long preS  = MIC_BLACKOUT_BEFORE_MS/1000UL;
+  unsigned long postS = MIC_BLACKOUT_AFTER_MS/1000UL;
+  for (int i=0;i<dayCount[wday];++i){
+    int m = hhmmToMin(dayTimes[wday][i]);
+    if (m<0) continue;
+    int from = m - (int)(preS/60UL);
+    int to   = m + (int)(postS/60UL);
+    if (nowMin >= from && nowMin <= to) return true;
+  }
+  return false;
+}
+void setupMicADC(){
+  analogReadResolution(12);
+  analogSetAttenuation(ADC_11db);
+  analogSetPinAttenuation(MIC_PIN, ADC_11db);
+}
+void saveMicAlerts(int wday){
+  if (wday < 0 || wday > 6) return;
+  if (prefs.begin("petcare", false)) {
+    String k = "micA_" + String(wday);
+    prefs.putInt(k.c_str(), micAlerts[wday]);
+    prefs.end();
+  }
+}
+int loadMicAlert(int wday){
+  if (wday < 0 || wday > 6) return 0;
+  int v = 0;
+  if (prefs.begin("petcare", true)) {
+    String k = "micA_" + String(wday);
+    v = prefs.getInt(k.c_str(), 0);
+    prefs.end();
+  }
+  return v;
+}
+void loadAllMicAlerts(){ for (int d=0; d<7; ++d) micAlerts[d] = loadMicAlert(d); }
+void saveAllMicAlerts(){ for (int d=0; d<7; ++d) saveMicAlerts(d); }
+
+void micTask(void*){
+  for(;;){
+    if (!micEnabled){ vTaskDelay(pdMS_TO_TICKS(50)); continue; }
+    if (micStopAtMs!=0 && millis() > micStopAtMs){
+      micEnabled = false;
+      micStopAtMs = 0;
+      vTaskDelay(pdMS_TO_TICKS(50));
+      continue;
+    }
+    micSuspendedByPlan = isNowWithinBlackout();
+    if (micSuspendedByPlan){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
+
+    float mean=0.0f, m2=0.0f, peak=0.0f;
+    for (int i=0;i<MIC_WINDOW_SAMPLES;i++){
+      int raw = analogRead(MIC_PIN);
+      float x = (float)raw;
+      float d = x - mean; mean += d/(i+1);   m2 += d*(x-mean);
+      float a = fabsf(x - mean); if(a>peak) peak=a;
+      delayMicroseconds(MIC_SAMPLE_US);
+    }
+    float variance = (MIC_WINDOW_SAMPLES>1) ? (m2/(MIC_WINDOW_SAMPLES-1)) : 0.0f;
+    float rms = sqrtf(variance);
+
+    float lvl01 = rms  / 1200.0f; if (lvl01>1) lvl01=1;
+    float pk01  = peak / 2048.0f; if (pk01 >1) pk01 =1;
+
+    micLevel01 = lvl01;
+    micPeak01  = pk01;
+
+    int lvl100 = (int)lroundf(lvl01*100.0f);
+    int pk100  = (int)lroundf(pk01 *100.0f);
+    bool high = (lvl100 >= micThreshold) || (pk100 >= micThreshold);
+
+    if (high && !micInAlert){
+      micAlertsToday++;
+      micInAlert=true;
+      struct tm ti;
+      if (getLocalTime(&ti)) {
+        micAlerts[ti.tm_wday] = micAlertsToday;
+        unsigned long now = millis();
+        if (now - micPersistMs > 60000UL) {
+          saveMicAlerts(ti.tm_wday);
+          micPersistMs = now;
+        }
+      }
+    }
+    if (!high && micInAlert){ micInAlert=false; }
+
+    vTaskDelay(1);
+  }
+}
+
+// ===========================
+// /status (incluye MIC)
+// ===========================
+void handleStatus() {
+  enableCORS();
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    server.send(503, "application/json", "{\"ok\":false,\"error\":\"no_time\"}");
+    return;
+  }
+  int wday = timeinfo.tm_wday;
+  char nowbuf[6]; strftime(nowbuf, sizeof(nowbuf), "%H:%M", &timeinfo);
+
+  String json = "{";
+  json += "\"ok\":true,";
+  json += "\"now\":{\"wday\":" + String(wday) + ",\"dayName\":\"" + getDayName(wday) + "\",\"hhmm\":\"" + String(nowbuf) + "\"},";
+  json += "\"secondsOpen\":" + String(secondsOpen,2) + ",";
+  json += "\"eat_waiting\":" + String(waitingEat ? "true":"false") + ",";
+  json += "\"pumpOn\":" + String(pumpOn ? "true":"false") + ",";
+  json += "\"camera\":{";
+  json += "\"on\":" + String(camOn ? "true":"false") + ",";
+  json += "\"busy\":" + String(anyNonCamBusy() ? "true":"false") + ",";
+  unsigned long _now = millis();
+  unsigned long _left = (_now < camBlackoutUntilMs) ? (camBlackoutUntilMs - _now) : 0;
+  json += "\"blackout_ms_left\":" + String(_left);
+  json += "},";
+
+
+  json += "\"mic\":{";
+  json += "\"enabled\":"   + String(micEnabled ? "true":"false") + ",";
+  json += "\"suspended\":" + String(micSuspendedByPlan ? "true":"false") + ",";
+  json += "\"level\":"     + String((int)lroundf(micLevel01*100.0f)) + ",";
+  json += "\"peak\":"      + String((int)lroundf(micPeak01 *100.0f)) + ",";
+  json += "\"thr\":"       + String(micThreshold) + ",";
+  json += "\"alertsToday\":"+ String(micAlertsToday);
+  json += "},";
+
+  json += "\"micAlertsWeek\":[";
+  for (int d=0; d<7; ++d) { if (d) json += ","; json += String(micAlerts[d]); }
+  json += "],";
+
+  json += "\"lastFeed\":{";
+  json += "\"wday\":" + String(lastFeedWday) + ",";
+  json += "\"dayName\":\"" + ((lastFeedWday>=0)?getDayName(lastFeedWday):String("")) + "\",";
+  json += "\"index\":" + String(lastFeedIndex) + ",";
+  json += "\"hhmm\":\"" + lastFeedTime + "\"},";
+
+  json += "\"today\":{";
+  json += "\"wday\":" + String(wday) + ",";
+  json += "\"dayName\":\"" + getDayName(wday) + "\",";
+  json += "\"total\":" + String(dayCount[wday]) + ",";
+  json += "\"plan\":[";
+  for (int i = 0; i < dayCount[wday]; i++) {
+    if (i) json += ",";
+    json += "{";
+    json += "\"index\":" + String(i) + ",";
+    json += "\"time\":\"" + dayTimes[wday][i] + "\",";
+    json += "\"fed\":" + String(fed[wday][i] ? "true":"false") + ",";
+    json += "\"eaten\":" + String(eaten[wday][i] ? "true":"false") + ",";
+    json += "\"water\":" + String(water[wday][i] ? "true":"false");
+    json += "}";
+  }
+  json += "]}";
+  json += "}";
+  server.send(200, "application/json", json);
+}
+
+// ===========================
+// Calibración/Agua por usuario (NVS)
+// ===========================
+uint32_t djb2hash(const String& s){
+  uint32_t h = 5381;
+  for (size_t i=0;i<s.length();++i) h = ((h<<5)+h) + (uint8_t)s[i];
+  return h ? h : 1;
+}
+String calibKeyForUser(const String& userId){ char buf[16]; snprintf(buf, sizeof(buf), "cal_u_%08lx", (unsigned long)djb2hash(userId)); return String(buf); }
+String waterKeyForUser(const String& userId){ char buf[16]; snprintf(buf, sizeof(buf), "wat_u_%08lx", (unsigned long)djb2hash(userId)); return String(buf); }
+String flowKeyForUser (const String& userId){ char buf[16]; snprintf(buf, sizeof(buf), "flo_u_%08lx", (unsigned long)djb2hash(userId)); return String(buf); }
+
+bool saveUserGPS(const String& userId, float gps){
+  if (!isfinite(gps) || gps<=0) return false;
+  String k = calibKeyForUser(userId);
+  if (prefs.begin("petcare", false)){ prefs.putFloat(k.c_str(), gps); prefs.end(); return true; }
+  return false;
+}
+float loadUserGPS(const String& userId){
+  String k = calibKeyForUser(userId);
+  float v = NAN;
+  if (prefs.begin("petcare", true)){ v = prefs.getFloat(k.c_str(), NAN); prefs.end(); }
+  return v;
+}
+bool saveUserWaterML(const String& userId, float ml){
+  if (!isfinite(ml) || ml < 0) return false;
+  String k = waterKeyForUser(userId);
+  if (prefs.begin("petcare", false)){ prefs.putFloat(k.c_str(), ml); prefs.end(); return true; }
+  return false;
+}
+float loadUserWaterML(const String& userId){
+  String k = waterKeyForUser(userId);
+  float v = NAN;
+  if (prefs.begin("petcare", true)){ v = prefs.getFloat(k.c_str(), NAN); prefs.end(); }
+  return v;
+}
+bool saveUserPumpFlow(const String& userId, float mlps){
+  if (!isfinite(mlps) || mlps <= 0) return false;
+  String k = flowKeyForUser(userId);
+  if (prefs.begin("petcare", false)){ prefs.putFloat(k.c_str(), mlps); prefs.end(); return true; }
+  return false;
+}
+float loadUserPumpFlow(const String& userId){
+  String k = flowKeyForUser(userId);
+  float v = NAN;
+  if (prefs.begin("petcare", true)){ v = prefs.getFloat(k.c_str(), NAN); prefs.end(); }
+  return v;
+}
+
+// Defaults agua/flujo y dueño actual del plan
+const float DEFAULT_PUMP_ML_PER_SEC   = 25.0f;   // 250 ml / 10 s
+const float DEFAULT_WATER_ML_PER_MEAL = 600.0f;  // pedido
+String currentPlanUserId = "";
+
+// ===========================
+// Endpoints calibración/agua
+// ===========================
+void handleCalibOpen(){
+  enableCORS();
+  float sec = 1.0f;
+  if (server.hasArg("sec")){
+    float s = server.arg("sec").toFloat();
+    if (isfinite(s) && s>0.1f && s<=10.0f) sec = s;
+  }
+  servoMotor.write(90);
+  delay((unsigned long)(sec * 1000));
+  servoMotor.write(0);
+  String j = String("{\"ok\":true,\"sec\":") + String(sec,2) + "}";
+  server.send(200, "application/json", j);
+}
+void handleCalibGet(){
+  enableCORS();
+  if (!server.hasArg("user")){
+    server.send(400,"application/json","{\"ok\":false,\"error\":\"missing user\"}");
+    return;
+  }
+  String user = server.arg("user");
+  float gps = loadUserGPS(user);
+  if (!isfinite(gps) || gps<=0){
+    server.send(200,"application/json","{\"ok\":true,\"gps\":null}");
+    return;
+  }
+  String j = String("{\"ok\":true,\"gps\":") + String(gps,3) + "}";
+  server.send(200,"application/json", j);
+}
+
+// ======= CAMBIO: versión compatible con ArduinoJson v7 =======
+void handleCalibPost(){
+  enableCORS();
+
+  String body = server.hasArg("plain") ? server.arg("plain") : "";
+  String user = "";
+  float  gps  = 0.0f;
+
+  if (body.length()>0){
+    StaticJsonDocument<256> doc;
+    DeserializationError err = deserializeJson(doc, body);
+    if (!err){
+      user = doc["userId"].as<String>();      // << usar as<String>()
+      gps  = doc["gps"].as<float>();
+    }
+  }
+
+  if ((user.length()==0 || !(gps>0)) && (server.hasArg("userId") || server.hasArg("gps"))) {
+    user = server.arg("userId");
+    gps  = server.arg("gps").toFloat();
+  }
+
+  if (user.length()==0 || !isfinite(gps) || gps<=0){
+    server.send(400,"application/json","{\"ok\":false,\"error\":\"invalid params: need userId & gps\"}");
+    return;
+  }
+
+  bool ok = saveUserGPS(user, gps);
+  server.send(ok?200:500,"application/json", ok?"{\"ok\":true}":"{\"ok\":false}");
+}
+
+// ======= NUEVO: GET /water para evitar el error de símbolo no declarado =======
+void handleWaterGet(){
+  enableCORS();
+  String user = server.hasArg("user") ? server.arg("user") : server.arg("userId");
+  float ml   = DEFAULT_WATER_ML_PER_MEAL;
+  float rate = DEFAULT_PUMP_ML_PER_SEC;
+  if (user.length()){
+    float uMl = loadUserWaterML(user);
+    float uRt = loadUserPumpFlow(user);
+    if (isfinite(uMl) && uMl>=0) ml = uMl;
+    if (isfinite(uRt) && uRt>0)  rate = uRt;
+  }
+  StaticJsonDocument<256> doc;
+  doc["ok"]=true;
+  if (user.length()) doc["userId"]=user;
+  doc["ml"]=ml;
+  doc["rate"]=rate;
+  String out; serializeJson(doc,out);
+  server.send(200,"application/json", out);
+}
+
+// ======= CAMBIO: versión compatible con ArduinoJson v7 =======
+void handleWaterPost(){
+  enableCORS();
+
+  String body = server.hasArg("plain") ? server.arg("plain") : "";
+  String user = "";
+  float ml   = NAN;
+  float rate = NAN;
+
+  if (body.length()>0){
+    StaticJsonDocument<256> doc;
+    DeserializationError err = deserializeJson(doc, body);
+    if (!err){
+      user = doc["userId"].as<String>();          // << usar as<String>()
+      if (!doc["ml"].isNull())   ml   = doc["ml"].as<float>();
+      if (!doc["rate"].isNull()) rate = doc["rate"].as<float>();
+    }
+  }
+
+  if (user.length()==0 && (server.hasArg("userId") || server.hasArg("ml") || server.hasArg("rate"))) {
+    user = server.arg("userId");
+    if (server.hasArg("ml"))   ml   = server.arg("ml").toFloat();
+    if (server.hasArg("rate")) rate = server.arg("rate").toFloat();
+  }
+
+  if (user.length()==0){
+    server.send(400,"application/json","{\"ok\":false,\"error\":\"invalid params: need userId\"}");
+    return;
+  }
+
+  bool ok = true;
+  if (isfinite(ml)   && ml>=0) ok = ok && saveUserWaterML(user, ml);
+  if (isfinite(rate) && rate>0) ok = ok && saveUserPumpFlow(user, rate);
+
+  server.send(ok?200:500,"application/json", ok?"{\"ok\":true}":"{\"ok\":false}");
+}
+
+
+// ===========================
+// /setPlan  (POST)
+// ===========================
+void handleSetPlan() {
+  if (!server.hasArg("plain")) { enableCORS(); server.send(400,"text/plain","Falta cuerpo JSON"); return; }
+
+  StaticJsonDocument<2000> doc;
+  DeserializationError err = deserializeJson(doc, server.arg("plain"));
+  if (err) { enableCORS(); server.send(400,"text/plain","JSON invalido"); return; }
+
+  if (!doc.containsKey("secondsOpen")) { enableCORS(); server.send(400,"text/plain","Falta secondsOpen"); return; }
+  secondsOpen = doc["secondsOpen"].as<float>();
+
+  // NUEVO: userId + agua/flujo (persistir por usuario)
+  String planUser = doc["userId"] | "";
+  if (planUser.length()>0) {
+    currentPlanUserId = planUser;
+    if (prefs.begin("petcare", false)) { prefs.putString("plan_user", currentPlanUserId); prefs.end(); }
+  }
+  if (doc.containsKey("water_ml_per_meal")) {
+    float ml = doc["water_ml_per_meal"].as<float>();
+    if (planUser.length()>0 && isfinite(ml) && ml>=0) saveUserWaterML(planUser, ml);
+  }
+  if (doc.containsKey("pump_ml_per_sec")) {
+    float r = doc["pump_ml_per_sec"].as<float>();
+    if (planUser.length()>0 && isfinite(r) && r>0) saveUserPumpFlow(planUser, r);
+  }
+
+  String mode = doc.containsKey("mode") ? String(doc["mode"].as<const char*>()) : "per_day";
+
+  for (int d=0; d<7; d++){
+    dayCount[d]=0;
+    for(int i=0;i<MAX_MEALS_PER_DAY;i++){
+      fed[d][i]=false; eaten[d][i]=false; water[d][i]=false;
+    }
+  }
+
+  auto isoToWday = [](int iso)->int { return (iso==6)?0:(iso+1); };
+
+  bool ok=false;
+  if (mode=="repeat_week") {
+    if (!doc.containsKey("dayplan")) { enableCORS(); server.send(400,"text/plain","Falta dayplan en repeat_week"); return; }
+    JsonArray arr = doc["dayplan"].as<JsonArray>();
+    String tmp[MAX_MEALS_PER_DAY]; int cnt=0;
+    for (JsonVariant v: arr){ if (cnt>=MAX_MEALS_PER_DAY) break; String t=v.as<String>(); t.trim(); if (isValidHHMM(t)) tmp[cnt++]=t; }
+    for (int d=0; d<7; d++){ for (int i=0;i<cnt;i++){ dayTimes[d][i]=tmp[i]; } dayCount[d]=cnt; }
+    ok=true;
+  } else {
+    if (!doc.containsKey("weekplan")) { enableCORS(); server.send(400,"text/plain","Falta weekplan en per_day"); return; }
+    JsonArray week = doc["weekplan"].as<JsonArray>();
+    if (week.size()!=7){ enableCORS(); server.send(400,"text/plain","weekplan debe tener 7 elementos"); return; }
+    for (int iso=0; iso<7; iso++){
+      int wday=isoToWday(iso);
+      JsonArray times = week[iso].as<JsonArray>();
+      int idx=0;
+      for (JsonVariant v: times){
+        if (idx>=MAX_MEALS_PER_DAY) break;
+        String t = v.as<String>(); 
+          t.trim();
+        if (isValidHHMM(t)) { dayTimes[wday][idx]=t; idx++; }
+      }
+      dayCount[wday]=idx;
+    }
+    ok=true;
+  }
+
+  resetAllFed();
+  resetAllBuzzed();
+  waitingEat=false; pendingEatWday=-1; pendingEatIndex=-1;
+
+  savePlanJSONToNVS(server.arg("plain"));
+  saveAllFlags();
+
+  Serial.println("=== Plan cargado ===");
+  Serial.printf("mode: %s  secondsOpen: %.2f s\n", mode.c_str(), secondsOpen);
+  for (int d=0; d<7; d++){ Serial.printf("Dia %d: ", d); for(int i=0;i<dayCount[d];i++){ Serial.print(dayTimes[d][i]); if(i<dayCount[d]-1) Serial.print(", "); } Serial.println(); }
+
+  enableCORS();
+  if (ok) server.send(200,"text/plain","Plan cargado");
+  else    server.send(400,"text/plain","Error al cargar plan");
+}
+
+// ===========================
+// /clearPlan (POST)
+// ===========================
+void handleClearPlan() {
+  for (int d=0; d<7; d++){
+    dayCount[d]=0;
+    for(int i=0;i<MAX_MEALS_PER_DAY;i++){
+      fed[d][i]=false; eaten[d][i]=false; water[d][i]=false;
+      buzzed[d][i]=false;
+    }
+    saveDayFlags(d);
+  }
+  lastFeedWday=-1; lastFeedIndex=-1; lastFeedTime="";
+  waitingEat=false; pendingEatWday=-1; pendingEatIndex=-1;
+  enableCORS(); server.send(200,"text/plain","Plan borrado");
+}
+
+// ===========================
+// /servo (GET) - manual
+// ===========================
+void handleServoManual() {
+  enableCORS();
+  camStop();
+  actSet(ACT_SERVO, true);
+  servoMotor.write(90);
+  delay(2000);
+  servoMotor.write(0);
+  actSet(ACT_SERVO, false);
+  server.send(200, "text/plain", "Servo ");
+}
+
+
+// ===========================
+// /getPlan (GET)
+// ===========================
+void handleGetPlan() {
+  enableCORS();
+  String json = loadPlanJSONFromNVS();
+  if (json.length() == 0) {
+    StaticJsonDocument<2500> doc;
+    doc["ok"] = true;
+    doc["mode"] = "per_day";
+    doc["secondsOpen"] = secondsOpen;
+    JsonArray week = doc.createNestedArray("weekplan");
+    for (int iso=0; iso<7; ++iso) {
+      int wday = (iso == 6) ? 0 : iso + 1;
+      JsonArray arr = week.createNestedArray();
+      for (int i=0; i<dayCount[wday]; ++i) { arr.add(dayTimes[wday][i]); }
+    }
+    String out; serializeJson(doc, out);
+    server.send(200, "application/json", out);
+    return;
+  }
+  server.send(200, "application/json", json);
+}
+
+// ===========================
+// Setup
+// ===========================
+void setup() {
+  Serial.begin(115200);
+
+  servoMotor.attach(SERVO_PIN, 500, 2400);
+  servoMotor.write(0);
+
+  pinMode(PIR_PIN, INPUT);
+
+  pinMode(PUMP_PIN, INPUT_PULLUP);
+  delay(5);
+  pinMode(PUMP_PIN, OUTPUT);
+  pump_off();
+
+  setupBuzzer();
+
+  WiFi.begin(ssid, password);
+  Serial.print("Conectando WiFi");
+  while (WiFi.status()!=WL_CONNECTED){ delay(500); Serial.print("."); }
+  Serial.println("\nWiFi OK: " + WiFi.localIP().toString());
+
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) { lastWday = timeinfo.tm_wday; Serial.printf("Hora inicial: %02d:%02d  wday=%d\n", timeinfo.tm_hour, timeinfo.tm_min, lastWday); }
+  else                          { Serial.println("No se pudo obtener hora inicial (NTP)"); }
+
+  // Restaurar plan desde NVS
+  {
+    String saved = loadPlanJSONFromNVS();
+    if (saved.length() > 0) {
+      StaticJsonDocument<2500> doc;
+      DeserializationError err = deserializeJson(doc, saved);
+      if (!err) {
+        if (doc.containsKey("secondsOpen")) { secondsOpen = doc["secondsOpen"].as<float>(); }
+        String mode = doc.containsKey("mode") ? String(doc["mode"].as<const char*>()) : "per_day";
+        for (int d=0; d<7; d++){
+          dayCount[d]=0;
+          for(int i=0;i<MAX_MEALS_PER_DAY;i++){
+            fed[d][i]=false; eaten[d][i]=false; water[d][i]=false;
+            buzzed[d][i]=false;
+          }
+        }
+        auto isoToWday = [](int iso)->int { return (iso==6)?0:(iso+1); };
+        if (mode=="repeat_week" && doc.containsKey("dayplan")) {
+          JsonArray arr = doc["dayplan"].as<JsonArray>();
+          String tmp[MAX_MEALS_PER_DAY]; int cnt=0;
+          for (JsonVariant v: arr){ if (cnt>=MAX_MEALS_PER_DAY) break; String t=v.as<String>(); t.trim(); if (isValidHHMM(t)) tmp[cnt++]=t; }
+          for (int d=0; d<7; d++){ for (int i=0;i<cnt;i++){ dayTimes[d][i]=tmp[i]; } dayCount[d]=cnt; }
+        } else if (mode=="per_day" && doc.containsKey("weekplan")) {
+          JsonArray week = doc["weekplan"].as<JsonArray>();
+          if (week.size()==7){
+            for (int iso=0; iso<7; iso++){
+              int wday=isoToWday(iso);
+              JsonArray times = week[iso].as<JsonArray>();
+              int idx=0;
+              for (JsonVariant v: times){
+                if (idx>=MAX_MEALS_PER_DAY) break;
+                String t=v.as<String>(); t.trim();
+                if (isValidHHMM(t)) { dayTimes[wday][idx]=t; idx++; }
+              }
+              dayCount[wday]=idx;
+            }
+          }
+        }
+        resetAllFed();
+        resetAllBuzzed();
+        waitingEat=false; pendingEatWday=-1; pendingEatIndex=-1;
+
+        Serial.println("Plan restaurado desde NVS.");
+      } else {
+        Serial.println("No se pudo parsear plan NVS.");
+      }
+    } else {
+      Serial.println("No hay plan NVS guardado.");
+    }
+  }
+
+  // Cargar dueño de plan si existía
+  if (prefs.begin("petcare", true)) {
+    currentPlanUserId = prefs.getString("plan_user", "");
+    prefs.end();
+  }
+
+  loadAllFlags();
+
+  setupMicADC();
+server.on("/mic/start",  HTTP_GET, [](){
+  enableCORS();
+  camStop();                      // mutex: apagar cámara
+  micEnabled = true;
+  micStopAtMs = millis() + 15UL*60UL*1000UL;
+  actSet(ACT_MIC, true);
+  server.send(200,"application/json","{\"ok\":true}");
+});
+server.on("/mic/stop",   HTTP_GET, [](){
+  enableCORS();
+  micEnabled = false;
+  micStopAtMs = 0;
+  actSet(ACT_MIC, false);
+  server.send(200,"application/json","{\"ok\":true}");
+});
+
+  server.on("/mic/status", HTTP_GET,      handleStatus);
+  server.on("/mic/start",  HTTP_OPTIONS,  handleOptions);
+  server.on("/mic/stop",   HTTP_OPTIONS,  handleOptions);
+  server.on("/mic/status", HTTP_OPTIONS,  handleOptions);
+
+  server.on("/setPlan",   HTTP_POST,    handleSetPlan);
+  server.on("/setPlan",   HTTP_OPTIONS, handleOptions);
+  server.on("/status",    HTTP_GET,     handleStatus);
+  server.on("/status",    HTTP_OPTIONS, handleOptions);
+  server.on("/clearPlan", HTTP_POST,    handleClearPlan);
+  server.on("/clearPlan", HTTP_OPTIONS, handleOptions);
+  server.on("/servo",     HTTP_GET,     handleServoManual);
+  server.on("/servo",     HTTP_OPTIONS, handleOptions);
+  server.on("/getPlan",   HTTP_GET,     handleGetPlan);
+  server.on("/getPlan",   HTTP_OPTIONS, handleOptions);
+
+    // ===========================
+  // Endpoints cámara (mutex)
+  // ===========================
+  server.on("/cam/start", HTTP_GET, [](){
+    enableCORS();
+    camEnsureOffIfNeeded();
+    if (camStart()){
+      server.send(200,"application/json","{\"ok\":true,\"on\":true}");
+    } else {
+      server.send(409,"application/json","{\"ok\":false,\"reason\":\"busy_or_blackout\"}");
+    }
+  });
+  server.on("/cam/stop", HTTP_GET, [](){
+    enableCORS(); camStop();
+    server.send(200,"application/json","{\"ok\":true,\"on\":false}");
+  });
+  server.on("/cam/status", HTTP_GET, [](){
+    enableCORS();
+    unsigned long now = millis();
+    unsigned long left = (now < camBlackoutUntilMs) ? (camBlackoutUntilMs - now) : 0;
+    String j = String("{\"ok\":true,\"on\":") + (camOn?"true":"false") +
+               ",\"busy\": " + (anyNonCamBusy()?"true":"false") +
+               ",\"blackout_ms_left\":" + String(left) + "}";
+    server.send(200,"application/json", j);
+  });
+  server.on("/cam/start", HTTP_OPTIONS, handleOptions);
+  server.on("/cam/stop",  HTTP_OPTIONS, handleOptions);
+  server.on("/cam/status",HTTP_OPTIONS, handleOptions);
+
+
+  // Buzzer
+  server.on("/buzzer", HTTP_POST, []() {
+    enableCORS();
+    buzzerAvisoComida();
+    server.send(200, "application/json", "{\"ok\":true}");
+  });
+  server.on("/buzzer", HTTP_OPTIONS, handleOptions);
+
+  // NUEVO: Calibración y Agua
+  server.on("/calibration/open", HTTP_GET,     handleCalibOpen);
+  server.on("/calibration/open", HTTP_OPTIONS, handleOptions);
+  server.on("/calibration",      HTTP_GET,     handleCalibGet);
+  server.on("/calibration",      HTTP_POST,    handleCalibPost);
+  server.on("/calibration",      HTTP_OPTIONS, handleOptions);
+
+  server.on("/water",            HTTP_GET,     handleWaterGet);
+  server.on("/water",            HTTP_POST,    handleWaterPost);
+  server.on("/water",            HTTP_OPTIONS, handleOptions);
+
+  server.begin();
+
+  loadAllMicAlerts();
+  struct tm _ti;
+  if (getLocalTime(&_ti)) { micAlertsToday = micAlerts[_ti.tm_wday]; } else { micAlertsToday = 0; }
+  xTaskCreatePinnedToCore(micTask, "micTask", 4096, nullptr, 1, &micTaskHandle, 0);
+}
+
+// ===========================
+// Loop
+// ===========================
+unsigned long lastCheck = 0;
+const unsigned long CHECK_EVERY_MS = 1000;
+
+void loop() {
+  server.handleClient();
+
+  unsigned long nowMs = millis();
+  if (nowMs - lastCheck >= CHECK_EVERY_MS) {
+    lastCheck = nowMs;
+
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+      int wday = timeinfo.tm_wday;
+
+      if (wday != lastWday) {
+        resetFedForDay(wday);
+        resetBuzzedForDay(wday);
+        lastWday = wday;
+        saveDayFlags(wday);
+        Serial.printf("Cambio de dia: wday=%d, reset flags\n", wday);
+      }
+
+      char hmbuf[6]; strftime(hmbuf, sizeof(hmbuf), "%H:%M", &timeinfo);
+      String nowHHMM = String(hmbuf);
+
+      int count = dayCount[wday];
+      for (int i=0; i<count; i++) {
+
+        // Aviso 1 minuto antes
+        if (!buzzed[wday][i]) {
+          String pre = prevMinute(dayTimes[wday][i]);
+          if (pre.length()==5 && nowHHMM == pre) {
+            Serial.printf("Aviso buzzer para comida (wday=%d idx=%d) a las %s\n", wday, i, nowHHMM.c_str());
+            buzzerAvisoComida();
+            buzzed[wday][i] = true;
+          }
+        }
+
+          fed[wday][i] = true;
+
+  lastFeedWday  = wday;
+  lastFeedIndex = i;
+  lastFeedTime  = nowHHMM;
+
+  Serial.printf("Alimentando (wday=%d) a las %s\n", wday, dayTimes[wday][i].c_str());
+
+  camStop();                    // forzar cámara OFF por seguridad
+
+  // ===== SERVO =====
+  actSet(ACT_SERVO, true);
+  servoMotor.write(90);
+  delay((unsigned long)(secondsOpen * 1000));
+  servoMotor.write(0);
+  actSet(ACT_SERVO, false);
+
+  // Gap
+  delay(PUMP_GAP_MS);
+
+  // ===== BOMBA =====
+  actSet(ACT_PUMP, true);
+  float flow = loadUserPumpFlow(currentPlanUserId);
+  if (!isfinite(flow) || flow <= 0) flow = DEFAULT_PUMP_ML_PER_SEC;
+  float mlPerMeal = loadUserWaterML(currentPlanUserId);
+  if (!isfinite(mlPerMeal) || mlPerMeal < 0) mlPerMeal = DEFAULT_WATER_ML_PER_MEAL;
+  unsigned long pumpMs = (unsigned long)((mlPerMeal / flow) * 1000.0f);
+
+  pump_on();
+  delay(pumpMs);
+  pump_off();
+  actSet(ACT_PUMP, false);
+
+  water[wday][i] = true;
+  saveDayFlags(wday);
+
+  // ventana de comer
+  waitingEat       = true;
+  actSet(ACT_WAIT_EAT, true);
+  pendingEatWday   = wday;
+  pendingEatIndex  = i;
+  eatWindowStartMs = millis();
+
+      }
+    }
+  }
+
+  // ===========================
+// Refuerzo de blackout/ocupado: apaga cámara si corresponde
+// ===========================
+if (millis() - camLastCheckMs >= 500) {
+  camLastCheckMs = millis();
+
+  if (isNowWithinCamBlackoutByPlan()) {
+    // Extiende blackout hasta 1 min post-comida inmediata
+    struct tm ti;
+    if (getLocalTime(&ti)) {
+      int w = ti.tm_wday;
+      int nowM = ti.tm_hour*60 + ti.tm_min;
+      unsigned long nowAbs = (unsigned long)nowM*60UL*1000UL + (unsigned long)ti.tm_sec*1000UL;
+
+      for (int i=0;i<dayCount[w];++i){
+        int m = hhmmToMin_cam(dayTimes[w][i]);
+        if (m<0) continue;
+        unsigned long mealAbs = (unsigned long)m*60UL*1000UL;
+        if (nowAbs <= mealAbs + CAM_BLACKOUT_AFTER_MS) {
+          unsigned long left = (mealAbs + CAM_BLACKOUT_AFTER_MS) - nowAbs;
+          camBlackoutUntilMs = millis() + left;
+          break;
+        }
+      }
+    }
+    camEnsureOffIfNeeded();
+  } else {
+    // fuera de blackout; no se enciende sola (la enciende el frontend con /cam/start)
+  }
+}
+
+
+
+
+if (waitingEat) {
+  if (millis() - eatWindowStartMs >= EAT_WINDOW_MS) {
+    waitingEat = false;
+    actSet(ACT_WAIT_EAT, false);              // <--- limpiar actividad
+  } else {
+    if (digitalRead(PIR_PIN) == HIGH) {
+      if (pendingEatWday>=0 && pendingEatIndex>=0 &&
+          pendingEatWday<=6 && pendingEatIndex<dayCount[pendingEatWday]) {
+        eaten[pendingEatWday][pendingEatIndex] = true;
+        Serial.printf("Comido detectado (wday=%d, idx=%d)\n", pendingEatWday, pendingEatIndex);
+        saveDayFlags(pendingEatWday);
+      }
+      waitingEat = false;
+      actSet(ACT_WAIT_EAT, false);            // <--- limpiar actividad
+    }
+  }
+}
+
+  static int _micDay = -1;
+  struct tm ti2;
+  if (getLocalTime(&ti2)) {
+    if (_micDay != ti2.tm_wday) {
+      if (_micDay >= 0 && _micDay <= 6) saveMicAlerts(_micDay);
+      _micDay = ti2.tm_wday;
+      micAlerts[_micDay] = 0;
+      micAlertsToday = 0;
+      micInAlert = false;
+      saveMicAlerts(_micDay);
+    }
+  }
+}
