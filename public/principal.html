@@ -64,6 +64,11 @@
       const STREAM_URL = `http://${CAM_IP}:81/stream`;
       const SERVO_URL  = `http://${CTRL_IP}:8080/servo`;
       const BUZZER_URL = `http://${CTRL_IP}:8080/buzzer`;
+      
+const CAM_START_URL  = `http://${CTRL_IP}:8080/cam/start`;
+const CAM_STOP_URL   = `http://${CTRL_IP}:8080/cam/stop`;
+const CAM_STATUS_URL = `http://${CTRL_IP}:8080/cam/status`;
+
 
 
       const img = document.getElementById("camara-stream");
@@ -91,27 +96,41 @@
         if (cont && !document.getElementById("cam-toggle")) cont.appendChild(camBtn);
       });
 
-      function showStream() {
-        img.style.display = "block";
-        img.src = STREAM_URL;
-        camBtn.classList.remove("off");
-        camBtn.classList.add("on");
-      }
-      function hideStream() {
-        img.style.display = "none";
-        img.removeAttribute("src");
-        camBtn.classList.remove("on");
-        camBtn.classList.add("off");
-      }
+     async function showStream() {
+  try {
+    const r = await fetch(CAM_START_URL);
+    if (!r.ok) { // 409 => ocupado/blackout
+      await hideStream();
+      return;
+    }
+    img.style.display = "block";
+    img.src = STREAM_URL;
+    camBtn.classList.remove("off");
+    camBtn.classList.add("on");
+  } catch (_) {
+    await hideStream();
+  }
+}
+
+async function hideStream() {
+  try { await fetch(CAM_STOP_URL); } catch (_) {}
+  img.style.display = "none";
+  img.removeAttribute("src");
+  camBtn.classList.remove("on");
+  camBtn.classList.add("off");
+}
+
       camBtn.addEventListener("click", () => {
         camBtn.classList.contains("off") ? showStream() : hideStream();
       });
 
-      function moverServo() {
-        showStream();
-        setTimeout(hideStream, 30000);
-        fetch(SERVO_URL).catch(err => console.error("Error servo:", err));
-      }
+      async function moverServo() {
+  await hideStream(); // cámara OFF por mutex
+  fetch(SERVO_URL).catch(err => console.error("Error servo:", err));
+  // opcional: reintentar encender luego de 1 min
+  // setTimeout(() => showStream(), 60000);
+}
+
       window.moverServo = moverServo;
       window.showStream = showStream;
       window.hideStream = hideStream;
@@ -139,7 +158,6 @@
 
       // Toast debajo de la cámara (reutiliza showToast y comportamiento visual)
       const micBtn  = document.getElementById("mic");
-      const micImg  = micBtn ? micBtn.querySelector(".mic-img") : null;
       const toast   = document.getElementById("mic-toast");
       let hideTimer = null;
 
@@ -159,18 +177,19 @@
     
   // ...
   if (micBtn) {
-    micBtn.addEventListener("click", () => {
-      micBtn.setAttribute("data-state", "on");
-      micBtn.setAttribute("aria-label", "Bocina activada");
-      micBtn.classList.add("active");
+  micBtn.addEventListener("click", async () => {
+    micBtn.setAttribute("data-state", "on");
+    micBtn.setAttribute("aria-label", "Bocina activada");
+    micBtn.classList.add("active");
 
-      // 🔔 Disparar la bocina con el patrón pre-comida (usar POST)
-      fetch(BUZZER_URL, { method: "POST" })
-        .catch(err => console.error("Error buzzer:", err));
+    await hideStream(); // cámara OFF por mutex
+    fetch(BUZZER_URL, { method: "POST" })
+      .catch(err => console.error("Error buzzer:", err));
 
-      showToast(" Bocina Activada", true, 2500);
-    });
-  }
+    showToast(" Bocina Activada", true, 2500);
+  });
+}
+
 
     </script>
 
@@ -255,6 +274,33 @@
         });
       })();
     </script>
+    <script>
+(function(){
+  async function refreshCamButton(){
+    try{
+      const r = await fetch(CAM_STATUS_URL);
+      if(!r.ok) return;
+      const st = await r.json();
+      const btn = document.getElementById("cam-toggle");
+      if(!btn) return;
+      const busy = st.busy || (st.blackout_ms_left > 0);
+      btn.disabled = !!busy;
+      btn.title = busy
+        ? "Cámara bloqueada (ocupado o cerca de un horario)"
+        : "Encender/Apagar cámara";
+      if (busy && btn.classList.contains('on')) {
+        // Si se volvió ocupado mientras estaba encendida, la escondemos
+        window.hideStream?.();
+      }
+    } catch(_){}
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    refreshCamButton();
+    setInterval(refreshCamButton, 1500);
+  });
+})();
+</script>
+
   </main>
 
   <script src="theme-toggle.js" defer></script>

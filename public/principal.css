@@ -197,3 +197,5 @@ body{
 @media (max-height:560px){
   .btn,.fab{ transform:scale(.92) }
 }
+
+#cam-toggle:disabled { opacity:.5; pointer-events:none; }
