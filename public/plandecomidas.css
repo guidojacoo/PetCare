@@ -389,3 +389,6 @@ input[type="number"]{
  
 }
 
+/* Mostrar/ocultar según aria-hidden (accesible) */
+.modal[aria-hidden="true"] { display: none; }
+.modal[aria-hidden="false"]{ display: flex; }

@@ -220,6 +220,40 @@
 
   <script src="plandecomidas.js"></script>
   <script>
+    // ---------- Helpers accesibles para modales ----------
+    function openModal(modal, openerBtn) {
+      modal.setAttribute('aria-hidden', 'false');
+      modal.classList.add('open'); // si tu CSS usa .open
+    
+      // bloquear foco en el fondo
+      document.querySelector('.topbar')?.setAttribute('inert', '');
+      document.querySelector('.content')?.setAttribute('inert', '');
+    
+      // recordar quién abrió para devolver foco
+      if (openerBtn && openerBtn.id) modal.dataset.openerId = openerBtn.id;
+    
+      // foco inicial
+      const card = modal.querySelector('.modal-card');
+      if (card && !card.hasAttribute('tabindex')) card.setAttribute('tabindex','-1');
+      const focusable = modal.querySelector('[autofocus], .close-x, button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      (focusable || card || modal).focus?.({ preventScroll: true });
+    }
+    
+    function closeModal(modal) {
+      if (modal.contains(document.activeElement)) document.activeElement.blur();
+      modal.setAttribute('aria-hidden', 'true');
+      modal.classList.remove('open');
+    
+      document.querySelector('.topbar')?.removeAttribute('inert');
+      document.querySelector('.content')?.removeAttribute('inert');
+    
+      const openerId = modal.dataset.openerId;
+      const opener = openerId ? document.getElementById(openerId) : null;
+      opener?.focus?.();
+    }
+    </script>
+    
+  <script>
     // ======= urls =======
     const BACKEND_URL = "http://localhost:3000"
     const DBURL = BACKEND_URL
@@ -748,16 +782,35 @@
       });
     }
 
-    // ====== modal ia ======
-    const iaModal=document.getElementById('iaModal'), openIA=document.getElementById('openIA'), closeIA=document.getElementById('closeIA')
-    const listMascotas=document.getElementById('listMascotas')
-    const iaPeso=document.getElementById('ia_peso'), iaEdad=document.getElementById('ia_edad'), iaKcal=document.getElementById('ia_kcal')
-    const iaAct=document.getElementById('ia_actividad'), iaCas=document.getElementById('ia_castrado')
-    const iaHint=document.getElementById('ia_hint'), iaResult=document.getElementById('iaResult')
 
-    openIA.addEventListener('click', ()=>{ iaModal.classList.add('open'); cargarMascotasIA() })
-    closeIA.addEventListener('click', ()=> iaModal.classList.remove('open'))
-    iaModal.addEventListener('click', (e)=>{ if(e.target===iaModal) iaModal.classList.remove('open') })
+const listMascotas = document.getElementById('listMascotas');
+const iaPeso   = document.getElementById('ia_peso');
+const iaEdad   = document.getElementById('ia_edad');
+const iaKcal   = document.getElementById('ia_kcal');
+const iaAct    = document.getElementById('ia_actividad');
+const iaCas    = document.getElementById('ia_castrado');
+const iaHint   = document.getElementById('ia_hint');
+const iaResult = document.getElementById('iaResult');
+
+
+    // ====== modal ia ======
+const iaModal  = document.getElementById('iaModal');
+const openIA   = document.getElementById('openIA');
+const closeIA  = document.getElementById('closeIA');
+
+openIA?.addEventListener('click', () => {
+  openModal(iaModal, openIA);
+  cargarMascotasIA();
+});
+
+closeIA?.addEventListener('click', () => closeModal(iaModal));
+
+iaModal?.addEventListener('click', (e) => {
+  if (e.target === iaModal) closeModal(iaModal); 
+});
+iaModal?.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape') closeModal(iaModal);
+});
 
     async function cargarMascotasIA(){
       const u = getUsuario()
@@ -833,7 +886,7 @@
         if(!Number.isFinite(gpc)) throw new Error("resultado invalido")
         document.getElementById('grams').value = String(Math.round(gpc))
         document.getElementById('iaResult').textContent = `Sugerencia IA: ${Math.round(gd)} g/dia → ${Math.round(gpc)} g dividido en 2 raciones`
-        setTimeout(()=> iaModal.classList.remove('open'), 700)
+        setTimeout(()=> closeModal(iaModal), 700)
         refreshSecondsPreview();
       }catch(e){
         if(iaHint) iaHint.textContent = `no se pudo calcular: ${e.message}`
@@ -1041,25 +1094,28 @@ if (Number.isFinite(userGPS) && userGPS>0){
 })();
 </script>
 
-<script>
-  // ====== modal calibración ======
-  const calibModal = document.getElementById('calibModal');
-  const openCalib  = document.getElementById('openCalib');
-  const closeCalib = document.getElementById('closeCalib');
 
-  if (openCalib){
-    openCalib.addEventListener('click', ()=>{
-      calibModal.classList.add('open');
-      refreshSecondsPreview(); // recalcula el preview al abrir
-    });
-  }
-  if (closeCalib){
-    closeCalib.addEventListener('click', ()=> calibModal.classList.remove('open'));
-  }
-  if (calibModal){
-    calibModal.addEventListener('click', (e)=>{ if(e.target===calibModal) calibModal.classList.remove('open') });
-  }
+<script>
+// ====== modal calibración (accesible) ======
+const calibModal = document.getElementById('calibModal');
+const openCalib  = document.getElementById('openCalib');
+const closeCalib = document.getElementById('closeCalib');
+
+openCalib?.addEventListener('click', () => {
+  openModal(calibModal, openCalib);
+  refreshSecondsPreview();
+});
+closeCalib?.addEventListener('click', () => closeModal(calibModal));
+
+calibModal?.addEventListener('click', (e) => {
+  if (e.target === calibModal) closeModal(calibModal);
+});
+calibModal?.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape') closeModal(calibModal);
+});
 </script>
+
+
 
 
 <script src="theme-toggle.js" defer></script>
