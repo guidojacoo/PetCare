@@ -9,8 +9,8 @@
 // ===========================
 // WiFi
 // ===========================
-const char *ssid = "IoTB";
-const char *password = "inventaronelVAR";
+const char *ssid = "iPhone de Ignacio";
+const char *password = "tajadagay";
 
 // ===========================
 // Servo
@@ -39,26 +39,32 @@ inline void pump_off() { digitalWrite(PUMP_PIN, PUMP_OFF_LEVEL); pumpOn = false;
 // === BUZZER ADD ===
 // ===========================
 #define BUZZER_PIN 27
-#define BUZZER_CHANNEL 0
 bool buzzed[7][12];
 extern const int __maxMealsPerDayDeclHack__ = 12;
 
 void setupBuzzer() {
   pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, LOW);
+  digitalWrite(BUZZER_PIN, HIGH);  
 }
-static inline void buzzerTone(int freq, int ms) {
-  tone(BUZZER_PIN, freq, ms);
-  delay(ms);
-  noTone(BUZZER_PIN);
-}
+
+// === Reemplazo: helpers ON/OFF y patrón sin tone() ===
+#define BUZZER_ON_LEVEL  LOW
+#define BUZZER_OFF_LEVEL HIGH
+
+static inline void buzzer_on()  { digitalWrite(BUZZER_PIN, BUZZER_ON_LEVEL); }
+static inline void buzzer_off() { digitalWrite(BUZZER_PIN, BUZZER_OFF_LEVEL); }
+
+// Patrón: 1.0 s + 0.5 s + 0.5 s, con pequeños gaps
 void buzzerAvisoComida() {
-  buzzerTone(2000, 1000);
-  delay(100);
-  buzzerTone(2000, 500);
-  delay(100);
-  buzzerTone(2000, 500);
+  buzzer_off(); delay(30);
+  buzzer_on();  delay(1000);
+  buzzer_off(); delay(120);
+  buzzer_on();  delay(500);
+  buzzer_off(); delay(120);
+  buzzer_on();  delay(500);
+  buzzer_off(); // asegura silencio al terminar
 }
+
 String prevMinute(const String& hhmm) {
   if (hhmm.length()!=5 || hhmm.charAt(2)!=':') return "";
   int hh = hhmm.substring(0,2).toInt();
