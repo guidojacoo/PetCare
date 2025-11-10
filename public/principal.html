@@ -72,10 +72,8 @@
       const STREAM_URL = `http://${CAM_IP}:81/stream`;
       const SERVO_URL  = `http://${CTRL_IP}:8080/servo`;
       const BUZZER_URL = `http://${CTRL_IP}:8080/buzzer`;
-      
-      const CAM_START_URL  = `http://${CTRL_IP}:8080/cam/start`;
-      const CAM_STOP_URL   = `http://${CTRL_IP}:8080/cam/stop`;
-      const CAM_STATUS_URL = `http://${CTRL_IP}:8080/cam/status`;
+      // ÚNICO estado del controlador que consultamos
+      const CTRL_STATUS_URL = `http://${CTRL_IP}:8080/status`;
 
       const img = document.getElementById("camara-stream");
 
@@ -102,7 +100,7 @@
         if (cont && !document.getElementById("cam-toggle")) cont.appendChild(camBtn);
       });
 
-      /* ===== AGREGADO: Candado de cámara (lock) ===== */
+      /* ===== Candado de cámara (lock) ===== */
       let camLocked = false;            // estado actual (si está bloqueada)
       let manualLockUntil = 0;          // bloqueo temporal por acción local (ms epoch)
 
@@ -126,39 +124,30 @@
       }
 
       async function showStream() {
-        // AGREGADO: no encender si está bloqueada
+        // no encender si está bloqueada
         if (camLocked) return;
-        try {
-          const r = await fetch(CAM_START_URL);
-          if (!r.ok) { // 409 => ocupado/blackout
-            await hideStream();
-            return;
-          }
-          img.style.display = "block";
-          img.src = STREAM_URL;
-          camBtn.classList.remove("off");
-          camBtn.classList.add("on");
-        } catch (_) {
-          await hideStream();
-        }
+        img.style.display = "block";
+        img.src = STREAM_URL;           // empezar a pedir el stream
+        camBtn.classList.remove("off");
+        camBtn.classList.add("on");
       }
 
       async function hideStream() {
-        // MODIFICADO: no "apagamos" la cámara; solo dejamos de pedir el stream
+        // dejar de pedir el stream
         img.style.display = "none";
         img.removeAttribute("src");
         camBtn.classList.remove("on");
         camBtn.classList.add("off");
       }
 
-      // MODIFICADO: el click respeta el lock
+      // click respeta el lock
       camBtn.addEventListener("click", () => {
         if (camLocked) return;
         camBtn.classList.contains("off") ? showStream() : hideStream();
       });
 
       async function moverServo() {
-        // AGREGADO: bloqueo corto y cortar stream antes de accionar
+        // bloqueo corto y corte de stream antes de accionar
         lockFor(4000, 'Servo en curso');
         await hideStream();
         fetch(SERVO_URL).catch(err => console.error("Error servo:", err));
@@ -209,8 +198,8 @@
 
       // comportamiento sencillo de bocina (UN SOLO MODO).
       // Al tocar siempre muestra "Bocina Activada" y desaparece después.
-    
-      // ... (AGREGADO: lock y corte de stream antes de accionar)
+
+      // ... (lock y corte de stream antes de accionar)
       if (micBtn) {
         micBtn.addEventListener("click", async () => {
           // bloqueo corto durante el inicio de la acción
@@ -311,7 +300,7 @@
       })();
     </script>
 
-    <!-- REEMPLAZADO: en vez de refreshCamButton simple, usamos un poller combinado que decide el lock -->
+    <!-- REEMPLAZADO: poller combinado que decide el lock usando SOLO /status del controlador -->
     <script>
       (function(){
         const CTRL_STATUS_URL = `http://${CTRL_IP}:8080/status`;
@@ -324,18 +313,16 @@
           }catch(_){ return null; }
         }
 
-        function computeAndApplyLock(camSt, ctrlSt){
+        function computeAndApplyLock(ctrlSt){
           const manual = (typeof manualLockActive === 'function') ? manualLockActive() : false;
-          const busy   = !!(camSt && (camSt.busy || (camSt.blackout_ms_left > 0)));
           const plan   = !!(ctrlSt && (ctrlSt.eat_waiting === true));   // ventana de comida/plan en curso
-          const shouldLock = manual || busy || plan;
+          const shouldLock = manual || plan;
 
           if (typeof setCamLock === 'function') {
             if (shouldLock) {
               const reason =
                 manual ? 'Ejecutando acción' :
-                plan   ? 'Ejecutando plan'   :
-                         'Cámara ocupada/blackout';
+                         'Ejecutando plan';
               setCamLock(true, reason);
             } else {
               setCamLock(false);
@@ -344,11 +331,8 @@
         }
 
         async function refreshCamState(){
-          const [camSt, ctrlSt] = await Promise.all([
-            readJSONSafe(CAM_STATUS_URL),
-            readJSONSafe(CTRL_STATUS_URL)
-          ]);
-          computeAndApplyLock(camSt, ctrlSt);
+          const ctrlSt = await readJSONSafe(CTRL_STATUS_URL);
+          computeAndApplyLock(ctrlSt);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
