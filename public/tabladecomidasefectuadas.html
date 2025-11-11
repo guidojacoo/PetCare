@@ -298,7 +298,7 @@ input[type="number"]{
         <div class="card">
           <h2>Estado</h2>
           <div class="info" style="margin-top:6px">
-            <div class="badge"><span class="k"></span> <span id="now">—</span></div>
+            <div class="badge"><span class="k">Ahora:</span> <span id="now">—</span></div>
             <div class="badge"><span class="k">Última comida:</span> <span id="last">—</span></div>
             <!-- NUEVO: badge para alertas del día -->
             <div class="badge"><span class="k">Alertas hoy:</span> <span id="micAlerts">—</span></div>
@@ -403,14 +403,20 @@ input[type="number"]{
   }
 
   // ======= Estado por día (total y lastReported) =======
-  function _readStateMap(){
-    try { return JSON.parse(localStorage.getItem('petcare_mic_day_state') || '{}'); }
-    catch { return {}; }
-  }
-  function _writeStateMap(map){
-    try { localStorage.setItem('petcare_mic_day_state', JSON.stringify(map)); }
-    catch {}
-  }
+
+ function stateNs() {
+  const u = getUserId() || "anon";
+  return `petcare_mic_day_state__${u}`;
+}
+function _readStateMap(){
+  try { return JSON.parse(localStorage.getItem(stateNs()) || '{}'); }
+  catch { return {}; }
+}
+function _writeStateMap(map){
+  try { localStorage.setItem(stateNs(), JSON.stringify(map)); }
+  catch {}
+}
+
   // Migración desde el formato viejo (solo número por día)
   function _migrateOldIfNeeded(map){
     try {
@@ -459,12 +465,14 @@ input[type="number"]{
 
   // ======= Cache local de TICKS (por día) =======
   function tickCacheKey(){
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,'0');
-    const day = String(d.getDate()).padStart(2,'0');
-    return `petcare_ticks_${y}-${m}-${day}`;
-  }
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  const mid = Number(localStorage.getItem("petcare_mascota_id") || "0") || 0;
+  return `petcare_ticks_${mid}_${y}-${m}-${day}`;
+}
+
   function loadTicksFromCache(){
     try {
       const raw = localStorage.getItem(tickCacheKey());
@@ -529,7 +537,11 @@ input[type="number"]{
     try{
       const m = Math.max(1, parseInt(micMinI.value||"15",10));
       const t = Math.max(10, Math.min(100, parseInt(micThrI.value||"80",10)));
-      await fetch(url(`/mic/start?minutes=${m}&thr=${t}`));
+const u = getUserId();
+const qs = u ? `/mic/start?minutes=${m}&thr=${t}&userId=${encodeURIComponent(u)}` 
+             : `/mic/start?minutes=${m}&thr=${t}`;
+await fetch(url(qs));
+
       msgEl.textContent = `Mic encendido por ${m} min (umbral ${t}).`;
     }catch(e){ msgEl.textContent = "No pude iniciar el mic: "+e.message; }
   });
@@ -544,7 +556,10 @@ input[type="number"]{
   async function fetchStatus() {
     try {
       msgEl.textContent = "Actualizando...";
-      const res = await fetch(url("/status"));
+      const u = getUserId();  // ya la tenés definida arriba
+      const path = u ? `/status?userId=${encodeURIComponent(u)}` : `/status`;
+      const res = await fetch(url(path));
+
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       render(data);
