@@ -9,8 +9,8 @@
 // ===========================
 // WiFi
 // ===========================
-const char *ssid = "iPhone de Ignacio";
-const char *password = "tajadagay";
+const char *ssid     = "Fibertel WiFi450 2.4GHz";
+const char *password = "mlc2009iB";
 
 // ===========================
 // Servo
@@ -204,14 +204,15 @@ volatile bool  micEnabled          = false;
 volatile bool  micSuspendedByPlan  = false;
 volatile float micLevel01          = 0.0f;
 volatile float micPeak01           = 0.0f;
-int            micThreshold        = 80;
+int            micThreshold        = 95;
+String currentMicUserId = "";  // usuario dueño del contador "Alertas hoy"
+String currentPlanUserId = ""; // <- subir acá para que micTask lo vea
 int            micAlertsToday      = 0;
 unsigned long  micStopAtMs         = 0;
 TaskHandle_t   micTaskHandle       = nullptr;
 const unsigned long MIC_BLACKOUT_BEFORE_MS = 2UL * 60UL * 1000UL;
 const unsigned long MIC_BLACKOUT_AFTER_MS  = 3UL * 60UL * 1000UL;
 bool micInAlert = false;
-int micAlerts[7] = {0};
 unsigned long micPersistMs = 0;
 
 int hhmmToMin(const String& s){
@@ -241,26 +242,7 @@ void setupMicADC(){
   analogSetAttenuation(ADC_11db);
   analogSetPinAttenuation(MIC_PIN, ADC_11db);
 }
-void saveMicAlerts(int wday){
-  if (wday < 0 || wday > 6) return;
-  if (prefs.begin("petcare", false)) {
-    String k = "micA_" + String(wday);
-    prefs.putInt(k.c_str(), micAlerts[wday]);
-    prefs.end();
-  }
-}
-int loadMicAlert(int wday){
-  if (wday < 0 || wday > 6) return 0;
-  int v = 0;
-  if (prefs.begin("petcare", true)) {
-    String k = "micA_" + String(wday);
-    v = prefs.getInt(k.c_str(), 0);
-    prefs.end();
-  }
-  return v;
-}
-void loadAllMicAlerts(){ for (int d=0; d<7; ++d) micAlerts[d] = loadMicAlert(d); }
-void saveAllMicAlerts(){ for (int d=0; d<7; ++d) saveMicAlerts(d); }
+
 
 void micTask(void*){
   for(;;){
@@ -296,18 +278,21 @@ void micTask(void*){
     bool high = (lvl100 >= micThreshold) || (pk100 >= micThreshold);
 
     if (high && !micInAlert){
-      micAlertsToday++;
-      micInAlert=true;
-      struct tm ti;
-      if (getLocalTime(&ti)) {
-        micAlerts[ti.tm_wday] = micAlertsToday;
-        unsigned long now = millis();
-        if (now - micPersistMs > 60000UL) {
-          saveMicAlerts(ti.tm_wday);
-          micPersistMs = now;
-        }
-      }
+  micAlertsToday++;
+  micInAlert = true;
+
+  struct tm ti;
+  if (getLocalTime(&ti)) {
+    unsigned long now = millis();
+    if (currentMicUserId.length()==0) currentMicUserId = currentPlanUserId;
+    // Persistimos cada ~60 s para cuidar la flash
+    if (now - micPersistMs > 60000UL) {
+      saveUserMicToday(currentMicUserId, ti.tm_wday, micAlertsToday);
+      micPersistMs = now;
     }
+  }
+}
+
     if (!high && micInAlert){ micInAlert=false; }
 
     vTaskDelay(1);
@@ -326,6 +311,13 @@ void handleStatus() {
   }
   int wday = timeinfo.tm_wday;
   char nowbuf[6]; strftime(nowbuf, sizeof(nowbuf), "%H:%M", &timeinfo);
+  // Si viene ?userId=... en el status, mostrar el contador de HOY de ese usuario
+String qUser = server.hasArg("userId") ? server.arg("userId") : "";
+int alertsForUser = micAlertsToday; // default: el usuario “actual” del mic
+if (qUser.length()) {
+  alertsForUser = loadUserMicToday(qUser, wday);  // lee NVS de ese user sin cambiar el mic actual
+}
+
 
   String json = "{";
   json += "\"ok\":true,";
@@ -340,12 +332,9 @@ void handleStatus() {
   json += "\"level\":"     + String((int)lroundf(micLevel01*100.0f)) + ",";
   json += "\"peak\":"      + String((int)lroundf(micPeak01 *100.0f)) + ",";
   json += "\"thr\":"       + String(micThreshold) + ",";
-  json += "\"alertsToday\":"+ String(micAlertsToday);
+  json += "\"userId\":\"" + (qUser.length()? qUser : (currentMicUserId.length()? currentMicUserId : currentPlanUserId)) + "\",";
+  json += "\"alertsToday\":"+ String(alertsForUser);
   json += "},";
-
-  json += "\"micAlertsWeek\":[";
-  for (int d=0; d<7; ++d) { if (d) json += ","; json += String(micAlerts[d]); }
-  json += "],";
 
   json += "\"lastFeed\":{";
   json += "\"wday\":" + String(lastFeedWday) + ",";
@@ -422,10 +411,31 @@ float loadUserPumpFlow(const String& userId){
   return v;
 }
 
+// ===== MIC por USUARIO — solo día actual =====
+String micTodayKeyForUser(const String& userId, int wday){
+  if (userId.length()==0 || wday < 0 || wday > 6) return "";
+  char buf[32];
+  snprintf(buf, sizeof(buf), "mic_u_%08lx_%d", (unsigned long)djb2hash(userId), wday);
+  return String(buf);
+}
+bool saveUserMicToday(const String& userId, int wday, int count){
+  String k = micTodayKeyForUser(userId, wday);
+  if (k.length()==0) return false;
+  if (prefs.begin("petcare", false)) { prefs.putInt(k.c_str(), count); prefs.end(); return true; }
+  return false;
+}
+int loadUserMicToday(const String& userId, int wday){
+  String k = micTodayKeyForUser(userId, wday);
+  if (k.length()==0) return 0;
+  int v = 0;
+  if (prefs.begin("petcare", true)) { v = prefs.getInt(k.c_str(), 0); prefs.end(); }
+  return v;
+}
+
+
 // Defaults agua/flujo y dueño actual del plan
 const float DEFAULT_PUMP_ML_PER_SEC   = 25.0f;   // 250 ml / 10 s
 const float DEFAULT_WATER_ML_PER_MEAL = 600.0f;  // pedido
-String currentPlanUserId = "";
 
 // ===========================
 // Endpoints calibración/agua
@@ -768,10 +778,63 @@ void setup() {
     prefs.end();
   }
 
+  // Cargar usuario del mic si existía; si no, usar el del plan
+if (prefs.begin("petcare", true)) {
+  currentMicUserId = prefs.getString("mic_user", "");
+  prefs.end();
+}
+if (currentMicUserId.length()==0) currentMicUserId = currentPlanUserId;
+
+// Cargar contador de HOY (solo el día en curso) para ese usuario
+struct tm _ti_init;
+if (getLocalTime(&_ti_init)) {
+  micAlertsToday = loadUserMicToday(currentMicUserId, _ti_init.tm_wday);
+} else {
+  micAlertsToday = 0;
+}
+
+
   loadAllFlags();
 
   setupMicADC();
-  server.on("/mic/start",  HTTP_GET,      [](){ enableCORS(); micEnabled=true; micStopAtMs = millis() + 15UL*60UL*1000UL; server.send(200,"application/json","{\"ok\":true}"); });
+  server.on("/mic/start", HTTP_GET, [](){
+  enableCORS();
+
+  // minutos opcional (default 15)
+  // minutos opcional (default 15)
+if (server.hasArg("minutes")) {
+  long mins = server.arg("minutes").toInt();   // puede venir negativo o 0
+  if (mins < 1) mins = 1;                      // clamp mínimo = 1
+  micStopAtMs = millis() + (unsigned long)mins * 60UL * 1000UL;
+} else {
+  micStopAtMs = millis() + 15UL * 60UL * 1000UL;
+}
+
+
+  // umbral opcional
+  if (server.hasArg("thr")) {
+    micThreshold = constrain(server.arg("thr").toInt(), 0, 100);
+  }
+
+  // userId opcional; si no viene, usamos el del plan
+  if (server.hasArg("userId")) {
+    currentMicUserId = server.arg("userId");
+    if (prefs.begin("petcare", false)) { prefs.putString("mic_user", currentMicUserId); prefs.end(); }
+  } else if (currentMicUserId.length()==0) {
+    currentMicUserId = currentPlanUserId;
+  }
+
+  // cargar contador de HOY de ese usuario
+  struct tm ti;
+  if (getLocalTime(&ti)) { micAlertsToday = loadUserMicToday(currentMicUserId, ti.tm_wday); }
+  else                   { micAlertsToday = 0; }
+
+  micEnabled = true;
+
+  String out = String("{\"ok\":true,\"userId\":\"") + currentMicUserId + "\",\"thr\":" + micThreshold + "}";
+  server.send(200, "application/json", out);
+});
+
   server.on("/mic/stop",   HTTP_GET,      [](){ enableCORS(); micEnabled=false; micStopAtMs=0; server.send(200,"application/json","{\"ok\":true}"); });
   server.on("/mic/status", HTTP_GET,      handleStatus);
   server.on("/mic/start",  HTTP_OPTIONS,  handleOptions);
@@ -810,9 +873,7 @@ void setup() {
 
   server.begin();
 
-  loadAllMicAlerts();
-  struct tm _ti;
-  if (getLocalTime(&_ti)) { micAlertsToday = micAlerts[_ti.tm_wday]; } else { micAlertsToday = 0; }
+  
   xTaskCreatePinnedToCore(micTask, "micTask", 4096, nullptr, 1, &micTaskHandle, 0);
 }
 
@@ -915,16 +976,16 @@ void loop() {
     }
   }
 
-  static int _micDay = -1;
-  struct tm ti2;
-  if (getLocalTime(&ti2)) {
-    if (_micDay != ti2.tm_wday) {
-      if (_micDay >= 0 && _micDay <= 6) saveMicAlerts(_micDay);
-      _micDay = ti2.tm_wday;
-      micAlerts[_micDay] = 0;
-      micAlertsToday = 0;
-      micInAlert = false;
-      saveMicAlerts(_micDay);
-    }
+static int _micDay = -1;
+struct tm ti2;
+if (getLocalTime(&ti2)) {
+  if (_micDay != ti2.tm_wday) {
+    _micDay = ti2.tm_wday;
+    micInAlert = false;
+    // Cargar el valor de HOY para el usuario actual (normalmente 0)
+    if (currentMicUserId.length()==0) currentMicUserId = currentPlanUserId;
+    micAlertsToday = loadUserMicToday(currentMicUserId, _micDay);
   }
+}
+
 }
