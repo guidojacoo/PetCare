@@ -4,40 +4,28 @@
 #include <ArduinoJson.h>
 #include <time.h>
 #include <Preferences.h>
-#include <math.h>   // fabsf, sqrtf, lroundf
+#include <math.h>   
 
-// ===========================
-// WiFi
-// ===========================
-const char *ssid     = "Fibertel WiFi450 2.4GHz";
-const char *password = "mlc2009iB";
+const char *ssid     = "iPhone de Ignacio";
+const char *password = "tajadagay";
 
-// ===========================
-// Servo
-// ===========================
 Servo servoMotor;
 #define SERVO_PIN 14
 
-// ===========================
-// PIR HC-SR501
-// ===========================
+
 #define PIR_PIN 12
 const unsigned long EAT_WINDOW_MS = 120000UL;  // 120s
 
-// ===========================
-// Bomba (relé/MOSFET de control)
-// ===========================
+
 #define PUMP_PIN 25
-const uint8_t PUMP_ON_LEVEL  = LOW;   // Relé activo en LOW
+const uint8_t PUMP_ON_LEVEL  = LOW;   // activo en LOW
 const uint8_t PUMP_OFF_LEVEL = HIGH;
 bool pumpOn = false;
-const unsigned long PUMP_GAP_MS = 2000; // 2 s entre servo y bomba
+const unsigned long PUMP_GAP_MS = 2000; 
 inline void pump_on()  { digitalWrite(PUMP_PIN, PUMP_ON_LEVEL);  pumpOn = true;  }
 inline void pump_off() { digitalWrite(PUMP_PIN, PUMP_OFF_LEVEL); pumpOn = false; }
 
-// ===========================
-// === BUZZER ADD ===
-// ===========================
+
 #define BUZZER_PIN 27
 bool buzzed[7][12];
 extern const int __maxMealsPerDayDeclHack__ = 12;
@@ -47,14 +35,12 @@ void setupBuzzer() {
   digitalWrite(BUZZER_PIN, HIGH);  
 }
 
-// === Reemplazo: helpers ON/OFF y patrón sin tone() ===
 #define BUZZER_ON_LEVEL  LOW
 #define BUZZER_OFF_LEVEL HIGH
 
 static inline void buzzer_on()  { digitalWrite(BUZZER_PIN, BUZZER_ON_LEVEL); }
 static inline void buzzer_off() { digitalWrite(BUZZER_PIN, BUZZER_OFF_LEVEL); }
 
-// Patrón: 1.0 s + 0.5 s + 0.5 s, con pequeños gaps
 void buzzerAvisoComida() {
   buzzer_off(); delay(30);
   buzzer_on();  delay(1000);
@@ -62,7 +48,7 @@ void buzzerAvisoComida() {
   buzzer_on();  delay(500);
   buzzer_off(); delay(120);
   buzzer_on();  delay(500);
-  buzzer_off(); // asegura silencio al terminar
+  buzzer_off(); 
 }
 
 String prevMinute(const String& hhmm) {
@@ -76,14 +62,10 @@ String prevMinute(const String& hhmm) {
   return String(buf);
 }
 
-// ===========================
-// Web Server
-// ===========================
+
 WebServer server(8080);
 
-// ===========================
-// Plan (por día o por semana)
-// ===========================
+
 #define MAX_MEALS_PER_DAY 12
 String dayTimes[7][MAX_MEALS_PER_DAY];
 int    dayCount[7] = {0,0,0,0,0,0,0};
@@ -105,16 +87,12 @@ void resetBuzzedForDay(int wday){
 }
 void resetAllBuzzed(){ for(int d=0; d<7; ++d) resetBuzzedForDay(d); }
 
-// ===========================
-// NTP
-// ===========================
+
 const char* ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = -10800;
 const int  daylightOffset_sec = 0;
 
-// ===========================
-// CORS
-// ===========================
+
 void enableCORS() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -122,12 +100,10 @@ void enableCORS() {
 }
 void handleOptions() { enableCORS(); server.send(204); }
 
-// ===========================
-// NVS (Preferences)
-// ===========================
+
 Preferences prefs;
 
-// Guarda/lee JSON del plan
+
 void savePlanJSONToNVS(const String& json) {
   if (prefs.begin("petcare", false)) {
     prefs.putString("weekplan_json", json);
@@ -143,7 +119,6 @@ String loadPlanJSONFromNVS() {
   return out;
 }
 
-// Flags por día
 void saveDayFlags(int wday) {
   if (wday < 0 || wday > 6) return;
   if (prefs.begin("petcare", false)) {
@@ -171,9 +146,7 @@ void loadDayFlags(int wday) {
 void saveAllFlags() { for (int d=0; d<7; d++) saveDayFlags(d); }
 void loadAllFlags() { for (int d=0; d<7; d++) loadDayFlags(d); }
 
-// ===========================
-// Utils
-// ===========================
+
 bool isValidHHMM(const String& s) {
   if (s.length() != 5 || s.charAt(2) != ':') return false;
   int hh = s.substring(0,2).toInt();
@@ -194,9 +167,7 @@ String getDayName(int wday) {
   if (wday<0||wday>6) return "Desconocido"; return String(names[wday]);
 }
 
-// ===========================
-// MIC (tu código tal cual)
-// ===========================
+
 #define MIC_PIN 34
 const int MIC_WINDOW_SAMPLES = 192;
 const int MIC_SAMPLE_US      = 200;
@@ -285,7 +256,7 @@ void micTask(void*){
   if (getLocalTime(&ti)) {
     unsigned long now = millis();
     if (currentMicUserId.length()==0) currentMicUserId = currentPlanUserId;
-    // Persistimos cada ~60 s para cuidar la flash
+    
     if (now - micPersistMs > 60000UL) {
       saveUserMicToday(currentMicUserId, ti.tm_wday, micAlertsToday);
       micPersistMs = now;
@@ -299,9 +270,7 @@ void micTask(void*){
   }
 }
 
-// ===========================
-// /status (incluye MIC)
-// ===========================
+
 void handleStatus() {
   enableCORS();
   struct tm timeinfo;
@@ -362,9 +331,7 @@ if (qUser.length()) {
   server.send(200, "application/json", json);
 }
 
-// ===========================
-// Calibración/Agua por usuario (NVS)
-// ===========================
+
 uint32_t djb2hash(const String& s){
   uint32_t h = 5381;
   for (size_t i=0;i<s.length();++i) h = ((h<<5)+h) + (uint8_t)s[i];
@@ -411,7 +378,6 @@ float loadUserPumpFlow(const String& userId){
   return v;
 }
 
-// ===== MIC por USUARIO — solo día actual =====
 String micTodayKeyForUser(const String& userId, int wday){
   if (userId.length()==0 || wday < 0 || wday > 6) return "";
   char buf[32];
@@ -433,13 +399,10 @@ int loadUserMicToday(const String& userId, int wday){
 }
 
 
-// Defaults agua/flujo y dueño actual del plan
 const float DEFAULT_PUMP_ML_PER_SEC   = 25.0f;   // 250 ml / 10 s
 const float DEFAULT_WATER_ML_PER_MEAL = 600.0f;  // pedido
 
-// ===========================
-// Endpoints calibración/agua
-// ===========================
+
 void handleCalibOpen(){
   enableCORS();
   float sec = 1.0f;
@@ -469,7 +432,6 @@ void handleCalibGet(){
   server.send(200,"application/json", j);
 }
 
-// ======= CAMBIO: versión compatible con ArduinoJson v7 =======
 void handleCalibPost(){
   enableCORS();
 
@@ -481,7 +443,7 @@ void handleCalibPost(){
     StaticJsonDocument<256> doc;
     DeserializationError err = deserializeJson(doc, body);
     if (!err){
-      user = doc["userId"].as<String>();      // << usar as<String>()
+      user = doc["userId"].as<String>();      
       gps  = doc["gps"].as<float>();
     }
   }
@@ -500,7 +462,6 @@ void handleCalibPost(){
   server.send(ok?200:500,"application/json", ok?"{\"ok\":true}":"{\"ok\":false}");
 }
 
-// ======= NUEVO: GET /water para evitar el error de símbolo no declarado =======
 void handleWaterGet(){
   enableCORS();
   String user = server.hasArg("user") ? server.arg("user") : server.arg("userId");
@@ -521,7 +482,6 @@ void handleWaterGet(){
   server.send(200,"application/json", out);
 }
 
-// ======= CAMBIO: versión compatible con ArduinoJson v7 =======
 void handleWaterPost(){
   enableCORS();
 
@@ -559,9 +519,6 @@ void handleWaterPost(){
 }
 
 
-// ===========================
-// /setPlan  (POST)
-// ===========================
 void handleSetPlan() {
   if (!server.hasArg("plain")) { enableCORS(); server.send(400,"text/plain","Falta cuerpo JSON"); return; }
 
@@ -572,7 +529,6 @@ void handleSetPlan() {
   if (!doc.containsKey("secondsOpen")) { enableCORS(); server.send(400,"text/plain","Falta secondsOpen"); return; }
   secondsOpen = doc["secondsOpen"].as<float>();
 
-  // NUEVO: userId + agua/flujo (persistir por usuario)
   String planUser = doc["userId"] | "";
   if (planUser.length()>0) {
     currentPlanUserId = planUser;
@@ -641,9 +597,7 @@ void handleSetPlan() {
   else    server.send(400,"text/plain","Error al cargar plan");
 }
 
-// ===========================
-// /clearPlan (POST)
-// ===========================
+
 void handleClearPlan() {
   for (int d=0; d<7; d++){
     dayCount[d]=0;
@@ -658,9 +612,7 @@ void handleClearPlan() {
   enableCORS(); server.send(200,"text/plain","Plan borrado");
 }
 
-// ===========================
-// /servo (GET) - manual
-// ===========================
+
 void handleServoManual() {
   enableCORS();
   servoMotor.write(90);
@@ -669,9 +621,7 @@ void handleServoManual() {
   server.send(200, "text/plain", "Servo ");
 }
 
-// ===========================
-// /getPlan (GET)
-// ===========================
+
 void handleGetPlan() {
   enableCORS();
   String json = loadPlanJSONFromNVS();
@@ -693,9 +643,6 @@ void handleGetPlan() {
   server.send(200, "application/json", json);
 }
 
-// ===========================
-// Setup
-// ===========================
 void setup() {
   Serial.begin(115200);
 
@@ -721,7 +668,6 @@ void setup() {
   if (getLocalTime(&timeinfo)) { lastWday = timeinfo.tm_wday; Serial.printf("Hora inicial: %02d:%02d  wday=%d\n", timeinfo.tm_hour, timeinfo.tm_min, lastWday); }
   else                          { Serial.println("No se pudo obtener hora inicial (NTP)"); }
 
-  // Restaurar plan desde NVS
   {
     String saved = loadPlanJSONFromNVS();
     if (saved.length() > 0) {
@@ -772,20 +718,17 @@ void setup() {
     }
   }
 
-  // Cargar dueño de plan si existía
   if (prefs.begin("petcare", true)) {
     currentPlanUserId = prefs.getString("plan_user", "");
     prefs.end();
   }
 
-  // Cargar usuario del mic si existía; si no, usar el del plan
 if (prefs.begin("petcare", true)) {
   currentMicUserId = prefs.getString("mic_user", "");
   prefs.end();
 }
 if (currentMicUserId.length()==0) currentMicUserId = currentPlanUserId;
 
-// Cargar contador de HOY (solo el día en curso) para ese usuario
 struct tm _ti_init;
 if (getLocalTime(&_ti_init)) {
   micAlertsToday = loadUserMicToday(currentMicUserId, _ti_init.tm_wday);
@@ -800,23 +743,20 @@ if (getLocalTime(&_ti_init)) {
   server.on("/mic/start", HTTP_GET, [](){
   enableCORS();
 
-  // minutos opcional (default 15)
-  // minutos opcional (default 15)
 if (server.hasArg("minutes")) {
-  long mins = server.arg("minutes").toInt();   // puede venir negativo o 0
-  if (mins < 1) mins = 1;                      // clamp mínimo = 1
+  long mins = server.arg("minutes").toInt();   
+  if (mins < 1) mins = 1;                      
   micStopAtMs = millis() + (unsigned long)mins * 60UL * 1000UL;
 } else {
   micStopAtMs = millis() + 15UL * 60UL * 1000UL;
 }
 
 
-  // umbral opcional
+
   if (server.hasArg("thr")) {
     micThreshold = constrain(server.arg("thr").toInt(), 0, 100);
   }
 
-  // userId opcional; si no viene, usamos el del plan
   if (server.hasArg("userId")) {
     currentMicUserId = server.arg("userId");
     if (prefs.begin("petcare", false)) { prefs.putString("mic_user", currentMicUserId); prefs.end(); }
@@ -824,7 +764,6 @@ if (server.hasArg("minutes")) {
     currentMicUserId = currentPlanUserId;
   }
 
-  // cargar contador de HOY de ese usuario
   struct tm ti;
   if (getLocalTime(&ti)) { micAlertsToday = loadUserMicToday(currentMicUserId, ti.tm_wday); }
   else                   { micAlertsToday = 0; }
@@ -852,7 +791,7 @@ if (server.hasArg("minutes")) {
   server.on("/getPlan",   HTTP_GET,     handleGetPlan);
   server.on("/getPlan",   HTTP_OPTIONS, handleOptions);
 
-  // Buzzer
+
   server.on("/buzzer", HTTP_POST, []() {
     enableCORS();
     buzzerAvisoComida();
@@ -860,7 +799,7 @@ if (server.hasArg("minutes")) {
   });
   server.on("/buzzer", HTTP_OPTIONS, handleOptions);
 
-  // NUEVO: Calibración y Agua
+
   server.on("/calibration/open", HTTP_GET,     handleCalibOpen);
   server.on("/calibration/open", HTTP_OPTIONS, handleOptions);
   server.on("/calibration",      HTTP_GET,     handleCalibGet);
@@ -877,9 +816,7 @@ if (server.hasArg("minutes")) {
   xTaskCreatePinnedToCore(micTask, "micTask", 4096, nullptr, 1, &micTaskHandle, 0);
 }
 
-// ===========================
-// Loop
-// ===========================
+
 unsigned long lastCheck = 0;
 const unsigned long CHECK_EVERY_MS = 1000;
 
@@ -908,7 +845,7 @@ void loop() {
       int count = dayCount[wday];
       for (int i=0; i<count; i++) {
 
-        // Aviso 1 minuto antes
+        
         if (!buzzed[wday][i]) {
           String pre = prevMinute(dayTimes[wday][i]);
           if (pre.length()==5 && nowHHMM == pre) {
@@ -927,15 +864,14 @@ void loop() {
 
           Serial.printf("Alimentando (wday=%d) a las %s\n", wday, dayTimes[wday][i].c_str());
 
-          // Servo
+          
           servoMotor.write(90);
           delay((unsigned long)(secondsOpen * 1000));
           servoMotor.write(0);
 
-          // Gap
+          
           delay(PUMP_GAP_MS);
 
-          // Bomba — calcular ms según ml y caudal por usuario (defaults si no hay)
           float flow = loadUserPumpFlow(currentPlanUserId);
           if (!isfinite(flow) || flow <= 0) flow = DEFAULT_PUMP_ML_PER_SEC;
 
@@ -982,7 +918,6 @@ if (getLocalTime(&ti2)) {
   if (_micDay != ti2.tm_wday) {
     _micDay = ti2.tm_wday;
     micInAlert = false;
-    // Cargar el valor de HOY para el usuario actual (normalmente 0)
     if (currentMicUserId.length()==0) currentMicUserId = currentPlanUserId;
     micAlertsToday = loadUserMicToday(currentMicUserId, _micDay);
   }

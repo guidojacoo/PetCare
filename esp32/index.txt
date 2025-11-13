@@ -4,11 +4,9 @@
 
 #define CAMERA_MODEL_AI_THINKER
 
-// ===========================
-// Configuración WiFi
-// ===========================
-const char *ssid     = "Fibertel WiFi450 2.4GHz";
-const char *password = "mlc2009iB";
+
+const char *ssid     = "iPhone de Ignacio";
+const char *password = "tajadagay";
 
 
 void startCameraServer();
@@ -82,7 +80,6 @@ void setup() {
   setupLedFlash();
 #endif
 
-  // Conexión WiFi
   WiFi.begin(ssid, password);
   WiFi.setSleep(false);
 
@@ -93,7 +90,6 @@ void setup() {
   }
   Serial.println("\nWiFi connected");
 
-  // Iniciar servidor de cámara (HTTP de la librería esp32-camera)
   startCameraServer();
 
   Serial.print("Camera Ready! Use 'http://");
@@ -102,6 +98,5 @@ void setup() {
 }
 
 void loop() {
-  // Sin WebServer de Arduino ni servo: no hay nada que atender aquí
   delay(10);
 }
