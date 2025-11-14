@@ -6,8 +6,8 @@
 #include <Preferences.h>
 #include <math.h>   
 
-const char *ssid     = "iPhone de Ignacio";
-const char *password = "tajadagay";
+const char *ssid = "Fibertel WiFi450 2.4GHz";
+const char *password = "mlc2009iB";
 
 Servo servoMotor;
 #define SERVO_PIN 14
@@ -175,7 +175,7 @@ volatile bool  micEnabled          = false;
 volatile bool  micSuspendedByPlan  = false;
 volatile float micLevel01          = 0.0f;
 volatile float micPeak01           = 0.0f;
-int            micThreshold        = 95;
+int            micThreshold        = 50;
 String currentMicUserId = "";  // usuario dueño del contador "Alertas hoy"
 String currentPlanUserId = ""; // <- subir acá para que micTask lo vea
 int            micAlertsToday      = 0;
@@ -257,7 +257,7 @@ void micTask(void*){
     unsigned long now = millis();
     if (currentMicUserId.length()==0) currentMicUserId = currentPlanUserId;
     
-    if (now - micPersistMs > 60000UL) {
+    if (now - micPersistMs > 100UL) {
       saveUserMicToday(currentMicUserId, ti.tm_wday, micAlertsToday);
       micPersistMs = now;
     }

@@ -129,6 +129,9 @@ body{
   border-radius:12px;
   object-fit:cover; /* usar 'contain' si no querés recorte */
   image-rendering:auto;
+  /* girar la imagen para que se vea vertical */
+  transform: rotate(180deg);
+  transform-origin: center center;
 }
 
 /* ===== MENSAJE MIC – DEBAJO DE LA CÁMARA ===== */

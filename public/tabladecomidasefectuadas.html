@@ -317,7 +317,7 @@ input[type="number"]{
             </div>
             <div>
               <label for="micThr">Umbral (0-100)</label>
-              <input id="micThr" type="number" min="10" max="100" value="95" />
+              <input id="micThr" type="number" min="10" max="100" value="" />
             </div>
           </div>
           <p class="subtle" id="micInfo">Mic: —</p>
@@ -635,39 +635,44 @@ await fetch(url(qs));
       }
     }
 
-    // ===== MIC en Estado (acumulador robusto)
-    if (data.mic){
-      const r = Number(data.mic.alertsToday) || 0; // lo que reporta la ESP en esta lectura
-      const st = getDayState();
-      // Primera lectura del día sin lastReported
-      if (st.r == null) {
-        if ((st.t|0) === 0 && r > 0) st.t = r;
-        st.r = r;
-      } else {
-        if (r >= st.r) {
-          st.t += (r - st.r);   // delta positivo → sumar al total
-          st.r  = r;
-        } else {
-          // La ESP se reinició o reseteó contador: no bajamos total; solo actualizamos baseline
-          st.r = r;
-        }
+      // ===== MIC en Estado (acumulador robusto EN EL FRONT) =====
+  if (data.mic){
+      const m     = data.mic;
+      const level = Number(m.level) || 0;
+      const peak  = Number(m.peak)  || 0;
+      const thr   = Number(m.thr)   || 50;
+      const high  = (level >= thr) || (peak >= thr);
+
+      // leer / actualizar acumulador del día (guardado en localStorage)
+      let st = getDayState();
+
+      // Si supera el umbral y no veníamos en "pulso", sumar 1
+      if (high && !window._frontendMicInAlert){
+          st.t++;
+          window._frontendMicInAlert = true;
+          setDayState(st);
       }
-      setDayState(st);
 
-      const m = data.mic;
-      const high = (m.level >= m.thr) || (m.peak >= m.thr);
+      // Cuando baja, liberamos el pulso para poder volver a sumar en el próximo ladrido fuerte
+      if (!high && window._frontendMicInAlert){
+          window._frontendMicInAlert = false;
+      }
+
+      // Texto de estado del mic
       const estado = m.enabled ? (m.suspended ? "ON (pausado por comida)" : "ON") : "OFF";
+      micInfo.textContent = `Mic: ${estado} • nivel=${level} pico=${peak} thr=${thr} • alertas hoy=${st.t}`;
 
-      micInfo.textContent = `Mic: ${estado} • nivel=${m.level} pico=${m.peak} thr=${m.thr} • alertas hoy=${st.t}`;
+      // Badge "Alertas hoy:"
       micAlertsEl.textContent = String(st.t);
 
-      if (high) {
-        msgEl.textContent = "⚠ Ladrido alto detectado (≥ umbral)";
+      // Mensaje principal si está por encima del umbral
+      if (high){
+          msgEl.textContent = "⚠ Ladrido alto detectado (≥ umbral)";
       }
-    } else {
+  } else {
       micInfo.textContent = "Mic: —";
       micAlertsEl.textContent = String(getTotalToday());
-    }
+  }
   }
 
   // ======= Sincronizar con el ÚLTIMO plan de la DB =======
