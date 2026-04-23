@@ -1,29 +1,45 @@
 import { query } from "../db.js";
 
 export const Listar = async (req, res) => {
-  let r = await query("SELECT * FROM mascotas ORDER BY creado_en DESC");
-  res.json(r.rows);
+  try {
+    const r = await query("SELECT * FROM mascotas ORDER BY creado_en DESC");
+    res.json(r.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al listar mascotas" });
+  }
 };
 
 export const Obtener = async (req, res) => {
-  let r = await query("SELECT * FROM mascotas WHERE id=$1", [req.params.id]);
-  if (!r.rowCount) return res.status(404).json({ error: "No encontrada" });
-  res.json(r.rows[0]);
+  try {
+    const r = await query("SELECT * FROM mascotas WHERE id=$1", [req.params.id]);
+    if (!r.rowCount) return res.status(404).json({ error: "No encontrada" });
+    res.json(r.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al obtener mascota" });
+  }
 };
 
 export const Crear = async (req, res) => {
-  let { nombre, sexo, raza, peso_kg, fecha_nacimiento, usuario_id, kcal_100g } = req.body;
-  let r = await query(
-    "INSERT INTO mascotas(nombre, sexo, raza, peso_kg, fecha_nacimiento, usuario_id, kcal_100g) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *",
-    [nombre, sexo, raza, peso_kg, fecha_nacimiento || null, usuario_id, kcal_100g || null]
-  );
-  res.status(201).json(r.rows[0]);
+  try {
+    const { nombre, sexo, raza, peso_kg, fecha_nacimiento, usuario_id, kcal_100g } = req.body;
+    const r = await query(
+      "INSERT INTO mascotas(nombre, sexo, raza, peso_kg, fecha_nacimiento, usuario_id, kcal_100g) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *",
+      [nombre, sexo, raza, peso_kg, fecha_nacimiento || null, usuario_id, kcal_100g || null]
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al crear mascota" });
+  }
 };
 
 export const Actualizar = async (req, res) => {
-  let { nombre, sexo, raza, peso_kg, fecha_nacimiento, kcal_100g } = req.body;
-  let r = await query(
-    `UPDATE mascotas 
+  try {
+    const { nombre, sexo, raza, peso_kg, fecha_nacimiento, kcal_100g } = req.body;
+    const r = await query(
+      `UPDATE mascotas
      SET nombre = COALESCE($2,nombre),
          sexo = COALESCE($3,sexo),
          raza = COALESCE($4,raza),
@@ -31,31 +47,50 @@ export const Actualizar = async (req, res) => {
          fecha_nacimiento = COALESCE($6,fecha_nacimiento),
          kcal_100g = COALESCE($7,kcal_100g)
      WHERE id=$1 RETURNING *`,
-    [req.params.id, nombre, sexo, raza, peso_kg, fecha_nacimiento || null, kcal_100g || null]
-  );
-  if (!r.rowCount) return res.status(404).json({ error: "No encontrada" });
-  res.json(r.rows[0]);
+      [req.params.id, nombre, sexo, raza, peso_kg, fecha_nacimiento || null, kcal_100g || null]
+    );
+    if (!r.rowCount) return res.status(404).json({ error: "No encontrada" });
+    res.json(r.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al actualizar mascota" });
+  }
 };
 
 export const Eliminar = async (req, res) => {
-  let id = req.params.id;
-  let r = await query("DELETE FROM mascotas WHERE id=$1", [id]);
-  if (!r.rowCount) return res.status(404).json({ error: "No encontrada" });
-  res.status(204).end();
+  try {
+    const id = req.params.id;
+    const r = await query("DELETE FROM mascotas WHERE id=$1", [id]);
+    if (!r.rowCount) return res.status(404).json({ error: "No encontrada" });
+    res.status(204).end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al eliminar mascota" });
+  }
 };
 
 export const HorariosDeMascota = async (req, res) => {
-  let r = await query(
-    "SELECT * FROM horarios WHERE mascota_id=$1 ORDER BY hora_local ASC",
-    [req.params.id]
-  );
-  res.json(r.rows);
+  try {
+    const r = await query(
+      "SELECT * FROM horarios WHERE mascota_id=$1 ORDER BY hora_local ASC",
+      [req.params.id]
+    );
+    res.json(r.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al obtener horarios" });
+  }
 };
 
 export const ListarPorUsuario = async (req, res) => {
-  let r = await query(
-    "SELECT * FROM mascotas WHERE usuario_id = $1 ORDER BY creado_en DESC",
-    [req.params.usuario_id || req.params.id || req.query.usuario_id]
-  );
-  res.json(r.rows);
+  try {
+    const r = await query(
+      "SELECT * FROM mascotas WHERE usuario_id = $1 ORDER BY creado_en DESC",
+      [req.params.usuario_id || req.params.id || req.query.usuario_id]
+    );
+    res.json(r.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al listar mascotas" });
+  }
 };

@@ -180,7 +180,8 @@ export const Activar = async (req, res) => {
     if (!r.rowCount) return res.status(404).json({ error: "No encontrado" });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: "Error al activar" });
+    console.error(err);
+    res.status(500).json({ error: "Error al activar plan" });
   }
 };
 
@@ -190,7 +191,8 @@ export const Desactivar = async (req, res) => {
     if (!r.rowCount) return res.status(404).json({ error: "No encontrado" });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: "Error al desactivar" });
+    console.error(err);
+    res.status(500).json({ error: "Error al desactivar plan" });
   }
 };
 
@@ -199,7 +201,12 @@ export const Desactivar = async (req, res) => {
  * Dejé la firma vacía por si ya la tenías; acá no la necesitamos para planes.
  */
 export const MisMascotasDB = async (_req, res) => {
-  res.json([]);
+  try {
+    res.json([]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al listar mascotas" });
+  }
 };
 
 // POST /db/plan/:id/sync
