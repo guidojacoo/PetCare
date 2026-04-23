@@ -1,5 +1,21 @@
 // controllers/eventos.js
 import { query } from "../db.js";
+import { z } from "zod";
+
+const hhmm = z.string().regex(/^\d{2}:\d{2}$/);
+
+const EventoSchema = z.object({
+  mascota_id: z.number(),
+  plan_id: z.number().nullable().optional(),
+  tipo: z.enum(['servo', 'sensor']),
+  accion: z.enum(['comida', 'agua']),
+  estado: z.enum(['ok', 'fail']),
+  gramos: z.number().nullable().optional(),
+  fuente: z.enum(['plan', 'manual', 'api']).nullable().optional(),
+  detalle: z.string().nullable().optional(),
+  esp_id: z.string().nullable().optional(),
+  slot_hhmm: hhmm.nullable().optional()
+});
 
 /**
  * POST /eventos
@@ -16,19 +32,15 @@ export async function Crear(req, res) {
     const {
       mascota_id,
       plan_id = null,
-      tipo,          // 'servo' | 'sensor'
-      accion,        // 'comida' | 'agua'
-      estado,        // 'ok' | 'fail'
+      tipo,
+      accion,
+      estado,
       gramos = null,
-      fuente = null, // 'plan' | 'manual' | 'api'
+      fuente = null,
       detalle = null,
       esp_id = null,
       slot_hhmm = null
-    } = req.body;
-
-    if (!mascota_id || !tipo || !accion || !estado) {
-      return res.status(400).json({ ok: false, message: "Faltan campos obligatorios" });
-    }
+    } = EventoSchema.parse(req.body);
 
     const sql = `
       INSERT INTO feed_eventos
@@ -41,6 +53,9 @@ export async function Crear(req, res) {
 
     res.json({ ok: true, evento: rows[0] });
   } catch (e) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ ok: false, error: e.errors });
+    }
     // Si hay conflicto por uq_tick_por_slot_dia, devolvemos 200 igualmente con un hint
     if (e.code === '23505') {
       return res.json({ ok: true, duplicated: true, message: "Ya existe un tick OK para ese slot hoy." });
