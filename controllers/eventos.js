@@ -27,7 +27,7 @@ export async function Crear(req, res) {
     } = req.body;
 
     if (!mascota_id || !tipo || !accion || !estado) {
-      return res.status(400).json({ ok: false, message: "Faltan campos obligatorios" });
+      return res.status(400).json({ error: "Faltan campos obligatorios" });
     }
 
     const sql = `
@@ -46,7 +46,7 @@ export async function Crear(req, res) {
       return res.json({ ok: true, duplicated: true, message: "Ya existe un tick OK para ese slot hoy." });
     }
     console.error(e);
-    res.status(500).json({ ok: false, message: "No se pudo registrar el evento" });
+    res.status(500).json({ error: "No se pudo registrar el evento" });
   }
 }
 
@@ -70,7 +70,7 @@ export async function Listar(req, res) {
     res.json({ ok: true, eventos: rows });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ ok: false, message: "No se pudo listar eventos" });
+    res.status(500).json({ error: "No se pudo listar eventos" });
   }
 }
 
@@ -111,6 +111,6 @@ export async function TicksDelDia(req, res) {
     res.json({ ok: true, fecha: fecha || null, ticks: rows.map(r => r.hhmm) });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ ok: false, message: "No se pudieron obtener los ticks" });
+    res.status(500).json({ error: "No se pudieron obtener los ticks" });
   }
 }
